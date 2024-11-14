@@ -34,19 +34,8 @@ const connectDB = async () => {
 connectDB();
 
 // CORS configuration
-const allowedOrigins = [
-  'http://localhost:5173',
-  'https://vermillion-smakager-55c20e.netlify.app'
-];
-
 app.use(cors({
-  origin: function(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: ['http://localhost:5173', 'https://vermillion-smakager-55c20e.netlify.app'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -55,6 +44,7 @@ app.use(cors({
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
+
 app.use(express.json());
 app.use(morgan('dev'));
 app.use(apiLimiter);
