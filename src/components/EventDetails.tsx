@@ -1,0 +1,106 @@
+import React from 'react';
+import { Event, Dress } from '../types';
+import { PlusCircle } from 'lucide-react';
+import { DressCard } from './DressCard';
+import { DressScrapingModal } from './DressScrapingModal';
+import { addDressToEvent } from '../services/eventService';
+import { useAuth } from '../contexts/AuthContext';
+import toast from 'react-hot-toast';
+
+interface EventDetailsProps {
+  event: Event;
+  onBack: () => void;
+  onDressAdded: (dress: Dress) => void;
+}
+
+export function EventDetails({ event, onBack, onDressAdded }: EventDetailsProps) {
+  const [showScrapingModal, setShowScrapingModal] = React.useState(false);
+  const { currentUser } = useAuth();
+  const isEventCreator = currentUser?.id === event.creatorId;
+
+  const handleAddDress = async (dressData: {
+    name: string;
+    imageUrl: string;
+    description?: string;
+    color?: string;
+    brand?: string;
+    price?: number;
+    isPrivate: boolean;
+  }) => {
+    try {
+      const newDress = await addDressToEvent(event.id, dressData);
+      onDressAdded(newDress);
+      setShowScrapingModal(false);
+      toast.success('Item added successfully!');
+    } catch (error) {
+      console.error('Error adding item:', error);
+      toast.error('Failed to add item');
+    }
+  };
+
+  const checkConflict = (dress: Dress) => {
+    return event.dresses.some(
+      (d) =>
+        d.id !== dress.id &&
+        d.name.toLowerCase() === dress.name.toLowerCase()
+    );
+  };
+
+  const visibleDresses = event.dresses.filter(dress => 
+    !dress.isPrivate || dress.userId === currentUser?.id || isEventCreator
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={onBack}
+            className="p-2 text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-100"
+          >
+            Back
+          </button>
+          <h2 className="text-2xl font-bold">{event.name}</h2>
+        </div>
+        <button
+          onClick={() => setShowScrapingModal(true)}
+          className="flex items-center gap-2 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+        >
+          <PlusCircle size={20} />
+          <span>Add Item</span>
+        </button>
+      </div>
+
+      {visibleDresses.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-600 mb-4">No items added yet</p>
+          <button
+            onClick={() => setShowScrapingModal(true)}
+            className="text-purple-600 hover:text-purple-700"
+          >
+            Add your first item
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {visibleDresses.map((dress) => (
+            <DressCard
+              key={dress.id}
+              dress={dress}
+              hasConflict={checkConflict(dress)}
+              isEventCreator={isEventCreator}
+            />
+          ))}
+        </div>
+      )}
+
+      {showScrapingModal && (
+        <DressScrapingModal
+          onClose={() => setShowScrapingModal(false)}
+          onSubmit={handleAddDress}
+          isEventCreator={isEventCreator}
+        />
+      )}
+    </div>
+  );
+}
