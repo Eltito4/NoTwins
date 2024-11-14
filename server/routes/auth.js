@@ -18,7 +18,6 @@ const validateAuthInput = (req, res, next) => {
     return res.status(400).json({ error: 'Invalid input types' });
   }
   
-  // Basic email format validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     return res.status(400).json({ error: 'Invalid email format' });
@@ -58,7 +57,7 @@ router.post('/register', validateAuthInput, async (req, res) => {
     // Create token
     const token = jwt.sign(
       { id: savedUser._id, email: savedUser.email },
-      process.env.JWT_SECRET || 'your-secret-key',
+      process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 
@@ -99,7 +98,7 @@ router.post('/login', validateAuthInput, async (req, res) => {
     // Create token
     const token = jwt.sign(
       { id: user._id, email: user.email },
-      process.env.JWT_SECRET || 'your-secret-key',
+      process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 

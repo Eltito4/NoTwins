@@ -1,10 +1,12 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
+const API_URL = import.meta.env.MODE === 'production' 
+  ? 'https://notwins.onrender.com/api'
+  : 'http://localhost:3001/api';
+
 const api = axios.create({
-  baseURL: import.meta.env.MODE === 'production' 
-    ? 'https://notwins.onrender.com/api'
-    : 'http://localhost:3001/api',
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json'
   },
