@@ -16,5 +16,5 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: CORS_ORIGIN
-        value: https://vermillion-smakager-55c20e.netlify.app
+        value: https://notwins.netlify.app
     autoDeploy: true
