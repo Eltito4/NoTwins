@@ -34,6 +34,7 @@
     "winston": "^3.11.0"
   },
   "devDependencies": {
+    "@types/node": "^20.11.24",
     "@vitejs/plugin-react": "^4.0.3",
     "autoprefixer": "^10.4.16",
     "concurrently": "^8.2.2",
