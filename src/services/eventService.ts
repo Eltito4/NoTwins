@@ -25,7 +25,6 @@ export async function createEvent(event: Omit<Event, 'id' | 'shareId' | 'dresses
       participants: event.participants
     });
     
-    toast.success('Event created successfully');
     return response.data;
   } catch (error) {
     handleError(error, 'Failed to create event');

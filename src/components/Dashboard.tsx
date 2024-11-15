@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
 import type { FC } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { LogOut, PlusCircle, UserPlus, User } from 'lucide-react';
 import { CreateEventModal } from './CreateEventModal';
@@ -149,8 +149,7 @@ export const Dashboard: FC = () => {
       const newEvent = await createEvent({
         ...data,
         creatorId: currentUser.id,
-        participants: [currentUser.id],
-        dresses: []
+        participants: [currentUser.id]
       });
       
       setEvents(prev => [...prev, newEvent]);
