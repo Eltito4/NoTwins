@@ -16,6 +16,21 @@ config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const CORS_ORIGIN = process.env.CORS_ORIGIN || 'https://notwins.netlify.app';
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+// Configure logger based on environment
+if (isDevelopment) {
+  logger.add(new winston.transports.Console({
+    format: winston.format.simple(),
+    level: 'debug'
+  }));
+} else {
+  logger.add(new winston.transports.Console({
+    format: winston.format.json(),
+    level: 'info'
+  }));
+}
 
 // Connect to MongoDB
 const connectDB = async () => {
@@ -24,7 +39,7 @@ const connectDB = async () => {
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
     });
-    logger.info('MongoDB Connected');
+    logger.info(`MongoDB Connected in ${process.env.NODE_ENV} mode`);
   } catch (error) {
     logger.error('MongoDB connection error:', error);
     setTimeout(connectDB, 5000);
@@ -33,9 +48,11 @@ const connectDB = async () => {
 
 connectDB();
 
-// Updated CORS configuration with proper options
+// CORS configuration based on environment
 const corsOptions = {
-  origin: ['https://notwins.netlify.app', 'http://localhost:5173'],
+  origin: isDevelopment 
+    ? ['http://localhost:5173', CORS_ORIGIN]
+    : CORS_ORIGIN,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -44,16 +61,18 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Updated security middleware with adjusted settings
+// Security middleware with environment-specific settings
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      connectSrc: ["'self'", "https://notwins.netlify.app", "http://localhost:5173"],
+      connectSrc: isDevelopment 
+        ? ["'self'", CORS_ORIGIN, "http://localhost:5173"]
+        : ["'self'", CORS_ORIGIN],
       imgSrc: ["'self'", "*", "data:", "blob:"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", ...(isDevelopment ? ["'unsafe-eval'"] : [])],
       styleSrc: ["'self'", "'unsafe-inline'"],
       fontSrc: ["'self'", "data:", "https:"],
       objectSrc: ["'none'"],
@@ -62,8 +81,9 @@ app.use(helmet({
   }
 }));
 
+// Middleware
 app.use(express.json());
-app.use(morgan('dev'));
+app.use(morgan(isDevelopment ? 'dev' : 'combined'));
 app.use(apiLimiter);
 
 // Routes
@@ -77,13 +97,27 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'healthy',
     mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV
   });
 });
 
-// Error handler
-app.use(errorHandler);
+// Error handling based on environment
+app.use((err, req, res, next) => {
+  logger.error(err);
+  
+  if (isDevelopment) {
+    res.status(err.status || 500).json({
+      error: err.message,
+      stack: err.stack
+    });
+  } else {
+    res.status(err.status || 500).json({
+      error: 'Internal Server Error'
+    });
+  }
+});
 
 app.listen(PORT, '0.0.0.0', () => {
-  logger.info(`Server running on port ${PORT}`);
+  logger.info(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
 });
