@@ -33,19 +33,33 @@ const connectDB = async () => {
 
 connectDB();
 
-// CORS configuration with proper options
-app.use(cors({
+// Updated CORS configuration with proper options
+const corsOptions = {
   origin: ['https://notwins.netlify.app', 'http://localhost:5173'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['set-cookie']
-}));
+  exposedHeaders: ['Content-Length', 'X-Requested-With']
+};
 
-// Security middleware with adjusted settings
+app.use(cors(corsOptions));
+
+// Updated security middleware with adjusted settings
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
-  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      connectSrc: ["'self'", "https://notwins.netlify.app", "http://localhost:5173"],
+      imgSrc: ["'self'", "*", "data:", "blob:"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      fontSrc: ["'self'", "data:", "https:"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: []
+    }
+  }
 }));
 
 app.use(express.json());
