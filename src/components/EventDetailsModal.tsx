@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import type { FC } from 'react';
+import { useState, useEffect } from 'react';
 import { Event, Dress } from '../types';
 import { PlusCircle, X, Users, Grid, BarChart, Lock, Eye } from 'lucide-react';
 import { DressCard } from './DressCard';
@@ -14,7 +15,7 @@ interface EventDetailsModalProps {
   onDressAdded: (dress: Dress) => void;
 }
 
-export function EventDetailsModal({ event, onClose, onDressAdded }: EventDetailsModalProps) {
+export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, onDressAdded }) => {
   const [showScrapingModal, setShowScrapingModal] = useState(false);
   const [activeView, setActiveView] = useState<'grid' | 'trends'>('grid');
   const [dresses, setDresses] = useState<Dress[]>([]);
@@ -199,4 +200,4 @@ export function EventDetailsModal({ event, onClose, onDressAdded }: EventDetails
       )}
     </div>
   );
-}
+};

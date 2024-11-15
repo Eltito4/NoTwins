@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import type { FC } from 'react';
+import { useMemo } from 'react';
 import { Dress } from '../types';
 import {
   Chart as ChartJS,
@@ -56,13 +57,12 @@ const COLOR_MAP: Record<string, string> = {
   'pastel green': '#98FB98'
 };
 
-function getColorForName(colorName: string): string {
+const getColorForName = (colorName: string): string => {
   const normalizedColor = colorName.toLowerCase();
   return COLOR_MAP[normalizedColor] || '#' + Math.floor(Math.random()*16777215).toString(16);
-}
+};
 
-export function EventTrends({ dresses }: EventTrendsProps) {
-  // Memoize the processed data to maintain color consistency
+export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
   const { colorData, brandData, typeData } = useMemo(() => {
     const colors: Record<string, number> = {};
     const brands: Record<string, number> = {};
@@ -208,4 +208,4 @@ export function EventTrends({ dresses }: EventTrendsProps) {
       )}
     </div>
   );
-}
+};

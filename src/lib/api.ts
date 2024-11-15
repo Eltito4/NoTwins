@@ -1,9 +1,7 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const API_URL = import.meta.env.MODE === 'production' 
-  ? 'https://notwins.onrender.com/api'
-  : 'http://localhost:3001/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -28,14 +26,6 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
-
-    // Retry the request if it failed due to network issues
-    if (error.message === 'Network Error' && !originalRequest._retry) {
-      originalRequest._retry = true;
-      return api(originalRequest);
-    }
-
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');

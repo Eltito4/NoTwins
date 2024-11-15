@@ -1,4 +1,4 @@
-import React from 'react';
+import type { FC } from 'react';
 import { Dress } from '../types';
 import { AlertTriangle, CheckCircle } from 'lucide-react';
 
@@ -7,7 +7,7 @@ interface DressComparisonProps {
   selectedDress: Dress;
 }
 
-export function DressComparison({ dresses, selectedDress }: DressComparisonProps) {
+export const DressComparison: FC<DressComparisonProps> = ({ dresses, selectedDress }) => {
   const conflicts = dresses.filter(dress => 
     dress.id !== selectedDress.id && (
       dress.color?.toLowerCase() === selectedDress.color?.toLowerCase() ||
@@ -61,4 +61,4 @@ export function DressComparison({ dresses, selectedDress }: DressComparisonProps
       )}
     </div>
   );
-}
+};

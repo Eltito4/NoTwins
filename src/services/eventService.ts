@@ -1,41 +1,7 @@
 import axios from 'axios';
 import { Event, Dress } from '../types';
 import toast from 'react-hot-toast';
-
-const api = axios.create({
-  baseURL: '/api',
-  headers: {
-    'Content-Type': 'application/json'
-  }
-});
-
-// Add retry logic and token handling
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 429) {
-      const retryAfter = error.response.headers['retry-after'] || 60;
-      toast.error(`Too many requests. Please wait ${retryAfter} seconds and try again.`);
-      return Promise.reject(error);
-    }
-
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/';
-    }
-
-    return Promise.reject(error);
-  }
-);
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+import api from '../lib/api';
 
 const handleError = (error: unknown, customMessage: string) => {
   console.error(`${customMessage}:`, error);
@@ -48,7 +14,7 @@ const handleError = (error: unknown, customMessage: string) => {
   throw error;
 };
 
-export async function createEvent(event: Omit<Event, 'id' | 'dresses'>): Promise<Event> {
+export async function createEvent(event: Omit<Event, 'id' | 'shareId' | 'dresses'>): Promise<Event> {
   try {
     const response = await api.post('/events', {
       name: event.name,
@@ -56,12 +22,11 @@ export async function createEvent(event: Omit<Event, 'id' | 'dresses'>): Promise
       location: event.location,
       description: event.description || '',
       creatorId: event.creatorId,
-      participants: event.participants,
-      shareId: Math.random().toString(36).substring(2, 8).toUpperCase()
+      participants: event.participants
     });
     
     toast.success('Event created successfully');
-    return { ...response.data, dresses: [] };
+    return response.data;
   } catch (error) {
     handleError(error, 'Failed to create event');
     return Promise.reject(error);
@@ -71,10 +36,7 @@ export async function createEvent(event: Omit<Event, 'id' | 'dresses'>): Promise
 export async function getEventsByUser(userId: string): Promise<Event[]> {
   try {
     const response = await api.get('/events');
-    return response.data.map((event: any) => ({
-      ...event,
-      dresses: event.dresses || []
-    }));
+    return response.data;
   } catch (error) {
     handleError(error, 'Failed to load events');
     return Promise.reject(error);
