@@ -10,3 +10,4 @@
 
 [build.environment]
   VITE_API_URL = "https://notwins.onrender.com/api"
+  NODE_ENV = "production"

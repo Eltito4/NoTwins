@@ -1,14 +1,8 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const isDevelopment = import.meta.env.MODE === 'development';
-const API_URL = isDevelopment 
-  ? 'http://localhost:3001/api'
-  : 'https://notwins.onrender.com/api';
-
-if (!API_URL) {
-  console.error('API_URL is not configured');
-}
+// API URL configuration
+const API_URL = 'https://notwins.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -29,7 +23,7 @@ api.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
-// Response interceptor with environment-specific error handling
+// Response interceptor
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -47,17 +41,6 @@ api.interceptors.response.use(
     } else if (!error.response) {
       toast.error('Network error. Please check your connection.');
     }
-
-    // Log detailed errors in development
-    if (isDevelopment) {
-      console.error('API Error:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        config: error.config,
-        message: error.message
-      });
-    }
-
     return Promise.reject(error);
   }
 );
