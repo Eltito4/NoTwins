@@ -13,7 +13,7 @@ const api = axios.create({
   withCredentials: true
 });
 
-// Request interceptor
+// Request interceptor with retry logic
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -24,12 +24,18 @@ api.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
-// Response interceptor
+// Response interceptor with enhanced error handling
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    console.error('API Error:', error);
-    
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Retry the request if it failed due to network issues
+    if (error.message === 'Network Error' && !originalRequest._retry) {
+      originalRequest._retry = true;
+      return api(originalRequest);
+    }
+
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
