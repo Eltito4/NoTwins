@@ -34,13 +34,15 @@ const connectDB = async () => {
 connectDB();
 
 // CORS configuration with proper options
-app.use(cors({
+const corsOptions = {
   origin: ['https://notwins.netlify.app', 'http://localhost:5173'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['set-cookie']
-}));
+};
+
+app.use(cors(corsOptions));
 
 // Security middleware with adjusted settings
 app.use(helmet({

@@ -11,7 +11,7 @@ const api = axios.create({
   withCredentials: true
 });
 
-// Request interceptor with retry logic
+// Request interceptor
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -22,7 +22,7 @@ api.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
-// Response interceptor with enhanced error handling
+// Response interceptor
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
