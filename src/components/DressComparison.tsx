@@ -10,8 +10,8 @@ interface DressComparisonProps {
 export function DressComparison({ dresses, selectedDress }: DressComparisonProps) {
   const conflicts = dresses.filter(dress => 
     dress.id !== selectedDress.id && (
-      dress.color.toLowerCase() === selectedDress.color.toLowerCase() ||
-      dress.style.toLowerCase() === selectedDress.style.toLowerCase()
+      dress.color?.toLowerCase() === selectedDress.color?.toLowerCase() ||
+      dress.type?.toLowerCase() === selectedDress.type?.toLowerCase()
     )
   );
 
@@ -33,19 +33,21 @@ export function DressComparison({ dresses, selectedDress }: DressComparisonProps
               <div key={dress.id} className="flex items-start gap-4 p-4 bg-red-50 rounded-lg">
                 <img
                   src={dress.imageUrl}
-                  alt={dress.description}
+                  alt={dress.description || dress.name}
                   className="w-20 h-20 object-cover rounded-lg"
                 />
                 <div>
-                  <p className="font-medium">{dress.style}</p>
-                  <p className="text-sm text-gray-600">{dress.description}</p>
-                  <div className="flex items-center mt-2 gap-2">
-                    <div
-                      className="w-4 h-4 rounded-full border-2"
-                      style={{ backgroundColor: dress.color }}
-                    />
-                    <span className="text-sm text-gray-500 capitalize">{dress.color}</span>
-                  </div>
+                  <p className="font-medium">{dress.type || 'Dress'}</p>
+                  <p className="text-sm text-gray-600">{dress.description || dress.name}</p>
+                  {dress.color && (
+                    <div className="flex items-center mt-2 gap-2">
+                      <div
+                        className="w-4 h-4 rounded-full border-2"
+                        style={{ backgroundColor: dress.color }}
+                      />
+                      <span className="text-sm text-gray-500 capitalize">{dress.color}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

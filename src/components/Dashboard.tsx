@@ -200,6 +200,14 @@ export function Dashboard() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
@@ -237,9 +245,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      {loading ? (
-        <div className="text-center text-gray-600 mt-12">Loading events...</div>
-      ) : events.length === 0 ? (
+      {events.length === 0 ? (
         <div className="text-center text-gray-600 mt-12">
           <p className="mb-4">No events yet.</p>
           <div className="flex justify-center gap-4">
