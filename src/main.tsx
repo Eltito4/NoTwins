@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from 'react-hot-toast';
@@ -9,10 +9,10 @@ const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Root element not found');
 
 createRoot(rootElement).render(
-  <StrictMode>
+  <React.StrictMode>
     <AuthProvider>
       <App />
       <Toaster position="bottom-right" />
     </AuthProvider>
-  </StrictMode>
+  </React.StrictMode>
 );

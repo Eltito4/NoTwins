@@ -1,7 +1,7 @@
 export interface User {
   id: string;
-  name: string;
   email: string;
+  name: string;
 }
 
 export interface Dress {
@@ -27,7 +27,7 @@ export interface DuplicateInfo {
     userName: string;
     color?: string;
   }>;
-  type: 'exact' | 'partial'; // exact = same name & color, partial = same name only
+  type: 'exact' | 'partial';
 }
 
 export interface Event {
@@ -40,6 +40,5 @@ export interface Event {
   creatorId: string;
   participants: string[];
   dresses: Dress[];
-  duplicates?: DuplicateInfo[];
   createdAt?: Date;
 }

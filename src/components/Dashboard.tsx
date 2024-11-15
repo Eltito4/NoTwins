@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { LogOut, PlusCircle, UserPlus, User } from 'lucide-react';
 import { CreateEventModal } from './CreateEventModal';
 import { EventCard } from './EventCard';
 import { EventDetailsModal } from './EventDetailsModal';
 import { JoinEventModal } from './JoinEventModal';
-import { Event, Dress, DuplicateInfo } from '../types';
+import type { Event, Dress, DuplicateInfo } from '../types';
 import { createEvent, getEventsByUser, joinEvent, deleteEvent, getEventDresses } from '../services/eventService';
 import toast from 'react-hot-toast';
 
-export function Dashboard() {
+export const Dashboard: FC = () => {
   const { currentUser, signOut } = useAuth();
   const [showCreateEvent, setShowCreateEvent] = useState(false);
   const [showJoinEvent, setShowJoinEvent] = useState(false);
@@ -45,7 +46,7 @@ export function Dashboard() {
       }, {} as Record<string, Dress[]>);
 
       // Check for duplicates
-      for (const [name, items] of Object.entries(dressesByName)) {
+      for (const [, items] of Object.entries(dressesByName)) {
         if (items.length > 1) {
           // Group by color
           const itemsByColor = items.reduce((acc, item) => {
@@ -58,14 +59,14 @@ export function Dashboard() {
           }, {} as Record<string, Dress[]>);
 
           // Check for exact duplicates (same color)
-          for (const [color, colorItems] of Object.entries(itemsByColor)) {
+          for (const [, colorItems] of Object.entries(itemsByColor)) {
             if (colorItems.length > 1) {
               duplicates.push({
                 name: items[0].name,
                 items: colorItems.map(item => ({
                   id: item.id,
                   userId: item.userId,
-                  userName: 'Loading...', // Will be updated with real names
+                  userName: 'Loading...',
                   color: item.color
                 })),
                 type: 'exact'
@@ -80,7 +81,7 @@ export function Dashboard() {
               items: items.map(item => ({
                 id: item.id,
                 userId: item.userId,
-                userName: 'Loading...', // Will be updated with real names
+                userName: 'Loading...',
                 color: item.color
               })),
               type: 'partial'
@@ -122,9 +123,11 @@ export function Dashboard() {
   };
 
   const loadEvents = async () => {
+    if (!currentUser?.id) return;
+    
     try {
       setLoading(true);
-      const userEvents = await getEventsByUser(currentUser!.id);
+      const userEvents = await getEventsByUser(currentUser.id);
       setEvents(userEvents);
     } catch (error) {
       console.error('Error loading events:', error);
@@ -140,11 +143,13 @@ export function Dashboard() {
     location: string;
     description: string;
   }) => {
+    if (!currentUser?.id) return;
+
     try {
       const newEvent = await createEvent({
         ...data,
-        creatorId: currentUser!.id,
-        participants: [currentUser!.id],
+        creatorId: currentUser.id,
+        participants: [currentUser.id],
         dresses: []
       });
       
@@ -301,4 +306,4 @@ export function Dashboard() {
       )}
     </div>
   );
-}
+};
