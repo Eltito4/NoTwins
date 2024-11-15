@@ -16,7 +16,15 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-hot-toast', 'axios'],
+          charts: ['chart.js', 'react-chartjs-2']
+        }
+      }
+    }
   },
   define: {
     'process.env': {}
