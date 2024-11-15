@@ -2,10 +2,12 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const isDevelopment = import.meta.env.MODE === 'development';
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = isDevelopment 
+  ? 'http://localhost:3001/api'
+  : 'https://notwins.onrender.com/api';
 
 if (!API_URL) {
-  console.error('VITE_API_URL environment variable is not set');
+  console.error('API_URL is not configured');
 }
 
 const api = axios.create({

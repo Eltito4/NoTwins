@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import mongoose from 'mongoose';
 import { config } from 'dotenv';
-import { logger } from './utils/logger.js';
+import winston from 'winston';
 import { errorHandler } from './middleware/errorHandler.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 import authRouter from './routes/auth.js';
@@ -19,7 +19,20 @@ const PORT = process.env.PORT || 3001;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'https://notwins.netlify.app';
 const isDevelopment = process.env.NODE_ENV === 'development';
 
-// Configure logger based on environment
+// Configure logger
+const logger = winston.createLogger({
+  level: isDevelopment ? 'debug' : 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'combined.log' })
+  ]
+});
+
+// Add console transport based on environment
 if (isDevelopment) {
   logger.add(new winston.transports.Console({
     format: winston.format.simple(),
@@ -97,8 +110,8 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'healthy',
     mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString()
   });
 });
 
