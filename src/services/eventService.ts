@@ -32,7 +32,7 @@ export async function createEvent(event: Omit<Event, 'id' | 'shareId' | 'dresses
   }
 }
 
-export async function getEventsByUser(userId: string): Promise<Event[]> {
+export async function getEventsByUser(id: string): Promise<Event[]> {
   try {
     const response = await api.get('/events');
     return response.data;
