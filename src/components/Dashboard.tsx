@@ -127,7 +127,7 @@ export const Dashboard: FC = () => {
     
     try {
       setLoading(true);
-      const userEvents = await getEventsByUser(currentUser.id);
+      const userEvents = await getEventsByUser();
       setEvents(userEvents);
     } catch (error) {
       console.error('Error loading events:', error);
