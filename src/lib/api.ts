@@ -6,9 +6,10 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 const api = axios.create({
   baseURL: API_URL,
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
   },
-  withCredentials: true
+  withCredentials: false // Changed to false since we're using JWT
 });
 
 // Request interceptor
@@ -26,6 +27,8 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    console.error('API Error:', error.response?.data || error.message);
+    
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');

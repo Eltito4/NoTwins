@@ -33,13 +33,11 @@ const logger = winston.createLogger({
 
 if (isDevelopment) {
   logger.add(new winston.transports.Console({
-    format: winston.format.simple(),
-    level: 'debug'
+    format: winston.format.simple()
   }));
 } else {
   logger.add(new winston.transports.Console({
-    format: winston.format.json(),
-    level: 'info'
+    format: winston.format.json()
   }));
 }
 
@@ -63,10 +61,10 @@ connectDB();
 const corsOptions = {
   origin: isDevelopment 
     ? ['http://localhost:5173', 'https://notwins.netlify.app']
-    : 'https://notwins.netlify.app',
-  credentials: true,
+    : ['https://notwins.netlify.app'],
+  credentials: false, // Changed to false since we're using JWT
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   exposedHeaders: ['Content-Length', 'X-Requested-With']
 };
 
@@ -91,6 +89,9 @@ app.use(helmet({
     }
   }
 }));
+
+// Pre-flight requests
+app.options('*', cors(corsOptions));
 
 // Middleware
 app.use(express.json());

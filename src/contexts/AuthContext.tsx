@@ -1,12 +1,8 @@
 import React, { createContext, useContext, useState } from 'react';
-import axios from 'axios';
+import { User } from '../types';
+import api from '../lib/api';
 import toast from 'react-hot-toast';
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-}
+import axios from 'axios';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -18,16 +14,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// Create axios instance with default config
-const api = axios.create({
-  baseURL: '/api',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  withCredentials: true
-});
-
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem('user');
@@ -41,6 +28,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const handleAuthError = (error: unknown) => {
     if (axios.isAxiosError(error)) {
+      console.error('Auth Error:', error.response?.data || error.message);
       const message = error.response?.data?.error || 
                      error.message || 
                      'Authentication failed';
