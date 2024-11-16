@@ -1,6 +1,7 @@
 import { URL } from 'url';
 
 const ALLOWED_PROTOCOLS = ['http:', 'https:'];
+
 const BLOCKED_DOMAINS = [
   'localhost',
   '127.0.0.1',
@@ -38,14 +39,6 @@ const SUPPORTED_DOMAINS = [
 
 export function validateUrl(url) {
   try {
-    // Handle special URL formats
-    if (url.includes('/p-ready-to-wear/')) {
-      const skuMatch = url.match(/\?sku=(\d+)/);
-      if (!skuMatch) {
-        throw new Error('Invalid product URL format');
-      }
-    }
-
     // Add protocol if missing
     if (!url.startsWith('http')) {
       url = 'https://' + url;
@@ -55,12 +48,12 @@ export function validateUrl(url) {
 
     // Check protocol
     if (!ALLOWED_PROTOCOLS.includes(parsedUrl.protocol)) {
-      throw new Error('Invalid protocol');
+      throw new Error('Invalid protocol. Only HTTP and HTTPS are supported.');
     }
 
     // Check for blocked domains
     if (BLOCKED_DOMAINS.some(domain => parsedUrl.hostname.includes(domain))) {
-      throw new Error('Domain not allowed');
+      throw new Error('This domain is not allowed.');
     }
 
     // Verify supported domains
@@ -69,7 +62,7 @@ export function validateUrl(url) {
     );
 
     if (!isSupported) {
-      throw new Error('Domain not supported. Please use a supported retailer.');
+      throw new Error('This retailer is not supported. Please use one of our supported stores.');
     }
 
     // Clean up URL
