@@ -16,7 +16,6 @@ config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const CORS_ORIGIN = process.env.CORS_ORIGIN || 'https://notwins.netlify.app';
 const isDevelopment = process.env.NODE_ENV === 'development';
 
 // Configure logger
@@ -32,7 +31,6 @@ const logger = winston.createLogger({
   ]
 });
 
-// Add console transport based on environment
 if (isDevelopment) {
   logger.add(new winston.transports.Console({
     format: winston.format.simple(),
@@ -61,11 +59,11 @@ const connectDB = async () => {
 
 connectDB();
 
-// CORS configuration based on environment
+// CORS configuration
 const corsOptions = {
   origin: isDevelopment 
-    ? ['http://localhost:5173', CORS_ORIGIN]
-    : CORS_ORIGIN,
+    ? ['http://localhost:5173', 'https://notwins.netlify.app']
+    : 'https://notwins.netlify.app',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -74,7 +72,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Security middleware with environment-specific settings
+// Security middleware
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
@@ -82,8 +80,8 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       connectSrc: isDevelopment 
-        ? ["'self'", CORS_ORIGIN, "http://localhost:5173"]
-        : ["'self'", CORS_ORIGIN],
+        ? ["'self'", "https://notwins.netlify.app", "http://localhost:5173"]
+        : ["'self'", "https://notwins.netlify.app"],
       imgSrc: ["'self'", "*", "data:", "blob:"],
       scriptSrc: ["'self'", "'unsafe-inline'", ...(isDevelopment ? ["'unsafe-eval'"] : [])],
       styleSrc: ["'self'", "'unsafe-inline'"],
@@ -115,7 +113,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Error handling based on environment
+// Error handling
 app.use((err, req, res, next) => {
   logger.error(err);
   
