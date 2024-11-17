@@ -4,12 +4,25 @@ import toast from 'react-hot-toast';
 export async function scrapeDressDetails(url: string) {
   try {
     const { data } = await api.post('/scraping/scrape', { url });
-    return data;
+    
+    if (!data.name || !data.imageUrl) {
+      throw new Error('Invalid product data received');
+    }
+    
+    return {
+      name: data.name,
+      imageUrl: data.imageUrl,
+      color: data.color || '',
+      style: data.brand || '',
+      description: `${data.name} - ${data.color || 'Unknown color'}`
+    };
   } catch (error: any) {
-    console.error('Error fetching dress details:', error.response?.data || error.message);
     const errorMessage = error.response?.data?.error || 
                         error.response?.data?.details ||
-                        'Failed to fetch product details. Please check the URL and try again.';
+                        error.message ||
+                        'Failed to fetch product details';
+                        
+    console.error('Error fetching dress details:', errorMessage);
     toast.error(errorMessage);
     throw new Error(errorMessage);
   }
