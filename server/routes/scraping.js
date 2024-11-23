@@ -20,7 +20,11 @@ async function fetchWithRetry(url, config, retries = 0) {
       ...config,
       timeout: TIMEOUT,
       maxRedirects: 5,
-      validateStatus: (status) => status === 200
+      validateStatus: (status) => status === 200,
+      headers: {
+        ...config.headers,
+        'Cookie': '_abck=; bm_sz=; ak_bmsc=;'
+      }
     });
     return response;
   } catch (error) {
@@ -28,7 +32,8 @@ async function fetchWithRetry(url, config, retries = 0) {
       url,
       error: error.message,
       attempt: retries + 1,
-      status: error.response?.status
+      status: error.response?.status,
+      timestamp: new Date().toISOString()
     });
 
     if (retries < MAX_RETRIES) {
@@ -53,10 +58,15 @@ async function scrapeProductDetails(url) {
       throw new Error('This retailer is not supported. Please try a different store.');
     }
 
+    // Transform URL if needed
+    const transformedUrl = retailerConfig.transformUrl ? 
+      retailerConfig.transformUrl(validatedUrl) : 
+      validatedUrl;
+
     const headers = getRetailerHeaders(retailerConfig);
 
     // Fetch page content with retry mechanism
-    const response = await fetchWithRetry(validatedUrl, { 
+    const response = await fetchWithRetry(transformedUrl, { 
       headers,
       timeout: TIMEOUT
     });
@@ -66,7 +76,7 @@ async function scrapeProductDetails(url) {
     }
 
     const $ = load(response.data);
-    const details = await extractProductDetails($, validatedUrl, retailerConfig);
+    const details = await extractProductDetails($, transformedUrl, retailerConfig);
     
     if (!details.name) {
       throw new Error('Could not find product name');
@@ -87,7 +97,8 @@ async function scrapeProductDetails(url) {
     logger.error('Scraping error:', {
       url,
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
+      timestamp: new Date().toISOString()
     });
 
     if (error.code === 'ECONNREFUSED') {
@@ -103,7 +114,7 @@ async function scrapeProductDetails(url) {
       throw new Error('Product not found. Please check the URL.');
     }
 
-    throw new Error(error.message || 'Failed to fetch product details. Please check the URL and try again.');
+    throw error;
   }
 }
 
@@ -124,7 +135,8 @@ router.post('/scrape', async (req, res) => {
     logger.error('Scraping endpoint error:', {
       url,
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
+      timestamp: new Date().toISOString()
     });
 
     res.status(400).json({

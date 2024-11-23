@@ -1,5 +1,3 @@
-import { URL } from 'url';
-
 const ALLOWED_PROTOCOLS = ['http:', 'https:'];
 
 const BLOCKED_DOMAINS = [
@@ -9,11 +7,11 @@ const BLOCKED_DOMAINS = [
 ];
 
 const SUPPORTED_DOMAINS = [
-  'zara.com',
-  'mango.com',
-  'elcorteingles.es',
-  'pronovias.com',
+  'ladypipa.com',
   'hm.com',
+  'www2.hm.com',
+  'cos.com',
+  'zara.com',
   'massimodutti.com',
   'bershka.com',
   'stradivarius.com',
@@ -25,9 +23,7 @@ const SUPPORTED_DOMAINS = [
   'hossintropia.com',
   'bimbaylola.com',
   'carolinaherrera.com',
-  'cos.com',
   'hugoboss.com',
-  'ladypipa.com',
   'violetabymango.com',
   'tedbaker.com',
   'farfetch.com',
@@ -57,8 +53,9 @@ export function validateUrl(url) {
     }
 
     // Verify supported domains
+    const hostname = parsedUrl.hostname.toLowerCase().replace(/^www\d*\./, '');
     const isSupported = SUPPORTED_DOMAINS.some(domain => 
-      parsedUrl.hostname.includes(domain)
+      hostname === domain || hostname.endsWith('.' + domain)
     );
 
     if (!isSupported) {
