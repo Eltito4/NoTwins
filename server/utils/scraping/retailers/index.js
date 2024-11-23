@@ -6,7 +6,7 @@ const retailers = {
   'ladypipa.com': {
     name: 'Lady Pipa',
     selectors: {
-      name: ['.product-title', '.product-single__title', '.product__title'],
+      name: ['.product-title', '.product-single__title', '.product__title', 'h1.product-title'],
       price: ['.price', '.product-single__price', '.price__regular'],
       color: ['.variant-input-wrap[data-option="Color"] .active', '.swatch-element.active'],
       brand: { defaultValue: 'Lady Pipa' },
