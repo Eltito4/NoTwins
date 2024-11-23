@@ -57,12 +57,15 @@ const connectDB = async () => {
 
 connectDB();
 
+// Trust proxy for rate limiting behind reverse proxy
+app.set('trust proxy', 1);
+
 // CORS configuration
 const corsOptions = {
   origin: isDevelopment 
     ? ['http://localhost:5173', 'https://notwins.netlify.app']
     : ['https://notwins.netlify.app'],
-  credentials: false, // Changed to false since we're using JWT
+  credentials: false,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   exposedHeaders: ['Content-Length', 'X-Requested-With']
@@ -115,20 +118,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Error handling
-app.use((err, req, res, next) => {
-  logger.error(err);
-  
-  if (isDevelopment) {
-    res.status(err.status || 500).json({
-      error: err.message,
-      stack: err.stack
-    });
-  } else {
-    res.status(err.status || 500).json({
-      error: 'Internal Server Error'
-    });
-  }
-});
+app.use(errorHandler);
 
 app.listen(PORT, '0.0.0.0', () => {
   logger.info(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);

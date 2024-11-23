@@ -4,7 +4,6 @@ import { logger } from '../utils/logger.js';
 export const apiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 100, // Limit each IP to 100 requests per minute
-  message: { error: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
@@ -13,6 +12,9 @@ export const apiLimiter = rateLimit({
       error: 'Too many requests, please try again later.',
       retryAfter: Math.ceil(req.rateLimit.resetTime / 1000)
     });
+  },
+  keyGenerator: (req) => {
+    return req.ip; // Use IP address for rate limiting
   }
 });
 
@@ -20,7 +22,9 @@ export const apiLimiter = rateLimit({
 export const eventLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 300,
-  message: { error: 'Too many requests, please try again later.' },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    return req.ip;
+  }
 });
