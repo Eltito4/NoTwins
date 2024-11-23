@@ -1,209 +1,125 @@
-import axios from 'axios';
-import { getRetailerConfig, transformImageUrl, getRetailerHeaders } from './retailers/index.js';
+import { getRetailerConfig, getRetailerHeaders } from './retailers/index.js';
 
-const VALID_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif'];
-const MAX_REDIRECTS = 5;
-const TIMEOUT = 10000;
+export function findBestImage($, url) {
+  const getImageUrl = (element) => {
+    const src = element.attr('content') || 
+                element.attr('src') || 
+                element.attr('data-src') || 
+                element.attr('data-zoom-image') || 
+                element.attr('data-image') ||
+                element.attr('data-lazy-src');
+    return src ? makeAbsoluteUrl(src, url) : null;
+  };
 
-const CDN_DOMAINS = [
-  // Luxury brands
-  'media.louisvuitton.com',
-  'assets.burberry.com',
-  'images.ralphlauren.com',
-  'images.coach.com',
-  'assets.hermes.com',
-  'media.gucci.com',
-  'assets.prada.com',
-  'images.chanel.com',
+  // Get retailer config
+  const retailerConfig = getRetailerConfig(url);
   
-  // Spanish retailers
-  'static.zara.net',
-  'static.massimodutti.net',
-  'static.bershka.net',
-  'static.pullandbear.net',
-  'static.e-stradivarius.net',
-  'images.elcorteingles.es',
-  'assets.pronovias.com',
-  'images.cortefiel.com',
-  'static.sfera.com',
-  'images.bimbaylola.com',
-  
-  // Common CDNs
-  'cloudinary.com',
-  'cloudfront.net',
-  'amazonaws.com',
-  'akamaized.net',
-  'imgix.net',
-  'cdn.shopify.com',
-  'images.unsplash.com',
-  'images.asos-media.com',
-  'cdn-images.farfetch-contents.com',
-  'images.selfridges.com'
-];
-
-async function isImageAccessible(url, retailerConfig) {
-  const headers = getRetailerHeaders(retailerConfig);
-  
-  try {
-    const response = await axios.head(url, {
-      timeout: TIMEOUT,
-      maxRedirects: MAX_REDIRECTS,
-      validateStatus: status => status === 200,
-      headers: {
-        ...headers,
-        'Accept': 'image/*'
-      }
-    });
-    
-    const contentType = response.headers['content-type'];
-    return contentType && contentType.startsWith('image/');
-  } catch {
+  // Try to get image from JSON-LD
+  const jsonLdScripts = $('script[type="application/ld+json"]');
+  for (let i = 0; i < jsonLdScripts.length; i++) {
     try {
-      const response = await axios.get(url, {
-        timeout: TIMEOUT,
-        maxRedirects: MAX_REDIRECTS,
-        responseType: 'arraybuffer',
-        headers: {
-          ...headers,
-          'Accept': 'image/*'
-        }
-      });
-      
-      const contentType = response.headers['content-type'];
-      return contentType && contentType.startsWith('image/');
-    } catch {
-      return false;
-    }
-  }
-}
-
-function hasValidExtension(url) {
-  try {
-    const parsedUrl = new URL(url);
-    const path = parsedUrl.pathname.toLowerCase();
-    return VALID_IMAGE_EXTENSIONS.some(ext => path.endsWith(ext));
-  } catch {
-    return false;
-  }
-}
-
-function isDataUrl(url) {
-  return url.startsWith('data:image/');
-}
-
-function isCDNUrl(url) {
-  try {
-    const hostname = new URL(url).hostname;
-    return CDN_DOMAINS.some(domain => hostname.includes(domain));
-  } catch {
-    return false;
-  }
-}
-
-export async function validateAndProcessImage(imageUrl, baseUrl) {
-  if (!imageUrl) return null;
-  
-  if (isDataUrl(imageUrl)) {
-    return imageUrl;
-  }
-  
-  let absoluteUrl = imageUrl;
-  if (!imageUrl.startsWith('http')) {
-    try {
-      const urlObj = new URL(baseUrl);
-      absoluteUrl = new URL(imageUrl, urlObj.origin).toString();
-    } catch {
-      return null;
-    }
-  }
-  
-  const retailerConfig = getRetailerConfig(baseUrl);
-  if (retailerConfig) {
-    absoluteUrl = transformImageUrl(absoluteUrl, retailerConfig);
-  }
-  
-  absoluteUrl = absoluteUrl.replace(/^http:/, 'https:');
-  
-  if (!hasValidExtension(absoluteUrl) && !isCDNUrl(absoluteUrl)) {
-    return null;
-  }
-  
-  if (await isImageAccessible(absoluteUrl, retailerConfig)) {
-    return absoluteUrl;
-  }
-  
-  return null;
-}
-
-export async function findBestImage($, baseUrl) {
-  const images = [];
-  const retailerConfig = getRetailerConfig(baseUrl);
-  const selectors = retailerConfig?.selectors?.image || [];
-  
-  // Try JSON-LD first
-  $('script[type="application/ld+json"]').each((_, element) => {
-    try {
-      const data = JSON.parse($(element).html());
-      if (Array.isArray(data)) {
-        const product = data.find(item => item['@type'] === 'Product');
-        if (product?.image) {
-          const imageUrl = Array.isArray(product.image) ? product.image[0] : product.image;
-          images.push({
-            url: imageUrl,
-            priority: 20
-          });
+      const data = JSON.parse($(jsonLdScripts[i]).html());
+      if (data['@type'] === 'Product' && data.image) {
+        const image = Array.isArray(data.image) ? data.image[0] : data.image;
+        if (image) {
+          const imageUrl = makeAbsoluteUrl(image, url);
+          if (imageUrl) return imageUrl;
         }
       }
     } catch (e) {
-      // Ignore parsing errors
+      continue;
     }
-  });
-  
-  // Try meta tags
-  $('meta[property="og:image"], meta[property="og:image:secure_url"]').each((_, element) => {
-    const content = $(element).attr('content');
-    if (content) {
-      images.push({
-        url: content,
-        priority: 15
-      });
+  }
+
+  // Try meta tags (usually highest quality)
+  const metaSelectors = [
+    'meta[property="og:image"]',
+    'meta[property="og:image:secure_url"]',
+    'meta[property="product:image"]',
+    'meta[name="twitter:image"]',
+    'meta[name="twitter:image:src"]'
+  ];
+
+  for (const selector of metaSelectors) {
+    const element = $(selector).first();
+    if (element.length) {
+      const imageUrl = getImageUrl(element);
+      if (imageUrl) return imageUrl;
     }
-  });
-  
+  }
+
   // Try retailer-specific selectors
-  for (const selector of selectors) {
-    const elements = $(selector);
-    elements.each((_, element) => {
-      const $element = $(element);
-      
-      const urls = [
-        $element.attr('src'),
-        $element.attr('data-src'),
-        $element.attr('data-zoom-image'),
-        $element.attr('data-image'),
-        $element.attr('data-original'),
-        $element.attr('data-srcset')?.split(',').pop()?.split(' ')[0],
-        $element.attr('srcset')?.split(',').pop()?.split(' ')[0]
-      ].filter(Boolean);
-      
-      urls.forEach(url => {
-        images.push({
-          url,
-          priority: 10
-        });
-      });
-    });
-  }
-  
-  // Sort by priority and try each image
-  const sortedImages = images.sort((a, b) => b.priority - a.priority);
-  
-  for (const image of sortedImages) {
-    const validUrl = await validateAndProcessImage(image.url, baseUrl);
-    if (validUrl) {
-      return validUrl;
+  if (retailerConfig?.selectors?.image) {
+    for (const selector of retailerConfig.selectors.image) {
+      const element = $(selector).first();
+      if (element.length) {
+        const imageUrl = getImageUrl(element);
+        if (imageUrl) return imageUrl;
+      }
     }
   }
-  
+
+  // Try product-specific image selectors
+  const productSelectors = [
+    '#product-image img',
+    '.product-image img',
+    '.main-image img',
+    '.primary-image img',
+    '[data-testid="product-image"]',
+    '.gallery-image img:first',
+    '.product-gallery img:first',
+    '.product-photo img',
+    '.featured-image img',
+    '.product-media img:first',
+    '.pdp-image img',
+    '.product-hero-image img',
+    '.product-main-image img',
+    '[data-component="PDPMainImage"] img'
+  ];
+
+  for (const selector of productSelectors) {
+    const element = $(selector).first();
+    if (element.length) {
+      const imageUrl = getImageUrl(element);
+      if (imageUrl) return imageUrl;
+    }
+  }
+
+  // Last resort: find any large image
+  const images = $('img').filter((_, img) => {
+    const width = parseInt($(img).attr('width'), 10);
+    const height = parseInt($(img).attr('height'), 10);
+    const src = $(img).attr('src') || '';
+    return (width > 300 || height > 300) && !src.includes('logo') && !src.includes('icon');
+  });
+
+  if (images.length) {
+    const imageUrl = getImageUrl(images.first());
+    if (imageUrl) return imageUrl;
+  }
+
   return null;
+}
+
+function makeAbsoluteUrl(imageUrl, baseUrl) {
+  if (!imageUrl) return null;
+  if (imageUrl.startsWith('data:')) return imageUrl;
+  
+  try {
+    // Handle protocol-relative URLs
+    if (imageUrl.startsWith('//')) {
+      return `https:${imageUrl}`;
+    }
+    
+    // Make relative URLs absolute
+    if (!imageUrl.startsWith('http')) {
+      const urlObj = new URL(baseUrl);
+      return new URL(imageUrl, urlObj.origin).toString();
+    }
+    
+    // Ensure HTTPS
+    return imageUrl.replace(/^http:/, 'https:');
+  } catch (e) {
+    return null;
+  }
 }

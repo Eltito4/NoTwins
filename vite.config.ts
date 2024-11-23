@@ -24,6 +24,9 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
     rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html')
+      },
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-hot-toast', 'axios'],
@@ -31,8 +34,5 @@ export default defineConfig({
         }
       }
     }
-  },
-  define: {
-    __API_URL__: JSON.stringify(process.env.VITE_API_URL || 'https://notwins.onrender.com/api')
   }
 });
