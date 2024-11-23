@@ -76,27 +76,39 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
   const { colorData, brandData, typeData } = useMemo(() => {
     const colors: Record<string, number> = {};
     const brands: Record<string, number> = {};
-    const types: Record<string, number> = {};
+    const types: Record<string, { category: string; count: number }> = {};
 
     dresses.forEach(dress => {
+      // Handle colors
       if (dress.color) {
-        // Get base color for grouping in chart
         const colorKey = dress.color.toLowerCase();
         const baseColor = COLOR_MAP[colorKey]?.base || colorKey;
         colors[baseColor] = (colors[baseColor] || 0) + 1;
       }
+
+      // Handle brands
       if (dress.brand) {
         const brand = dress.brand.toLowerCase();
         brands[brand] = (brands[brand] || 0) + 1;
       }
-      const type = dress.type || 'other';
-      types[type] = (types[type] || 0) + 1;
+
+      // Handle types
+      if (dress.type) {
+        const [category, type] = dress.type.split(' - ');
+        if (!types[category]) {
+          types[category] = { category, count: 0 };
+        }
+        types[category].count++;
+      }
     });
 
     return {
       colorData: colors,
       brandData: brands,
-      typeData: types
+      typeData: Object.values(types).reduce((acc, { category, count }) => {
+        acc[category] = count;
+        return acc;
+      }, {} as Record<string, number>)
     };
   }, [dresses]);
 
@@ -119,22 +131,27 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
     }]
   };
 
+  const typeChartData = {
+    labels: Object.keys(typeData).map(type => type.charAt(0).toUpperCase() + type.slice(1)),
+    datasets: [{
+      data: Object.values(typeData),
+      backgroundColor: [
+        '#9333ea', // Purple
+        '#3b82f6', // Blue
+        '#ef4444', // Red
+        '#f59e0b', // Yellow
+        '#10b981'  // Green
+      ],
+      borderColor: '#ffffff',
+      borderWidth: 2
+    }]
+  };
+
   const brandChartData = {
     labels: Object.keys(brandData).map(brand => brand.charAt(0).toUpperCase() + brand.slice(1)),
     datasets: [{
       label: 'Number of Items',
       data: Object.values(brandData),
-      backgroundColor: '#9333ea',
-      borderWidth: 1,
-      borderRadius: 4
-    }]
-  };
-
-  const typeChartData = {
-    labels: Object.keys(typeData).map(type => type.charAt(0).toUpperCase() + type.slice(1)),
-    datasets: [{
-      label: 'Number of Items',
-      data: Object.values(typeData),
       backgroundColor: '#9333ea',
       borderWidth: 1,
       borderRadius: 4

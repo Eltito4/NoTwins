@@ -1,6 +1,7 @@
 import { findBestImage } from './imageProcessor.js';
 import { selectors } from './selectors.js';
 import { normalizeText, normalizeColor } from './normalizers.js';
+import { detectArticleType } from './typeDetector.js';
 
 export async function extractProductDetails($, url, retailerConfig) {
   try {
@@ -22,15 +23,28 @@ export async function extractProductDetails($, url, retailerConfig) {
     // Extract other product details
     const price = extractPrice($, retailerSelectors.price || selectors.price);
     const color = extractColor($, retailerSelectors.color || selectors.color);
-    const brand = retailerConfig?.brand?.defaultValue || 
-                 extractBrand($, retailerSelectors.brand || selectors.brand);
+    
+    // Handle brand with fallback to default value
+    let brand = null;
+    if (retailerConfig?.brand?.defaultValue) {
+      brand = retailerConfig.brand.defaultValue;
+    } else {
+      const brandSelectors = retailerSelectors.brand || selectors.brand;
+      brand = extractBrand($, brandSelectors);
+    }
+
+    // Detect article type
+    const description = extractDescription($, retailerSelectors.description || selectors.description);
+    const type = detectArticleType(name, description);
 
     return {
       name: normalizeText(name),
       imageUrl,
       price,
       color: normalizeColor(color),
-      brand
+      brand,
+      type,
+      description: normalizeText(description)
     };
   } catch (error) {
     console.error('Error extracting product details:', error);
@@ -145,6 +159,10 @@ function extractColor($, colorSelectors) {
 }
 
 function extractBrand($, brandSelectors) {
+  if (!Array.isArray(brandSelectors)) {
+    return null;
+  }
+
   // Try direct selectors
   for (const selector of brandSelectors) {
     try {
@@ -174,14 +192,49 @@ function extractBrand($, brandSelectors) {
   return null;
 }
 
+function extractDescription($, descriptionSelectors) {
+  if (!Array.isArray(descriptionSelectors)) {
+    return null;
+  }
+
+  // Try direct selectors
+  for (const selector of descriptionSelectors) {
+    try {
+      const element = $(selector);
+      if (element.length) {
+        const text = element.text().trim();
+        if (text) return text;
+      }
+    } catch (error) {
+      continue;
+    }
+  }
+
+  // Try meta description
+  try {
+    const metaDesc = $('meta[name="description"]').attr('content');
+    if (metaDesc) return metaDesc;
+  } catch (error) {
+    console.error('Error getting meta description:', error);
+  }
+
+  return null;
+}
+
 function parsePrice(text) {
   if (!text) return null;
   
-  // Remove currency symbols and normalize decimal separator
-  const normalized = text.replace(/[^\d.,]/g, '')
-                       .replace(/[.,](\d{2})$/, '.$1')
-                       .replace(/[.,]/g, '');
+  // Handle European price format (e.g., "149,00 €" or "149.00 EUR")
+  const match = text.match(/(\d+)[,.](\d{2})/);
+  if (match) {
+    const euros = parseInt(match[1], 10);
+    const cents = parseInt(match[2], 10);
+    return euros + (cents / 100);
+  }
   
+  // Fallback to basic number extraction
+  const normalized = text.replace(/[^\d.,]/g, '')
+                       .replace(',', '.');
   const price = parseFloat(normalized);
   return isNaN(price) ? null : price;
 }

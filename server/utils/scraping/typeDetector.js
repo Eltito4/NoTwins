@@ -1,55 +1,91 @@
-import { ARTICLE_TYPES } from './constants.js';
+// Main article categories
+const ARTICLE_CATEGORIES = {
+  garment: {
+    name: 'Garment',
+    types: {
+      dress: ['dress', 'gown', 'frock', 'vestido', 'robe', 'kleid'],
+      top: ['top', 'blouse', 'shirt', 'sweater', 'camiseta', 'blusa', 'pullover'],
+      pants: ['pants', 'trousers', 'jeans', 'leggings', 'pantalón', 'hose'],
+      skirt: ['skirt', 'falda', 'jupe', 'gonna'],
+      jacket: ['jacket', 'coat', 'blazer', 'chaqueta', 'manteau'],
+      suit: ['suit', 'tuxedo', 'traje', 'anzug'],
+      swimwear: ['swimsuit', 'bikini', 'bañador'],
+      lingerie: ['bra', 'panties', 'ropa interior', 'sujetador']
+    }
+  },
+  shoes: {
+    name: 'Shoes',
+    types: {
+      heels: ['heels', 'pumps', 'tacones', 'stilettos'],
+      boots: ['boots', 'botas', 'stiefel'],
+      sneakers: ['sneakers', 'trainers', 'zapatillas'],
+      sandals: ['sandals', 'sandalias', 'sandalen'],
+      flats: ['flats', 'ballerinas', 'bailarinas']
+    }
+  },
+  accessories: {
+    name: 'Accessories',
+    types: {
+      scarf: ['scarf', 'bufanda', 'écharpe'],
+      belt: ['belt', 'cinturón', 'ceinture'],
+      hat: ['hat', 'cap', 'sombrero', 'chapeau'],
+      gloves: ['gloves', 'guantes', 'gants'],
+      sunglasses: ['sunglasses', 'gafas', 'lunettes']
+    }
+  },
+  bags: {
+    name: 'Bags',
+    types: {
+      handbag: ['handbag', 'purse', 'bolso', 'sac'],
+      clutch: ['clutch', 'pochette', 'cartera'],
+      backpack: ['backpack', 'mochila', 'rucksack'],
+      tote: ['tote', 'shopper', 'bolsa'],
+      crossbody: ['crossbody', 'messenger', 'bandolera']
+    }
+  },
+  jewelry: {
+    name: 'Jewelry',
+    types: {
+      necklace: ['necklace', 'collar', 'collier'],
+      bracelet: ['bracelet', 'pulsera', 'bracelet'],
+      earrings: ['earrings', 'pendientes', 'boucles'],
+      ring: ['ring', 'anillo', 'bague'],
+      brooch: ['brooch', 'broche', 'broche']
+    }
+  }
+};
 
 export function detectArticleType(name, description = '') {
   const text = `${name} ${description}`.toLowerCase();
-
-  // Check for Spanish dress keywords first
-  if (text.includes('vestido')) {
-    return 'dress';
-  }
-
-  // Special case for German product names
-  if (text.includes('bluse')) return 'top';
-  if (text.includes('t-shirt') || text.includes('tshirt')) return 'top';
-
-  // Check each type and its variations
-  for (const [type, keywords] of Object.entries(ARTICLE_TYPES)) {
-    // Check for exact word matches using word boundaries
-    const hasMatch = keywords.some(keyword => {
-      // Handle multi-word keywords properly
-      const escapedKeyword = keyword.toLowerCase().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-      const pattern = new RegExp(`\\b${escapedKeyword}\\b`);
-      return pattern.test(text);
-    });
-    
-    if (hasMatch) {
-      return type;
+  
+  // Check each category and its types
+  for (const [category, categoryData] of Object.entries(ARTICLE_CATEGORIES)) {
+    for (const [type, keywords] of Object.entries(categoryData.types)) {
+      for (const keyword of keywords) {
+        if (text.includes(keyword.toLowerCase())) {
+          return {
+            category: categoryData.name,
+            type: type.charAt(0).toUpperCase() + type.slice(1)
+          };
+        }
+      }
     }
   }
 
-  // Additional checks for common product name patterns
-  if (/\b(vestido|dress|kleid)\b/i.test(text)) return 'dress';
-  if (/\b(shirt|hemd|oberteile?)\b/i.test(text)) return 'top';
-  if (/\b(hose|pants|trousers)\b/i.test(text)) return 'pants';
-  if (/\b(jacke|jacket|coat)\b/i.test(text)) return 'outerwear';
-  if (/\b(schuhe|shoes|boots)\b/i.test(text)) return 'shoes';
-  if (/\b(tasche|bag|purse)\b/i.test(text)) return 'bags';
-  if (/\b(schmuck|jewelry)\b/i.test(text)) return 'jewelry';
-
-  // Check description for type hints
-  if (text.includes('manga') || text.includes('escote')) {
-    return 'dress';
+  // Additional checks for common patterns
+  if (/\b(dress|vestido|robe)\b/i.test(text)) {
+    return { category: 'Garment', type: 'Dress' };
+  }
+  if (/\b(shoes|zapatos|chaussures)\b/i.test(text)) {
+    return { category: 'Shoes', type: 'Other' };
+  }
+  if (/\b(bag|bolso|sac)\b/i.test(text)) {
+    return { category: 'Bags', type: 'Other' };
+  }
+  if (/\b(jewelry|joyas|bijoux)\b/i.test(text)) {
+    return { category: 'Jewelry', type: 'Other' };
   }
 
-  // If no specific type is found, check for generic clothing words
-  const genericClothing = [
-    'wear', 'clothing', 'apparel', 'fashion', 'outfit',
-    'ropa', 'vêtement', 'kleidung', 'abbigliamento'
-  ];
-
-  if (genericClothing.some(word => text.includes(word))) {
-    return 'clothing';
-  }
-
-  return 'other';
+  // Default fallback
+  return { category: 'Other', type: 'Unknown' };
 }
