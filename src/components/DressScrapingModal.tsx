@@ -8,20 +8,23 @@ interface DressScrapingModalProps {
   onClose: () => void;
   onSubmit: (dressData: Omit<Dress, 'id' | 'userId' | 'eventId'>) => void;
   isEventCreator: boolean;
+  existingItems?: Dress[];
 }
 
-export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressScrapingModalProps) {
+interface ScrapedData {
+  name: string;
+  imageUrl: string;
+  color?: string;
+  brand?: string;
+  price?: number;
+  description?: string;
+}
+
+export function DressScrapingModal({ onClose, onSubmit, isEventCreator, existingItems = [] }: DressScrapingModalProps) {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
-  const [scrapedData, setScrapedData] = useState<{
-    name: string;
-    imageUrl: string;
-    color?: string;
-    brand?: string;
-    price?: number;
-    description?: string;
-  } | null>(null);
+  const [scrapedData, setScrapedData] = useState<ScrapedData | null>(null);
 
   const handleScrape = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,10 +52,10 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
     onSubmit({
       name: scrapedData.name,
       imageUrl: scrapedData.imageUrl,
-      color: scrapedData.color,
-      brand: scrapedData.brand,
+      color: scrapedData.color || undefined,
+      brand: scrapedData.brand || undefined,
       price: scrapedData.price,
-      description: scrapedData.description,
+      description: scrapedData.description || undefined,
       isPrivate
     });
   };
