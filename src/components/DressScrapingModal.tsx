@@ -80,9 +80,9 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, existing
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] flex flex-col">
-        <div className="p-6 border-b flex-shrink-0">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="bg-white rounded-lg w-full max-w-lg my-8">
+        <div className="p-6 border-b">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Add Item from URL</h2>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
@@ -119,7 +119,7 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, existing
 
         {scrapedData && (
           <form onSubmit={handleSubmit}>
-            <div className="p-6 space-y-4 overflow-y-auto">
+            <div className="p-6 space-y-4 overflow-y-auto max-h-[60vh]">
               <div>
                 <label className="font-medium text-gray-700">Name:</label>
                 <p className="text-gray-900">{scrapedData.name}</p>
@@ -182,11 +182,11 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, existing
 
               <div>
                 <label className="font-medium text-gray-700 block mb-2">Preview:</label>
-                <div className="relative aspect-square overflow-hidden bg-gray-50 rounded-lg">
+                <div className="relative bg-gray-50 rounded-lg">
                   <img
                     src={scrapedData.imageUrl}
                     alt={scrapedData.name}
-                    className="w-full h-full object-contain"
+                    className="w-full object-contain max-h-[400px]"
                     crossOrigin="anonymous"
                     referrerPolicy="no-referrer"
                   />
@@ -214,7 +214,7 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, existing
               </div>
             </div>
 
-            <div className="p-6 border-t bg-gray-50 flex justify-end gap-4 flex-shrink-0">
+            <div className="p-6 border-t bg-gray-50 flex justify-end gap-4">
               <button
                 type="button"
                 onClick={onClose}

@@ -23,44 +23,54 @@ ChartJS.register(
   Legend
 );
 
+// Fixed color mapping with exact color values and base colors
+const COLOR_MAP: Record<string, { value: string; base: string }> = {
+  'white': { value: '#FFFFFF', base: 'white' },
+  'black': { value: '#000000', base: 'black' },
+  'red': { value: '#FF0000', base: 'red' },
+  'blue': { value: '#0000FF', base: 'blue' },
+  'light blue': { value: '#ADD8E6', base: 'blue' },
+  'dark blue': { value: '#00008B', base: 'blue' },
+  'navy blue': { value: '#000080', base: 'blue' },
+  'navy': { value: '#000080', base: 'blue' },
+  'green': { value: '#008000', base: 'green' },
+  'light green': { value: '#90EE90', base: 'green' },
+  'dark green': { value: '#006400', base: 'green' },
+  'yellow': { value: '#FFD700', base: 'yellow' },
+  'purple': { value: '#800080', base: 'purple' },
+  'pink': { value: '#FFC0CB', base: 'pink' },
+  'light pink': { value: '#FFB6C1', base: 'pink' },
+  'hot pink': { value: '#FF69B4', base: 'pink' },
+  'orange': { value: '#FFA500', base: 'orange' },
+  'brown': { value: '#8B4513', base: 'brown' },
+  'gray': { value: '#808080', base: 'gray' },
+  'grey': { value: '#808080', base: 'gray' },
+  'dark gray': { value: '#404040', base: 'gray' },
+  'light gray': { value: '#D3D3D3', base: 'gray' },
+  'silver': { value: '#C0C0C0', base: 'silver' },
+  'gold': { value: '#FFD700', base: 'gold' },
+  'beige': { value: '#F5F5DC', base: 'beige' },
+  'cream': { value: '#FFFDD0', base: 'cream' },
+  'khaki': { value: '#C3B091', base: 'khaki' },
+  'dark khaki': { value: '#BDB76B', base: 'khaki' },
+  'olive': { value: '#808000', base: 'olive' },
+  'burgundy': { value: '#800020', base: 'red' },
+  'maroon': { value: '#800000', base: 'red' },
+  'teal': { value: '#008080', base: 'blue' },
+  'turquoise': { value: '#40E0D0', base: 'blue' },
+  'coral': { value: '#FF7F50', base: 'orange' },
+  'salmon': { value: '#FA8072', base: 'pink' },
+  'magenta': { value: '#FF00FF', base: 'purple' },
+  'violet': { value: '#8F00FF', base: 'purple' },
+  'indigo': { value: '#4B0082', base: 'purple' },
+  'pastel pink': { value: '#FFB6C1', base: 'pink' },
+  'pastel blue': { value: '#B0E0E6', base: 'blue' },
+  'pastel green': { value: '#98FB98', base: 'green' }
+};
+
 interface EventTrendsProps {
   dresses: Dress[];
 }
-
-// Fixed color mapping with exact color values
-const COLOR_MAP: Record<string, string> = {
-  'white': '#FFFFFF',
-  'black': '#000000',
-  'red': '#FF0000',
-  'blue': '#0000FF',
-  'light blue': '#ADD8E6',
-  'dark blue': '#00008B',
-  'green': '#008000',
-  'yellow': '#FFD700',
-  'purple': '#800080',
-  'pink': '#FFC0CB',
-  'orange': '#FFA500',
-  'brown': '#8B4513',
-  'gray': '#808080',
-  'dark gray': '#404040',
-  'light gray': '#D3D3D3',
-  'silver': '#C0C0C0',
-  'gold': '#FFD700',
-  'beige': '#F5F5DC',
-  'cream': '#FFFDD0',
-  'navy': '#000080',
-  'khaki': '#C3B091',
-  'dark khaki': '#BDB76B',
-  'olive': '#808000',
-  'pastel pink': '#FFB6C1',
-  'pastel blue': '#B0E0E6',
-  'pastel green': '#98FB98'
-};
-
-const getColorForName = (colorName: string): string => {
-  const normalizedColor = colorName.toLowerCase();
-  return COLOR_MAP[normalizedColor] || '#' + Math.floor(Math.random()*16777215).toString(16);
-};
 
 export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
   const { colorData, brandData, typeData } = useMemo(() => {
@@ -70,8 +80,10 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
 
     dresses.forEach(dress => {
       if (dress.color) {
-        const color = dress.color.toLowerCase();
-        colors[color] = (colors[color] || 0) + 1;
+        // Get base color for grouping in chart
+        const colorKey = dress.color.toLowerCase();
+        const baseColor = COLOR_MAP[colorKey]?.base || colorKey;
+        colors[baseColor] = (colors[baseColor] || 0) + 1;
       }
       if (dress.brand) {
         const brand = dress.brand.toLowerCase();
@@ -101,7 +113,7 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
     labels: Object.keys(colorData).map(color => color.charAt(0).toUpperCase() + color.slice(1)),
     datasets: [{
       data: Object.values(colorData),
-      backgroundColor: Object.keys(colorData).map(color => getColorForName(color)),
+      backgroundColor: Object.keys(colorData).map(color => COLOR_MAP[color]?.value || color),
       borderColor: '#ffffff',
       borderWidth: 2
     }]
