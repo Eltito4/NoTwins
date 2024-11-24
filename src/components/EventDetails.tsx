@@ -48,7 +48,7 @@ export function EventDetails({ event, onBack, onDressAdded, participants }: Even
       d.name.toLowerCase() === dress.name.toLowerCase()
     );
 
-    if (duplicates.length === 0) return null;
+    if (duplicates.length === 0) return undefined;
 
     // Group by color
     const itemsByColor = duplicates.reduce((acc, item) => {
@@ -63,7 +63,7 @@ export function EventDetails({ event, onBack, onDressAdded, participants }: Even
     // Check if current user is involved
     const isUserInvolved = duplicates.some(d => d.userId === currentUser?.id);
     
-    if (!isUserInvolved && !isEventCreator) return null;
+    if (!isUserInvolved && !isEventCreator) return undefined;
 
     // Check for exact color matches
     const exactMatches = itemsByColor[dress.color?.toLowerCase() || 'unknown'] || [];
