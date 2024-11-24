@@ -1,13 +1,13 @@
-import type { FC } from 'react';
-import { useState, useEffect } from 'react';
+import { FC, useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, PlusCircle, UserPlus, User } from 'lucide-react';
+import { LogOut, PlusCircle, UserPlus, User as UserIcon } from 'lucide-react';
 import { CreateEventModal } from './CreateEventModal';
 import { EventCard } from './EventCard';
 import { EventDetailsModal } from './EventDetailsModal';
 import { JoinEventModal } from './JoinEventModal';
 import type { Event, Dress, DuplicateInfo } from '../types';
-import { createEvent, getEventsByUser, joinEvent, deleteEvent, getEventDresses } from '../services/eventService';
+import type { User as UserType } from '../types';
+import { createEvent, getEventsByUser, joinEvent, deleteEvent, getEventDresses, getEventParticipants } from '../services/eventService';
 import toast from 'react-hot-toast';
 
 export const Dashboard: FC = () => {
@@ -18,6 +18,7 @@ export const Dashboard: FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [duplicateItems, setDuplicateItems] = useState<Record<string, DuplicateInfo[]>>({});
+  const [participants, setParticipants] = useState<Record<string, Record<string, UserType>>>({});
 
   useEffect(() => {
     if (currentUser) {
@@ -27,100 +28,10 @@ export const Dashboard: FC = () => {
 
   useEffect(() => {
     events.forEach(event => {
+      loadParticipants(event.id);
       checkDuplicateItems(event.id);
     });
   }, [events]);
-
-  const checkDuplicateItems = async (eventId: string) => {
-    try {
-      const dresses = await getEventDresses(eventId);
-      const duplicates: DuplicateInfo[] = [];
-      
-      // Group dresses by name
-      const dressesByName = dresses.reduce((acc, dress) => {
-        if (!acc[dress.name.toLowerCase()]) {
-          acc[dress.name.toLowerCase()] = [];
-        }
-        acc[dress.name.toLowerCase()].push(dress);
-        return acc;
-      }, {} as Record<string, Dress[]>);
-
-      // Check for duplicates
-      for (const [, items] of Object.entries(dressesByName)) {
-        if (items.length > 1) {
-          // Group by color
-          const itemsByColor = items.reduce((acc, item) => {
-            const color = (item.color || 'unknown').toLowerCase();
-            if (!acc[color]) {
-              acc[color] = [];
-            }
-            acc[color].push(item);
-            return acc;
-          }, {} as Record<string, Dress[]>);
-
-          // Check for exact duplicates (same color)
-          for (const [, colorItems] of Object.entries(itemsByColor)) {
-            if (colorItems.length > 1) {
-              duplicates.push({
-                name: items[0].name,
-                items: colorItems.map(item => ({
-                  id: item.id,
-                  userId: item.userId,
-                  userName: 'Loading...',
-                  color: item.color
-                })),
-                type: 'exact'
-              });
-            }
-          }
-
-          // Check for partial duplicates (different colors)
-          if (Object.keys(itemsByColor).length > 1) {
-            duplicates.push({
-              name: items[0].name,
-              items: items.map(item => ({
-                id: item.id,
-                userId: item.userId,
-                userName: 'Loading...',
-                color: item.color
-              })),
-              type: 'partial'
-            });
-          }
-        }
-      }
-
-      // Update user names for duplicates
-      const userIds = [...new Set(duplicates.flatMap(d => d.items.map(i => i.userId)))];
-      const userNames = await Promise.all(
-        userIds.map(async (userId) => {
-          try {
-            const response = await fetch(`/api/users/${userId}`);
-            const data = await response.json();
-            return [userId, data.name];
-          } catch (error) {
-            console.error('Error fetching user name:', error);
-            return [userId, 'Unknown User'];
-          }
-        })
-      );
-      const userMap = Object.fromEntries(userNames);
-
-      // Update duplicate items with user names
-      duplicates.forEach(duplicate => {
-        duplicate.items.forEach(item => {
-          item.userName = userMap[item.userId];
-        });
-      });
-
-      setDuplicateItems(prev => ({
-        ...prev,
-        [eventId]: duplicates
-      }));
-    } catch (error) {
-      console.error('Error checking for duplicate items:', error);
-    }
-  };
 
   const loadEvents = async () => {
     if (!currentUser?.id) return;
@@ -134,6 +45,18 @@ export const Dashboard: FC = () => {
       toast.error('Failed to load events');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadParticipants = async (eventId: string) => {
+    try {
+      const eventParticipants = await getEventParticipants(eventId);
+      setParticipants(prev => ({
+        ...prev,
+        [eventId]: Object.fromEntries(eventParticipants.map(user => [user.id, user]))
+      }));
+    } catch (error) {
+      console.error('Error loading participants:', error);
     }
   };
 
@@ -204,6 +127,75 @@ export const Dashboard: FC = () => {
     }
   };
 
+  const checkDuplicateItems = async (eventId: string) => {
+    try {
+      const dresses = await getEventDresses(eventId, true);
+      const duplicates: DuplicateInfo[] = [];
+      
+      // Group dresses by name
+      const dressesByName = dresses.reduce((acc, dress) => {
+        const name = dress.name.toLowerCase();
+        if (!acc[name]) {
+          acc[name] = [];
+        }
+        acc[name].push(dress);
+        return acc;
+      }, {} as Record<string, Dress[]>);
+
+      // Check for duplicates
+      for (const [name, items] of Object.entries(dressesByName)) {
+        if (items.length > 1) {
+          // Group by color
+          const itemsByColor = items.reduce((acc, item) => {
+            const color = (item.color || 'unknown').toLowerCase();
+            if (!acc[color]) {
+              acc[color] = [];
+            }
+            acc[color].push(item);
+            return acc;
+          }, {} as Record<string, Dress[]>);
+
+          // Check for exact duplicates (same color)
+          for (const [color, colorItems] of Object.entries(itemsByColor)) {
+            if (colorItems.length > 1) {
+              duplicates.push({
+                name,
+                items: colorItems.map(item => ({
+                  id: item.id,
+                  userId: item.userId,
+                  userName: participants[eventId]?.[item.userId]?.name || 'Unknown User',
+                  color: item.color
+                })),
+                type: 'exact'
+              });
+            }
+          }
+
+          // Check for partial duplicates (different colors)
+          if (Object.keys(itemsByColor).length > 1) {
+            duplicates.push({
+              name,
+              items: items.map(item => ({
+                id: item.id,
+                userId: item.userId,
+                userName: participants[eventId]?.[item.userId]?.name || 'Unknown User',
+                color: item.color
+              })),
+              type: 'partial'
+            });
+          }
+        }
+      }
+
+      setDuplicateItems(prev => ({
+        ...prev,
+        [eventId]: duplicates
+      }));
+    } catch (error) {
+      console.error('Error checking for duplicate items:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -235,7 +227,7 @@ export const Dashboard: FC = () => {
           </button>
           <div className="flex items-center gap-4 pl-4 border-l border-gray-200">
             <div className="flex items-center gap-2 text-gray-700">
-              <User size={20} className="text-gray-500" />
+              <UserIcon size={20} className="text-gray-500" />
               <span className="font-medium">{currentUser?.name}</span>
             </div>
             <button
@@ -277,6 +269,7 @@ export const Dashboard: FC = () => {
               onClick={() => setSelectedEvent(event)}
               onDelete={() => handleDeleteEvent(event.id)}
               duplicates={duplicateItems[event.id]}
+              participants={participants[event.id] || {}}
             />
           ))}
         </div>
@@ -301,6 +294,7 @@ export const Dashboard: FC = () => {
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
           onDressAdded={(dress) => handleDressAdded(selectedEvent.id, dress)}
+          participants={participants[selectedEvent.id] || {}}
         />
       )}
     </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Event, DuplicateInfo } from '../types';
-import { Calendar, MapPin, Users, Share2, Check, Copy, Trash2, AlertTriangle, Eye, Lock, Store } from 'lucide-react';
+import { Event, DuplicateInfo, User } from '../types';
+import { Calendar, MapPin, Users, Share2, Check, Copy, Trash2, AlertTriangle, Eye, Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -9,10 +9,10 @@ interface EventCardProps {
   onClick: () => void;
   onDelete?: () => void;
   duplicates?: DuplicateInfo[];
-  users?: Record<string, { id: string; name: string }>;
+  participants: Record<string, User>;
 }
 
-export function EventCard({ event, onClick, onDelete, duplicates = [], users = {} }: EventCardProps) {
+export function EventCard({ event, onClick, onDelete, duplicates = [], participants }: EventCardProps) {
   const [showShareSuccess, setShowShareSuccess] = useState(false);
   const [showCopySuccess, setShowCopySuccess] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -20,40 +20,18 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], users = {
 
   const isCreator = currentUser?.id === event.creatorId;
 
-  // Filter duplicates to only show those relevant to the current user
   const userDuplicates = duplicates.filter(dup => 
     dup.items.some(item => item.userId === currentUser?.id) ||
     (isCreator && dup.items.length > 0)
   );
 
-  // Group duplicates by type
   const exactDuplicates = userDuplicates.filter(d => d.type === 'exact');
   const partialDuplicates = userDuplicates.filter(d => d.type === 'partial');
 
   const formatUserInfo = (item: { userId: string; color?: string }) => {
-    // First try to get the user from the users map
-    if (users[item.userId]) {
-      return `${users[item.userId].name}${item.color ? ` - ${item.color}` : ''}`;
-    }
-    
-    // If it's the current user, use their name
-    if (item.userId === currentUser?.id) {
-      return `${currentUser.name}${item.color ? ` - ${item.color}` : ''}`;
-    }
-    
-    // For participants in the event, use their name from the event data
-    const participant = event.participants.find(p => p === item.userId);
-    if (participant) {
-      return `${participant}${item.color ? ` - ${item.color}` : ''}`;
-    }
-    
-    // If we still can't find the user name, use Test or Test1 based on the user ID
-    if (item.userId.includes('Test')) {
-      return `${item.userId}${item.color ? ` - ${item.color}` : ''}`;
-    }
-    
-    // Fallback to Test for any other case
-    return `Test${item.color ? ` - ${item.color}` : ''}`;
+    const user = participants[item.userId];
+    const userName = user?.name || 'Unknown User';
+    return `${userName}${item.color ? ` - ${item.color}` : ''}`;
   };
 
   const handleShare = async (e: React.MouseEvent) => {

@@ -1,6 +1,7 @@
 import express from 'express';
 import Event from '../models/Event.js';
 import Dress from '../models/Dress.js';
+import User from '../models/User.js';
 import { logger } from '../utils/logger.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { eventLimiter } from '../middleware/rateLimiter.js';
@@ -25,6 +26,39 @@ router.get('/', cacheMiddleware(30), async (req, res) => {
   } catch (error) {
     logger.error('Error fetching events:', error);
     res.status(500).json({ error: 'Failed to fetch events' });
+  }
+});
+
+// Get event participants
+router.get('/:eventId/participants', async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.eventId);
+    
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    // Only allow creator or participants to view participant info
+    if (!event.participants.includes(req.user.id)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const users = await User.find({ 
+      _id: { $in: event.participants }
+    }).select('_id name email');
+
+    // Map users to include isCreator flag
+    const mappedUsers = users.map(user => ({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      isCreator: event.creatorId === user._id.toString()
+    }));
+
+    res.json(mappedUsers);
+  } catch (error) {
+    logger.error('Error fetching participants:', error);
+    res.status(500).json({ error: 'Failed to fetch participants' });
   }
 });
 

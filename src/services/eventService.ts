@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Event, Dress } from '../types';
+import { Event, Dress, User } from '../types';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
 
@@ -97,6 +97,16 @@ export async function joinEvent(shareId: string): Promise<Event> {
     return response.data;
   } catch (error) {
     handleError(error, 'Failed to join event');
+    return Promise.reject(error);
+  }
+}
+
+export async function getEventParticipants(eventId: string): Promise<User[]> {
+  try {
+    const response = await api.get(`/events/${eventId}/participants`);
+    return response.data;
+  } catch (error) {
+    handleError(error, 'Failed to load participants');
     return Promise.reject(error);
   }
 }
