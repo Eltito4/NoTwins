@@ -1,16 +1,44 @@
 export const spanishRetailers = {
+  'zara.com': {
+    name: 'Zara',
+    selectors: {
+      name: [
+        '.product-detail-info h1',
+        '[data-qa-id="product-name"]',
+        '.product-name',
+        'meta[property="og:title"]'
+      ],
+      price: [
+        '.price__amount',
+        '[data-qa-id="product-price"]',
+        '.product-price',
+        'meta[property="product:price:amount"]'
+      ],
+      color: [
+        '.product-detail-color-selector__selected',
+        '[data-qa-id="selected-color"]',
+        '.product-detail-selected-color'
+      ],
+      image: [
+        '.media-image img',
+        '[data-qa-id="product-image"]',
+        'meta[property="og:image"]'
+      ],
+      brand: { defaultValue: 'Zara' }
+    }
+  },
   'elcorteingles.es': {
     name: 'El Corte Inglés',
     selectors: {
       name: [
         '.product-title h1',
         '.pdp-title',
-        'h1[data-testid="product-title"]'
+        'meta[property="og:title"]'
       ],
       price: [
         '.price-amount',
         '.current-price',
-        '[data-testid="product-price"]'
+        'meta[property="product:price:amount"]'
       ],
       color: [
         '.product-color-name',
@@ -19,90 +47,40 @@ export const spanishRetailers = {
       ],
       image: [
         '.product-image__main img',
-        '.product-gallery__image',
+        '.gallery-image',
         'meta[property="og:image"]'
+      ],
+      brand: [
+        '.product-brand',
+        '.brand-name',
+        'meta[property="product:brand"]'
       ]
     }
   },
-  'scalperscompany.com': {
-    name: 'Scalpers',
+  'massimodutti.com': {
+    name: 'Massimo Dutti',
     selectors: {
       name: [
-        '.product-title',
-        '.product__title',
-        'h1.title'
-      ],
-      price: [
-        '.product-price',
-        '.price',
-        '.current-price'
-      ],
-      color: [
-        '.product-color',
-        '.color-selector .selected',
-        '.variant-color'
-      ],
-      image: [
-        '.product-image img',
-        '.product-gallery__image',
-        'meta[property="og:image"]'
-      ]
-    }
-  },
-  'pronovias.com': {
-    name: 'Pronovias',
-    selectors: {
-      name: [
-        '.product-name h1',
-        '.pdp-title',
-        'h1.product-title'
-      ],
-      price: [
-        '.product-price',
-        '.price-current',
-        '.current-price'
-      ],
-      color: [
-        '.product-color',
-        '.selected-color',
-        '.color-selector .active'
-      ],
-      image: [
-        '.product-gallery__image',
-        '.pdp-main-image img',
-        'meta[property="og:image"]'
-      ],
-      brand: {
-        defaultValue: 'Pronovias'
-      }
-    }
-  },
-  'rosaclara.es': {
-    name: 'Rosa Clará',
-    selectors: {
-      name: [
+        '.product-info__name',
         '.product-name',
-        '.product-title',
-        'h1.title'
+        'meta[property="og:title"]'
       ],
       price: [
-        '.product-price',
-        '.price',
-        '.current-price'
+        '.product-price span',
+        '.current-price',
+        'meta[property="product:price:amount"]'
       ],
       color: [
-        '.product-color',
-        '.color-selector .selected',
-        '.selected-color'
+        '.product-colors__selected',
+        '.selected-color',
+        '.color-selector .selected'
       ],
       image: [
-        '.product-gallery img',
-        '.product-image img',
+        '.product-media-wrapper img',
+        '.pdp-image',
         'meta[property="og:image"]'
       ],
-      brand: {
-        defaultValue: 'Rosa Clará'
-      }
+      brand: { defaultValue: 'Massimo Dutti' }
     }
   },
   'mango.com': {
@@ -111,12 +89,12 @@ export const spanishRetailers = {
       name: [
         '.product-name.text-title',
         '.name-title',
-        'h1.product-name'
+        'meta[property="og:title"]'
       ],
       price: [
         '.product-prices__price',
         '.price-sale',
-        '.current-price'
+        'meta[property="product:price:amount"]'
       ],
       color: [
         '.color-selector__selected-color',
@@ -128,37 +106,85 @@ export const spanishRetailers = {
         '.image-container img',
         'meta[property="og:image"]'
       ],
-      brand: {
-        defaultValue: 'Mango'
-      }
+      brand: { defaultValue: 'Mango' }
     }
   },
-  'massimodutti.com': {
-    name: 'Massimo Dutti',
+  'pronovias.com': {
+    name: 'Pronovias',
     selectors: {
       name: [
-        '.product-info__name',
-        '.product-name',
-        'h1.product-title'
+        '.product-name h1',
+        '.pdp-title',
+        'meta[property="og:title"]'
       ],
       price: [
-        '.product-price span',
-        '.current-price',
-        '.price-amount'
+        '.product-price',
+        '.price-current',
+        'meta[property="product:price:amount"]'
       ],
       color: [
-        '.product-colors__selected',
+        '.product-color',
         '.selected-color',
-        '.color-selector .active'
+        '.color-selector .selected'
       ],
       image: [
-        '.product-media-wrapper img',
-        '.pdp-image',
+        '.product-gallery__image',
+        '.pdp-main-image img',
         'meta[property="og:image"]'
       ],
-      brand: {
-        defaultValue: 'Massimo Dutti'
-      }
+      brand: { defaultValue: 'Pronovias' }
+    }
+  },
+  'rosaclara.es': {
+    name: 'Rosa Clará',
+    selectors: {
+      name: [
+        '.product-name',
+        '.pdp-title',
+        'meta[property="og:title"]'
+      ],
+      price: [
+        '.product-price',
+        '.price-current',
+        'meta[property="product:price:amount"]'
+      ],
+      color: [
+        '.product-color',
+        '.selected-color',
+        '.color-selector .selected'
+      ],
+      image: [
+        '.product-gallery__image',
+        '.pdp-main-image img',
+        'meta[property="og:image"]'
+      ],
+      brand: { defaultValue: 'Rosa Clará' }
+    }
+  },
+  'scalperscompany.com': {
+    name: 'Scalpers',
+    selectors: {
+      name: [
+        '.product-name',
+        '.pdp-title',
+        'meta[property="og:title"]'
+      ],
+      price: [
+        '.product-price',
+        '.price-current',
+        'meta[property="product:price:amount"]'
+      ],
+      color: [
+        '.product-color',
+        '.selected-color',
+        '.color-selector .selected'
+      ],
+      image: [
+        '.product-gallery__image',
+        '.pdp-main-image img',
+        'meta[property="og:image"]'
+      ],
+      brand: { defaultValue: 'Scalpers' }
     }
   },
   'apparentia.com': {
@@ -249,6 +275,16 @@ export const spanishRetailers = {
       color: ['.color-selector .selected', '.variant-color', '.selected-color'],
       image: ['.product-image img', '.gallery-image', 'meta[property="og:image"]'],
       brand: { defaultValue: 'Carla Ruiz' }
+    }
+  },
+  'ladypipa.com': {
+    name: 'Lady Pipa',
+    selectors: {
+      name: ['.product-title', '.product-single__title', '.product__title', 'h1.product-title'],
+      price: ['.price', '.product-single__price', '.price__regular'],
+      color: ['.variant-input-wrap[data-option="Color"] .active', '.swatch-element.active'],
+      image: ['.product__media-item img', '.product-featured-media', 'meta[property="og:image"]'],
+      brand: { defaultValue: 'Lady Pipa' }
     }
   }
 };
