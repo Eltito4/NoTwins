@@ -42,11 +42,50 @@ export function EventDetails({ event, onBack, onDressAdded, participants }: Even
     }
   };
 
-  const checkDuplicates = (dress: Dress) => {
-    return event.dresses.some(d => 
+  const getDuplicateInfo = (dress: Dress) => {
+    const duplicates = event.dresses.filter(d => 
       d._id !== dress._id && 
       d.name.toLowerCase() === dress.name.toLowerCase()
     );
+
+    if (duplicates.length === 0) return null;
+
+    // Group by color
+    const itemsByColor = duplicates.reduce((acc, item) => {
+      const color = (item.color || 'unknown').toLowerCase();
+      if (!acc[color]) {
+        acc[color] = [];
+      }
+      acc[color].push(item);
+      return acc;
+    }, {} as Record<string, Dress[]>);
+
+    // Check if current user is involved
+    const isUserInvolved = duplicates.some(d => d.userId === currentUser?.id);
+    
+    if (!isUserInvolved && !isEventCreator) return null;
+
+    // Check for exact color matches
+    const exactMatches = itemsByColor[dress.color?.toLowerCase() || 'unknown'] || [];
+    
+    if (exactMatches.length > 0) {
+      return {
+        type: 'exact' as const,
+        items: exactMatches.map(item => ({
+          userName: participants[item.userId]?.name || 'Unknown User',
+          color: item.color
+        }))
+      };
+    }
+
+    // Return partial matches
+    return {
+      type: 'partial' as const,
+      items: duplicates.map(item => ({
+        userName: participants[item.userId]?.name || 'Unknown User',
+        color: item.color
+      }))
+    };
   };
 
   return (
@@ -82,16 +121,20 @@ export function EventDetails({ event, onBack, onDressAdded, participants }: Even
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {event.dresses.map((dress) => (
-            <DressCard
-              key={dress._id}
-              dress={dress}
-              hasConflict={checkDuplicates(dress)}
-              isEventCreator={isEventCreator}
-              userName={participants[dress.userId]?.name}
-              onDelete={handleDeleteDress}
-            />
-          ))}
+          {event.dresses.map((dress) => {
+            const duplicateInfo = getDuplicateInfo(dress);
+            return (
+              <DressCard
+                key={dress._id}
+                dress={dress}
+                hasConflict={Boolean(duplicateInfo)}
+                isEventCreator={isEventCreator}
+                userName={participants[dress.userId]?.name}
+                onDelete={handleDeleteDress}
+                duplicateInfo={duplicateInfo}
+              />
+            );
+          })}
         </div>
       )}
 
