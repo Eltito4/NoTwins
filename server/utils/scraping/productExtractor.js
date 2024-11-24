@@ -10,29 +10,29 @@ export async function extractProductDetails($, url, retailerConfig) {
     const platformInfo = detectPlatform($);
     const genericSelectors = getGenericSelectors();
     
-    // Combine selectors in order of priority
+    // Initialize combined selectors with generic selectors
     const combinedSelectors = {
-      name: [
-        ...(retailerConfig?.selectors?.name || []),
-        ...(platformInfo?.selectors?.name || []),
-        ...genericSelectors.name
-      ],
-      price: [
-        ...(retailerConfig?.selectors?.price || []),
-        ...(platformInfo?.selectors?.price || []),
-        ...genericSelectors.price
-      ],
-      color: [
-        ...(retailerConfig?.selectors?.color || []),
-        ...(platformInfo?.selectors?.color || []),
-        ...genericSelectors.color
-      ],
-      brand: [
-        ...(retailerConfig?.selectors?.brand || []),
-        ...(platformInfo?.selectors?.brand || []),
-        ...genericSelectors.name
-      ]
+      name: [...genericSelectors.name],
+      price: [...genericSelectors.price],
+      color: [...genericSelectors.color],
+      brand: [...genericSelectors.name]
     };
+
+    // Add platform-specific selectors if available
+    if (platformInfo?.selectors) {
+      combinedSelectors.name.unshift(...(platformInfo.selectors.name || []));
+      combinedSelectors.price.unshift(...(platformInfo.selectors.price || []));
+      combinedSelectors.color.unshift(...(platformInfo.selectors.color || []));
+      combinedSelectors.brand.unshift(...(platformInfo.selectors.brand || []));
+    }
+
+    // Add retailer-specific selectors if available
+    if (retailerConfig?.selectors) {
+      combinedSelectors.name.unshift(...(retailerConfig.selectors.name || []));
+      combinedSelectors.price.unshift(...(retailerConfig.selectors.price || []));
+      combinedSelectors.color.unshift(...(retailerConfig.selectors.color || []));
+      combinedSelectors.brand.unshift(...(retailerConfig.selectors.brand || []));
+    }
 
     // Extract product name
     const name = extractName($, combinedSelectors.name);
@@ -59,7 +59,7 @@ export async function extractProductDetails($, url, retailerConfig) {
     }
 
     // Extract description and detect article type
-    const description = extractDescription($, retailerConfig?.selectors?.description || selectors.description);
+    const description = extractDescription($, retailerConfig?.selectors?.description || selectors.description || []);
     const { type } = detectArticleType(name, description);
 
     return {
@@ -78,6 +78,10 @@ export async function extractProductDetails($, url, retailerConfig) {
 }
 
 function extractName($, nameSelectors) {
+  if (!Array.isArray(nameSelectors)) {
+    return null;
+  }
+
   // Try direct selectors
   for (const selector of nameSelectors) {
     try {
@@ -112,6 +116,10 @@ function extractName($, nameSelectors) {
 }
 
 function extractPrice($, priceSelectors) {
+  if (!Array.isArray(priceSelectors)) {
+    return null;
+  }
+
   // Try direct selectors
   for (const selector of priceSelectors) {
     try {
@@ -150,6 +158,10 @@ function extractPrice($, priceSelectors) {
 }
 
 function extractColor($, colorSelectors) {
+  if (!Array.isArray(colorSelectors)) {
+    return null;
+  }
+
   // Try direct selectors
   for (const selector of colorSelectors) {
     try {
