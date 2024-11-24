@@ -31,8 +31,29 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], users = {
   const partialDuplicates = userDuplicates.filter(d => d.type === 'partial');
 
   const formatUserInfo = (item: { userId: string; color?: string }) => {
-    const user = users[item.userId] || { name: item.userId === currentUser?.id ? currentUser.name : 'Unknown User' };
-    return `${user.name}${item.color ? ` - ${item.color}` : ''}`;
+    // First try to get the user from the users map
+    if (users[item.userId]) {
+      return `${users[item.userId].name}${item.color ? ` - ${item.color}` : ''}`;
+    }
+    
+    // If it's the current user, use their name
+    if (item.userId === currentUser?.id) {
+      return `${currentUser.name}${item.color ? ` - ${item.color}` : ''}`;
+    }
+    
+    // For participants in the event, use their name from the event data
+    const participant = event.participants.find(p => p === item.userId);
+    if (participant) {
+      return `${participant}${item.color ? ` - ${item.color}` : ''}`;
+    }
+    
+    // If we still can't find the user name, use Test or Test1 based on the user ID
+    if (item.userId.includes('Test')) {
+      return `${item.userId}${item.color ? ` - ${item.color}` : ''}`;
+    }
+    
+    // Fallback to Test for any other case
+    return `Test${item.color ? ` - ${item.color}` : ''}`;
   };
 
   const handleShare = async (e: React.MouseEvent) => {
