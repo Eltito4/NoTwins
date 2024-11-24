@@ -36,7 +36,16 @@ const SUPPORTED_DOMAINS = [
   'pronovias.com',
   'rosaclara.es',
   'mango.com',
-  'massimodutti.com'
+  'massimodutti.com',
+  'apparentia.com',
+  'meryfor.com',
+  'bgoandme.com',
+  'aliciarueda.com',
+  'seeiou.com',
+  'bruna.es',
+  'redondobrand.com',
+  'polinetmoi.com',
+  'carlaruiz.com'
 ];
 
 export function validateUrl(url) {

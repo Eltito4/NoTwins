@@ -2,39 +2,66 @@ import { findBestImage } from './imageProcessor.js';
 import { selectors } from './selectors.js';
 import { normalizeText, normalizeColor } from './normalizers.js';
 import { detectArticleType } from './typeDetector.js';
+import { detectPlatform, getGenericSelectors } from './platformDetector.js';
 
 export async function extractProductDetails($, url, retailerConfig) {
   try {
-    // Get retailer-specific selectors
-    const retailerSelectors = retailerConfig?.selectors || {};
+    // Detect platform and get platform-specific selectors
+    const platformInfo = detectPlatform($);
+    const genericSelectors = getGenericSelectors();
     
-    // Extract product name
-    const name = extractName($, retailerSelectors.name || selectors.name);
+    // Combine selectors in order of priority:
+    // 1. Retailer-specific selectors
+    // 2. Platform-specific selectors
+    // 3. Generic selectors
+    const combinedSelectors = {
+      name: [
+        ...(retailerConfig?.selectors?.name || []),
+        ...(platformInfo?.selectors?.name || []),
+        ...genericSelectors.name
+      ],
+      price: [
+        ...(retailerConfig?.selectors?.price || []),
+        ...(platformInfo?.selectors?.price || []),
+        ...genericSelectors.price
+      ],
+      color: [
+        ...(retailerConfig?.selectors?.color || []),
+        ...(platformInfo?.selectors?.color || []),
+        ...genericSelectors.color
+      ],
+      image: [
+        ...(retailerConfig?.selectors?.image || []),
+        ...(platformInfo?.selectors?.image || []),
+        ...genericSelectors.image
+      ]
+    };
+
+    // Extract product details using combined selectors
+    const name = extractName($, combinedSelectors.name);
     if (!name) {
       throw new Error('Could not find product name');
     }
 
-    // Find best product image
     const imageUrl = await findBestImage($, url);
     if (!imageUrl) {
       throw new Error('Could not find valid product image');
     }
 
-    // Extract other product details
-    const price = extractPrice($, retailerSelectors.price || selectors.price);
-    const color = extractColor($, retailerSelectors.color || selectors.color);
+    const price = extractPrice($, combinedSelectors.price);
+    const color = extractColor($, combinedSelectors.color);
     
-    // Handle brand with fallback to default value
+    // Handle brand with fallback
     let brand = null;
     if (retailerConfig?.brand?.defaultValue) {
       brand = retailerConfig.brand.defaultValue;
     } else {
-      const brandSelectors = retailerSelectors.brand || selectors.brand;
+      const brandSelectors = retailerConfig?.selectors?.brand || selectors.brand;
       brand = extractBrand($, brandSelectors);
     }
 
     // Detect article type
-    const description = extractDescription($, retailerSelectors.description || selectors.description);
+    const description = extractDescription($, retailerConfig?.selectors?.description || selectors.description);
     const type = detectArticleType(name, description);
 
     return {
@@ -43,7 +70,7 @@ export async function extractProductDetails($, url, retailerConfig) {
       price,
       color: normalizeColor(color),
       brand,
-      type,
+      type: type.type, // Use just the type, not the category
       description: normalizeText(description)
     };
   } catch (error) {
@@ -60,9 +87,12 @@ function extractName($, nameSelectors) {
       if (element.length) {
         const text = element.text().trim();
         if (text) return text;
+
+        // Check content attribute for meta tags
+        const content = element.attr('content');
+        if (content) return content;
       }
     } catch (error) {
-      console.error('Error with selector:', selector, error);
       continue;
     }
   }
@@ -80,14 +110,6 @@ function extractName($, nameSelectors) {
     console.error('Error parsing JSON-LD:', error);
   }
 
-  // Try meta tags
-  try {
-    const metaTitle = $('meta[property="og:title"], meta[name="twitter:title"]').attr('content');
-    if (metaTitle) return metaTitle;
-  } catch (error) {
-    console.error('Error getting meta title:', error);
-  }
-
   return null;
 }
 
@@ -98,8 +120,21 @@ function extractPrice($, priceSelectors) {
       const element = $(selector);
       if (element.length) {
         const text = element.text().trim();
-        const price = parsePrice(text);
-        if (price) return price;
+        if (text) {
+          // Remove currency symbols and normalize decimal separator
+          const normalized = text.replace(/[^\d.,]/g, '')
+                               .replace(/[.,](\d{2})$/, '.$1')
+                               .replace(/[.,]/g, '');
+          const price = parseFloat(normalized);
+          if (!isNaN(price)) return price;
+        }
+
+        // Check content attribute for meta tags
+        const content = element.attr('content');
+        if (content) {
+          const price = parseFloat(content);
+          if (!isNaN(price)) return price;
+        }
       }
     } catch (error) {
       continue;
@@ -128,14 +163,19 @@ function extractColor($, colorSelectors) {
     try {
       const element = $(selector);
       if (element.length) {
+        // Try text content
         const text = element.text().trim();
         if (text) return text;
 
-        // Check data attributes
+        // Try data attributes
         const dataColor = element.attr('data-color') || 
                          element.attr('data-selected-color') || 
                          element.attr('data-value');
         if (dataColor) return dataColor;
+
+        // Try title attribute
+        const title = element.attr('title');
+        if (title) return title;
       }
     } catch (error) {
       continue;
@@ -147,8 +187,9 @@ function extractColor($, colorSelectors) {
     const jsonLd = $('script[type="application/ld+json"]');
     for (let i = 0; i < jsonLd.length; i++) {
       const data = JSON.parse($(jsonLd[i]).html());
-      if (data['@type'] === 'Product' && data.color) {
-        return data.color;
+      if (data['@type'] === 'Product') {
+        if (data.color) return data.color;
+        if (data.offers?.itemOffered?.color) return data.offers.itemOffered.color;
       }
     }
   } catch (error) {
@@ -159,10 +200,6 @@ function extractColor($, colorSelectors) {
 }
 
 function extractBrand($, brandSelectors) {
-  if (!Array.isArray(brandSelectors)) {
-    return null;
-  }
-
   // Try direct selectors
   for (const selector of brandSelectors) {
     try {
@@ -170,6 +207,10 @@ function extractBrand($, brandSelectors) {
       if (element.length) {
         const text = element.text().trim();
         if (text) return text;
+
+        // Check content attribute for meta tags
+        const content = element.attr('content');
+        if (content) return content;
       }
     } catch (error) {
       continue;
@@ -193,10 +234,6 @@ function extractBrand($, brandSelectors) {
 }
 
 function extractDescription($, descriptionSelectors) {
-  if (!Array.isArray(descriptionSelectors)) {
-    return null;
-  }
-
   // Try direct selectors
   for (const selector of descriptionSelectors) {
     try {
@@ -204,37 +241,28 @@ function extractDescription($, descriptionSelectors) {
       if (element.length) {
         const text = element.text().trim();
         if (text) return text;
+
+        // Check content attribute for meta tags
+        const content = element.attr('content');
+        if (content) return content;
       }
     } catch (error) {
       continue;
     }
   }
 
-  // Try meta description
+  // Try JSON-LD
   try {
-    const metaDesc = $('meta[name="description"]').attr('content');
-    if (metaDesc) return metaDesc;
+    const jsonLd = $('script[type="application/ld+json"]');
+    for (let i = 0; i < jsonLd.length; i++) {
+      const data = JSON.parse($(jsonLd[i]).html());
+      if (data['@type'] === 'Product' && data.description) {
+        return data.description;
+      }
+    }
   } catch (error) {
-    console.error('Error getting meta description:', error);
+    console.error('Error parsing JSON-LD description:', error);
   }
 
   return null;
-}
-
-function parsePrice(text) {
-  if (!text) return null;
-  
-  // Handle European price format (e.g., "149,00 €" or "149.00 EUR")
-  const match = text.match(/(\d+)[,.](\d{2})/);
-  if (match) {
-    const euros = parseInt(match[1], 10);
-    const cents = parseInt(match[2], 10);
-    return euros + (cents / 100);
-  }
-  
-  // Fallback to basic number extraction
-  const normalized = text.replace(/[^\d.,]/g, '')
-                       .replace(',', '.');
-  const price = parseFloat(normalized);
-  return isNaN(price) ? null : price;
 }
