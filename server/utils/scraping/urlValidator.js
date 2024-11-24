@@ -30,7 +30,13 @@ const SUPPORTED_DOMAINS = [
   'net-a-porter.com',
   'matchesfashion.com',
   'selfridges.com',
-  'mytheresa.com'
+  'mytheresa.com',
+  'elcorteingles.es',
+  'scalperscompany.com',
+  'pronovias.com',
+  'rosaclara.es',
+  'mango.com',
+  'massimodutti.com'
 ];
 
 export function validateUrl(url) {
