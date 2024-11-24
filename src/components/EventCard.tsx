@@ -31,8 +31,8 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], users = {
   const partialDuplicates = userDuplicates.filter(d => d.type === 'partial');
 
   const formatUserInfo = (item: { userId: string; color?: string }) => {
-    const user = users[item.userId] || { name: item.userId === currentUser?.id ? currentUser.name : 'User' };
-    return `${user.name} (ID: ${item.userId})${item.color ? ` - ${item.color}` : ''}`;
+    const user = users[item.userId] || { name: item.userId === currentUser?.id ? currentUser.name : 'Unknown User' };
+    return `${user.name}${item.color ? ` - ${item.color}` : ''}`;
   };
 
   const handleShare = async (e: React.MouseEvent) => {
