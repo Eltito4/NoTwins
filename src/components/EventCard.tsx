@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Event, DuplicateInfo } from '../types';
-import { Calendar, MapPin, Users, Share2, Check, Copy, Trash2, AlertTriangle, Eye, Lock } from 'lucide-react';
+import { Calendar, MapPin, Users, Share2, Check, Copy, Trash2, AlertTriangle, Eye, Lock, Store } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -32,7 +32,7 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], users = {
 
   const formatUserInfo = (item: { userId: string; color?: string }) => {
     const user = users[item.userId] || { name: item.userId === currentUser?.id ? currentUser.name : 'User' };
-    return `${user.name}${item.color ? ` (${item.color})` : ''}`;
+    return `${user.name} (ID: ${item.userId})${item.color ? ` - ${item.color}` : ''}`;
   };
 
   const handleShare = async (e: React.MouseEvent) => {
