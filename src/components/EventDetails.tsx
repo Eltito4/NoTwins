@@ -1,9 +1,9 @@
 import React from 'react';
-import { Event, Dress } from '../types';
+import { Event, Dress, User } from '../types';
 import { PlusCircle } from 'lucide-react';
 import { DressCard } from './DressCard';
 import { DressScrapingModal } from './DressScrapingModal';
-import { addDressToEvent } from '../services/eventService';
+import { addDressToEvent, deleteDress } from '../services/eventService';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -11,44 +11,43 @@ interface EventDetailsProps {
   event: Event;
   onBack: () => void;
   onDressAdded: (dress: Dress) => void;
+  participants: Record<string, User>;
 }
 
-export function EventDetails({ event, onBack, onDressAdded }: EventDetailsProps) {
+export function EventDetails({ event, onBack, onDressAdded, participants }: EventDetailsProps) {
   const [showScrapingModal, setShowScrapingModal] = React.useState(false);
   const { currentUser } = useAuth();
   const isEventCreator = currentUser?.id === event.creatorId;
 
-  const handleAddDress = async (dressData: {
-    name: string;
-    imageUrl: string;
-    description?: string;
-    color?: string;
-    brand?: string;
-    price?: number;
-    isPrivate: boolean;
-  }) => {
+  const handleAddDress = async (dressData: Omit<Dress, '_id' | 'id' | 'userId' | 'eventId'>) => {
     try {
       const newDress = await addDressToEvent(event.id, dressData);
       onDressAdded(newDress);
       setShowScrapingModal(false);
       toast.success('Item added successfully!');
     } catch (error) {
-      console.error('Error adding item:', error);
+      console.error('Error adding dress:', error);
       toast.error('Failed to add item');
     }
   };
 
-  const checkConflict = (dress: Dress) => {
-    return event.dresses.some(
-      (d) =>
-        d.id !== dress.id &&
-        d.name.toLowerCase() === dress.name.toLowerCase()
-    );
+  const handleDeleteDress = async (dressId: string) => {
+    try {
+      await deleteDress(dressId);
+      onDressAdded(event.dresses.find(d => d._id === dressId)!);
+    } catch (error) {
+      console.error('Error deleting dress:', error);
+      toast.error('Failed to delete item');
+      throw error;
+    }
   };
 
-  const visibleDresses = event.dresses.filter(dress => 
-    !dress.isPrivate || dress.userId === currentUser?.id || isEventCreator
-  );
+  const checkDuplicates = (dress: Dress) => {
+    return event.dresses.some(d => 
+      d._id !== dress._id && 
+      d.name.toLowerCase() === dress.name.toLowerCase()
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -71,7 +70,7 @@ export function EventDetails({ event, onBack, onDressAdded }: EventDetailsProps)
         </button>
       </div>
 
-      {visibleDresses.length === 0 ? (
+      {event.dresses.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-gray-600 mb-4">No items added yet</p>
           <button
@@ -83,12 +82,14 @@ export function EventDetails({ event, onBack, onDressAdded }: EventDetailsProps)
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {visibleDresses.map((dress) => (
+          {event.dresses.map((dress) => (
             <DressCard
-              key={dress.id}
+              key={dress._id}
               dress={dress}
-              hasConflict={checkConflict(dress)}
+              hasConflict={checkDuplicates(dress)}
               isEventCreator={isEventCreator}
+              userName={participants[dress.userId]?.name}
+              onDelete={handleDeleteDress}
             />
           ))}
         </div>
@@ -99,6 +100,7 @@ export function EventDetails({ event, onBack, onDressAdded }: EventDetailsProps)
           onClose={() => setShowScrapingModal(false)}
           onSubmit={handleAddDress}
           isEventCreator={isEventCreator}
+          existingItems={event.dresses}
         />
       )}
     </div>

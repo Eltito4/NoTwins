@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { X, Link, Loader2, Eye, EyeOff, ChevronDown } from 'lucide-react';
+import { X, Link, Loader2, Eye, EyeOff } from 'lucide-react';
 import { scrapeDressDetails } from '../services/scrapingService';
 import { Dress } from '../types';
 import toast from 'react-hot-toast';
 
 interface DressScrapingModalProps {
   onClose: () => void;
-  onSubmit: (dressData: Omit<Dress, 'id' | 'userId' | 'eventId'>) => void;
+  onSubmit: (dressData: Omit<Dress, '_id' | 'id' | 'userId' | 'eventId'>) => void;
   isEventCreator: boolean;
   existingItems?: Dress[];
 }
@@ -18,21 +18,14 @@ interface ScrapedData {
   brand?: string;
   price?: number;
   description?: string;
+  type?: string;
 }
 
-const COLORS = [
-  'Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Purple', 'Pink',
-  'Orange', 'Brown', 'Gray', 'Navy', 'Beige', 'Cream', 'Gold', 'Silver',
-  'Burgundy', 'Teal', 'Olive', 'Khaki', 'Maroon', 'Turquoise'
-];
-
-export function DressScrapingModal({ onClose, onSubmit, isEventCreator, existingItems = [] }: DressScrapingModalProps) {
+export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressScrapingModalProps) {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [scrapedData, setScrapedData] = useState<ScrapedData | null>(null);
-  const [manualColor, setManualColor] = useState('');
-  const [showColorPicker, setShowColorPicker] = useState(false);
 
   const handleScrape = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,9 +38,6 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, existing
     try {
       const data = await scrapeDressDetails(url);
       setScrapedData(data);
-      if (!data.color) {
-        setShowColorPicker(true);
-      }
       toast.success('Product details fetched successfully!');
     } catch (error) {
       // Error is already handled in scrapeDressDetails
@@ -63,25 +53,18 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, existing
     onSubmit({
       name: scrapedData.name,
       imageUrl: scrapedData.imageUrl,
-      color: manualColor || scrapedData.color,
+      description: scrapedData.description,
+      color: scrapedData.color,
       brand: scrapedData.brand,
       price: scrapedData.price,
-      description: scrapedData.description,
+      type: scrapedData.type,
       isPrivate
     });
   };
 
-  const formatPrice = (price?: number) => {
-    if (!price) return null;
-    return new Intl.NumberFormat('de-DE', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(price);
-  };
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-lg w-full max-w-lg my-8">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg w-full max-w-lg">
         <div className="p-6 border-b">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Add Item from URL</h2>
@@ -119,7 +102,7 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, existing
 
         {scrapedData && (
           <form onSubmit={handleSubmit}>
-            <div className="p-6 space-y-4 overflow-y-auto max-h-[60vh]">
+            <div className="p-6 space-y-4">
               <div>
                 <label className="font-medium text-gray-700">Name:</label>
                 <p className="text-gray-900">{scrapedData.name}</p>
@@ -132,61 +115,40 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, existing
                 </div>
               )}
 
-              <div>
-                <label className="font-medium text-gray-700">Color:</label>
-                {scrapedData.color || showColorPicker ? (
+              {scrapedData.color && (
+                <div>
+                  <label className="font-medium text-gray-700">Color:</label>
                   <div className="flex items-center gap-2 mt-1">
-                    {scrapedData.color && (
-                      <>
-                        <div
-                          className="w-6 h-6 rounded-full border-2 border-gray-200"
-                          style={{ backgroundColor: scrapedData.color.toLowerCase() }}
-                        />
-                        <span className="text-gray-900">{scrapedData.color}</span>
-                      </>
-                    )}
-                    {(!scrapedData.color || showColorPicker) && (
-                      <div className="relative">
-                        <select
-                          value={manualColor}
-                          onChange={(e) => setManualColor(e.target.value)}
-                          className="pl-3 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-                          required={!scrapedData.color}
-                        >
-                          <option value="">Select a color</option>
-                          {COLORS.map(color => (
-                            <option key={color} value={color}>{color}</option>
-                          ))}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                      </div>
-                    )}
+                    <div
+                      className="w-6 h-6 rounded-full border-2 border-gray-200"
+                      style={{ backgroundColor: scrapedData.color.toLowerCase() }}
+                    />
+                    <span className="text-gray-900">{scrapedData.color}</span>
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowColorPicker(true)}
-                    className="mt-1 text-purple-600 hover:text-purple-700"
-                  >
-                    Add color manually
-                  </button>
-                )}
-              </div>
+                </div>
+              )}
 
               {scrapedData.price && (
                 <div>
                   <label className="font-medium text-gray-700">Price:</label>
-                  <p className="text-gray-900">{formatPrice(scrapedData.price)}</p>
+                  <p className="text-gray-900">${scrapedData.price.toFixed(2)}</p>
+                </div>
+              )}
+
+              {scrapedData.type && (
+                <div>
+                  <label className="font-medium text-gray-700">Type:</label>
+                  <p className="text-gray-900">{scrapedData.type}</p>
                 </div>
               )}
 
               <div>
                 <label className="font-medium text-gray-700 block mb-2">Preview:</label>
-                <div className="relative bg-gray-50 rounded-lg">
+                <div className="relative aspect-square overflow-hidden bg-gray-50 rounded-lg">
                   <img
                     src={scrapedData.imageUrl}
                     alt={scrapedData.name}
-                    className="w-full object-contain max-h-[400px]"
+                    className="w-full h-full object-contain"
                     crossOrigin="anonymous"
                     referrerPolicy="no-referrer"
                   />

@@ -9,22 +9,15 @@ interface DressCardProps {
   hasConflict: boolean;
   isEventCreator: boolean;
   userName?: string;
-  onImageLoad?: () => void;
-  onDelete?: (dressId: string) => Promise<void>;
-  duplicateInfo?: {
-    type: 'exact' | 'partial';
-    items: Array<{ userName: string; color?: string }>;
-  };
+  onDelete: (dressId: string) => Promise<void>;
 }
 
 export function DressCard({ 
   dress, 
   hasConflict, 
   isEventCreator, 
-  userName, 
-  onImageLoad,
-  onDelete,
-  duplicateInfo 
+  userName,
+  onDelete
 }: DressCardProps) {
   const { currentUser } = useAuth();
   const [imageError, setImageError] = React.useState(false);
@@ -36,7 +29,6 @@ export function DressCard({
   const handleImageLoad = () => {
     setImageLoading(false);
     setImageError(false);
-    onImageLoad?.();
   };
 
   const handleImageError = () => {
@@ -55,7 +47,7 @@ export function DressCard({
     if (confirmed) {
       setIsDeleting(true);
       try {
-        await onDelete(dress.id);
+        await onDelete(dress._id);
         toast.success('Item deleted successfully');
       } catch (error) {
         console.error('Error deleting item:', error);
@@ -79,32 +71,12 @@ export function DressCard({
 
   return (
     <div className="relative bg-white rounded-xl shadow-lg overflow-hidden transition-transform hover:scale-105">
-      {(hasConflict || duplicateInfo) && (
-        <div className={`absolute top-2 right-2 p-2 rounded-full shadow-lg z-10 group cursor-help ${
-          duplicateInfo?.type === 'exact' ? 'bg-red-500' : 'bg-amber-500'
-        }`}>
+      {hasConflict && (
+        <div className="absolute top-2 right-2 p-2 rounded-full bg-red-500 shadow-lg z-10 group cursor-help">
           <AlertTriangle size={20} className="text-white" />
           <div className="absolute right-0 top-full mt-2 w-48 bg-white text-gray-800 text-sm p-2 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-            {duplicateInfo ? (
-              <>
-                <p className="font-medium">
-                  {duplicateInfo.type === 'exact' ? 
-                    'Exact duplicate found:' : 
-                    'Similar items found:'
-                  }
-                </p>
-                <ul className="mt-1">
-                  {duplicateInfo.items.map((item, i) => (
-                    <li key={i}>
-                      {item.userName}
-                      {item.color && ` (${item.color})`}
-                    </li>
-                  ))}
-                </ul>
-              </>
-            ) : (
-              "This item name exists in the event"
-            )}
+            <p className="font-medium">Duplicate item found</p>
+            <p className="mt-1">Another participant has added this item</p>
           </div>
         </div>
       )}

@@ -40,7 +40,7 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
     loadDresses();
   }, [event.id]);
 
-  const handleAddDress = async (dressData: Omit<Dress, 'id' | 'userId' | 'eventId'>) => {
+  const handleAddDress = async (dressData: Omit<Dress, '_id' | 'id' | 'userId' | 'eventId'>) => {
     try {
       const newDress = await addDressToEvent(event.id, dressData);
       setDresses(prevDresses => [...prevDresses, newDress]);
@@ -56,7 +56,7 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
   const handleDeleteDress = async (dressId: string) => {
     try {
       await deleteDress(dressId);
-      setDresses(prevDresses => prevDresses.filter(d => d.id !== dressId));
+      setDresses(prevDresses => prevDresses.filter(d => d._id !== dressId));
       toast.success('Item deleted successfully');
     } catch (error) {
       console.error('Error deleting dress:', error);
@@ -67,7 +67,7 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
 
   const checkDuplicates = (dress: Dress) => {
     return dresses.some(d => 
-      d.id !== dress.id && 
+      d._id !== dress._id && 
       d.name.toLowerCase() === dress.name.toLowerCase()
     );
   };
@@ -174,12 +174,12 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {dresses.map((dress) => (
                     <DressCard
-                      key={dress.id}
+                      key={dress._id}
                       dress={dress}
                       hasConflict={checkDuplicates(dress)}
                       isEventCreator={isEventCreator}
-                      onDelete={handleDeleteDress}
                       userName={participants[dress.userId]?.name}
+                      onDelete={handleDeleteDress}
                     />
                   ))}
                 </div>

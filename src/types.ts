@@ -5,7 +5,8 @@ export interface User {
 }
 
 export interface Dress {
-  id: string;
+  _id: string; // MongoDB ID
+  id: string; // Client-side ID
   userId: string;
   eventId: string;
   name: string;
@@ -41,4 +42,14 @@ export interface Event {
   participants: string[];
   dresses: Dress[];
   createdAt?: Date;
+}
+
+export interface ScrapedProduct {
+  name: string;
+  imageUrl: string;
+  color?: string;
+  brand?: string;
+  price?: number;
+  description?: string;
+  type?: string;
 }
