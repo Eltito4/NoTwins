@@ -1,6 +1,5 @@
-import type { FC } from 'react';
-import { useState, useEffect } from 'react';
-import { Event, Dress } from '../types';
+import { FC, useState, useEffect } from 'react';
+import { Event, Dress, User } from '../types';
 import { PlusCircle, X, Users, Grid, BarChart, Lock, Eye } from 'lucide-react';
 import { DressCard } from './DressCard';
 import { DressScrapingModal } from './DressScrapingModal';
@@ -13,9 +12,10 @@ interface EventDetailsModalProps {
   event: Event;
   onClose: () => void;
   onDressAdded: (dress: Dress) => void;
+  participants: Record<string, User>;
 }
 
-export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, onDressAdded }) => {
+export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, onDressAdded, participants }) => {
   const [showScrapingModal, setShowScrapingModal] = useState(false);
   const [activeView, setActiveView] = useState<'grid' | 'trends'>('grid');
   const [dresses, setDresses] = useState<Dress[]>([]);
@@ -179,6 +179,7 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
                       hasConflict={checkDuplicates(dress)}
                       isEventCreator={isEventCreator}
                       onDelete={handleDeleteDress}
+                      userName={participants[dress.userId]?.name}
                     />
                   ))}
                 </div>
