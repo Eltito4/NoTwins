@@ -12,26 +12,42 @@ export async function extractProductDetails($, url, retailerConfig) {
     
     // Initialize combined selectors with generic selectors
     const combinedSelectors = {
-      name: [...genericSelectors.name],
-      price: [...genericSelectors.price],
-      color: [...genericSelectors.color],
-      brand: [...genericSelectors.name]
+      name: Array.isArray(genericSelectors.name) ? [...genericSelectors.name] : [],
+      price: Array.isArray(genericSelectors.price) ? [...genericSelectors.price] : [],
+      color: Array.isArray(genericSelectors.color) ? [...genericSelectors.color] : [],
+      brand: Array.isArray(genericSelectors.brand) ? [...genericSelectors.brand] : []
     };
 
     // Add platform-specific selectors if available
     if (platformInfo?.selectors) {
-      combinedSelectors.name.unshift(...(platformInfo.selectors.name || []));
-      combinedSelectors.price.unshift(...(platformInfo.selectors.price || []));
-      combinedSelectors.color.unshift(...(platformInfo.selectors.color || []));
-      combinedSelectors.brand.unshift(...(platformInfo.selectors.brand || []));
+      if (Array.isArray(platformInfo.selectors.name)) {
+        combinedSelectors.name.unshift(...platformInfo.selectors.name);
+      }
+      if (Array.isArray(platformInfo.selectors.price)) {
+        combinedSelectors.price.unshift(...platformInfo.selectors.price);
+      }
+      if (Array.isArray(platformInfo.selectors.color)) {
+        combinedSelectors.color.unshift(...platformInfo.selectors.color);
+      }
+      if (Array.isArray(platformInfo.selectors.brand)) {
+        combinedSelectors.brand.unshift(...platformInfo.selectors.brand);
+      }
     }
 
     // Add retailer-specific selectors if available
     if (retailerConfig?.selectors) {
-      combinedSelectors.name.unshift(...(retailerConfig.selectors.name || []));
-      combinedSelectors.price.unshift(...(retailerConfig.selectors.price || []));
-      combinedSelectors.color.unshift(...(retailerConfig.selectors.color || []));
-      combinedSelectors.brand.unshift(...(retailerConfig.selectors.brand || []));
+      if (Array.isArray(retailerConfig.selectors.name)) {
+        combinedSelectors.name.unshift(...retailerConfig.selectors.name);
+      }
+      if (Array.isArray(retailerConfig.selectors.price)) {
+        combinedSelectors.price.unshift(...retailerConfig.selectors.price);
+      }
+      if (Array.isArray(retailerConfig.selectors.color)) {
+        combinedSelectors.color.unshift(...retailerConfig.selectors.color);
+      }
+      if (Array.isArray(retailerConfig.selectors.brand)) {
+        combinedSelectors.brand.unshift(...retailerConfig.selectors.brand);
+      }
     }
 
     // Extract product name
@@ -59,7 +75,8 @@ export async function extractProductDetails($, url, retailerConfig) {
     }
 
     // Extract description and detect article type
-    const description = extractDescription($, retailerConfig?.selectors?.description || selectors.description || []);
+    const descriptionSelectors = retailerConfig?.selectors?.description || selectors.description || [];
+    const description = extractDescription($, Array.isArray(descriptionSelectors) ? descriptionSelectors : []);
     const { type } = detectArticleType(name, description);
 
     return {
