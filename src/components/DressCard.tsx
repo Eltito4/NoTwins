@@ -33,17 +33,6 @@ export function DressCard({
   const isOwner = currentUser?.id === dress.userId;
   const canViewDetails = isOwner || !dress.isPrivate || isEventCreator;
 
-  const getRetailerName = (url: string) => {
-    try {
-      const urlObj = new URL(url);
-      return urlObj.hostname.replace('www.', '');
-    } catch {
-      return null;
-    }
-  };
-
-  const retailerName = dress.imageUrl ? getRetailerName(dress.imageUrl) : null;
-
   const handleImageLoad = () => {
     setImageLoading(false);
     setImageError(false);
@@ -76,6 +65,17 @@ export function DressCard({
       }
     }
   };
+
+  const getRetailerName = (url: string) => {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.hostname.replace('www.', '');
+    } catch {
+      return null;
+    }
+  };
+
+  const retailerName = dress.imageUrl ? getRetailerName(dress.imageUrl) : null;
 
   return (
     <div className="relative bg-white rounded-xl shadow-lg overflow-hidden transition-transform hover:scale-105">
@@ -181,12 +181,6 @@ export function DressCard({
                 Type: {dress.type}
               </p>
             )}
-            {retailerName && (
-              <div className="flex items-center mt-2 gap-2 text-gray-500">
-                <Store size={16} />
-                <span className="text-sm">{retailerName}</span>
-              </div>
-            )}
             {dress.color && (
               <div className="flex items-center mt-3 gap-2">
                 <div
@@ -195,6 +189,12 @@ export function DressCard({
                   title={dress.color}
                 />
                 <span className="text-sm text-gray-500 capitalize line-clamp-1">{dress.color}</span>
+              </div>
+            )}
+            {retailerName && (
+              <div className="flex items-center mt-2 gap-2 text-gray-500">
+                <Store size={16} />
+                <span className="text-sm">{retailerName}</span>
               </div>
             )}
           </div>

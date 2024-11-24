@@ -15,13 +15,23 @@ router.use(eventLimiter);
 // Delete an item
 router.delete('/:dressId', async (req, res) => {
   try {
+    if (!req.params.dressId) {
+      return res.status(400).json({ error: 'Dress ID is required' });
+    }
+
     const dress = await Dress.findById(req.params.dressId);
     
     if (!dress) {
       return res.status(404).json({ error: 'Item not found' });
     }
 
-    if (dress.userId !== req.user.id) {
+    // Check if user owns the dress or is event creator
+    const event = await Event.findById(dress.eventId);
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    if (dress.userId !== req.user.id && event.creatorId !== req.user.id) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -75,13 +85,10 @@ router.get('/event/:eventId', cacheMiddleware(30), async (req, res) => {
     const userMap = Object.fromEntries(users.map(user => [user._id.toString(), user]));
 
     // Add user names to dresses
-    const dressesWithUsers = dresses.map(dress => {
-      const user = userMap[dress.userId];
-      return {
-        ...dress.toObject(),
-        userName: user ? user.name : 'Unknown User'
-      };
-    });
+    const dressesWithUsers = dresses.map(dress => ({
+      ...dress.toObject(),
+      userName: userMap[dress.userId] ? userMap[dress.userId].name : 'Unknown User'
+    }));
 
     res.json(dressesWithUsers);
   } catch (error) {
