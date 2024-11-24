@@ -1,6 +1,6 @@
 import React from 'react';
 import { Dress } from '../types';
-import { AlertTriangle, Lock, Eye, Trash2, Loader2 } from 'lucide-react';
+import { AlertTriangle, Lock, Eye, Trash2, Loader2, Store } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -32,6 +32,17 @@ export function DressCard({
   const [isDeleting, setIsDeleting] = React.useState(false);
   const isOwner = currentUser?.id === dress.userId;
   const canViewDetails = isOwner || !dress.isPrivate || isEventCreator;
+
+  const getRetailerName = (url: string) => {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.hostname.replace('www.', '');
+    } catch {
+      return null;
+    }
+  };
+
+  const retailerName = dress.imageUrl ? getRetailerName(dress.imageUrl) : null;
 
   const handleImageLoad = () => {
     setImageLoading(false);
@@ -169,6 +180,12 @@ export function DressCard({
               <p className="text-sm text-gray-500 mb-2 capitalize">
                 Type: {dress.type}
               </p>
+            )}
+            {retailerName && (
+              <div className="flex items-center mt-2 gap-2 text-gray-500">
+                <Store size={16} />
+                <span className="text-sm">{retailerName}</span>
+              </div>
             )}
             {dress.color && (
               <div className="flex items-center mt-3 gap-2">

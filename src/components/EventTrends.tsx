@@ -23,67 +23,22 @@ ChartJS.register(
   Legend
 );
 
-// Fixed color mapping with exact color values and base colors
-const COLOR_MAP: Record<string, { value: string; base: string }> = {
-  'white': { value: '#FFFFFF', base: 'white' },
-  'black': { value: '#000000', base: 'black' },
-  'red': { value: '#FF0000', base: 'red' },
-  'blue': { value: '#0000FF', base: 'blue' },
-  'light blue': { value: '#ADD8E6', base: 'blue' },
-  'dark blue': { value: '#00008B', base: 'blue' },
-  'navy blue': { value: '#000080', base: 'blue' },
-  'navy': { value: '#000080', base: 'blue' },
-  'green': { value: '#008000', base: 'green' },
-  'light green': { value: '#90EE90', base: 'green' },
-  'dark green': { value: '#006400', base: 'green' },
-  'yellow': { value: '#FFD700', base: 'yellow' },
-  'purple': { value: '#800080', base: 'purple' },
-  'pink': { value: '#FFC0CB', base: 'pink' },
-  'light pink': { value: '#FFB6C1', base: 'pink' },
-  'hot pink': { value: '#FF69B4', base: 'pink' },
-  'orange': { value: '#FFA500', base: 'orange' },
-  'brown': { value: '#8B4513', base: 'brown' },
-  'gray': { value: '#808080', base: 'gray' },
-  'grey': { value: '#808080', base: 'gray' },
-  'dark gray': { value: '#404040', base: 'gray' },
-  'light gray': { value: '#D3D3D3', base: 'gray' },
-  'silver': { value: '#C0C0C0', base: 'silver' },
-  'gold': { value: '#FFD700', base: 'gold' },
-  'beige': { value: '#F5F5DC', base: 'beige' },
-  'cream': { value: '#FFFDD0', base: 'cream' },
-  'khaki': { value: '#C3B091', base: 'khaki' },
-  'dark khaki': { value: '#BDB76B', base: 'khaki' },
-  'olive': { value: '#808000', base: 'olive' },
-  'burgundy': { value: '#800020', base: 'red' },
-  'maroon': { value: '#800000', base: 'red' },
-  'teal': { value: '#008080', base: 'blue' },
-  'turquoise': { value: '#40E0D0', base: 'blue' },
-  'coral': { value: '#FF7F50', base: 'orange' },
-  'salmon': { value: '#FA8072', base: 'pink' },
-  'magenta': { value: '#FF00FF', base: 'purple' },
-  'violet': { value: '#8F00FF', base: 'purple' },
-  'indigo': { value: '#4B0082', base: 'purple' },
-  'pastel pink': { value: '#FFB6C1', base: 'pink' },
-  'pastel blue': { value: '#B0E0E6', base: 'blue' },
-  'pastel green': { value: '#98FB98', base: 'green' }
-};
-
 interface EventTrendsProps {
   dresses: Dress[];
 }
 
 export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
-  const { colorData, brandData, typeData } = useMemo(() => {
+  const { colorData, brandData, typeData, retailerData } = useMemo(() => {
     const colors: Record<string, number> = {};
     const brands: Record<string, number> = {};
-    const types: Record<string, { category: string; count: number }> = {};
+    const types: Record<string, number> = {};
+    const retailers: Record<string, number> = {};
 
     dresses.forEach(dress => {
       // Handle colors
       if (dress.color) {
         const colorKey = dress.color.toLowerCase();
-        const baseColor = COLOR_MAP[colorKey]?.base || colorKey;
-        colors[baseColor] = (colors[baseColor] || 0) + 1;
+        colors[colorKey] = (colors[colorKey] || 0) + 1;
       }
 
       // Handle brands
@@ -94,21 +49,27 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
 
       // Handle types
       if (dress.type) {
-        const [category, type] = dress.type.split(' - ');
-        if (!types[category]) {
-          types[category] = { category, count: 0 };
+        const type = dress.type.toLowerCase();
+        types[type] = (types[type] || 0) + 1;
+      }
+
+      // Handle retailers
+      if (dress.imageUrl) {
+        try {
+          const url = new URL(dress.imageUrl);
+          const hostname = url.hostname.replace('www.', '');
+          retailers[hostname] = (retailers[hostname] || 0) + 1;
+        } catch (e) {
+          // Skip invalid URLs
         }
-        types[category].count++;
       }
     });
 
     return {
       colorData: colors,
       brandData: brands,
-      typeData: Object.values(types).reduce((acc, { category, count }) => {
-        acc[category] = count;
-        return acc;
-      }, {} as Record<string, number>)
+      typeData: types,
+      retailerData: retailers
     };
   }, [dresses]);
 
@@ -125,7 +86,7 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
     labels: Object.keys(colorData).map(color => color.charAt(0).toUpperCase() + color.slice(1)),
     datasets: [{
       data: Object.values(colorData),
-      backgroundColor: Object.keys(colorData).map(color => COLOR_MAP[color]?.value || color),
+      backgroundColor: Object.keys(colorData).map(color => color.toLowerCase()),
       borderColor: '#ffffff',
       borderWidth: 2
     }]
@@ -153,6 +114,17 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
       label: 'Number of Items',
       data: Object.values(brandData),
       backgroundColor: '#9333ea',
+      borderWidth: 1,
+      borderRadius: 4
+    }]
+  };
+
+  const retailerChartData = {
+    labels: Object.keys(retailerData).map(retailer => retailer.charAt(0).toUpperCase() + retailer.slice(1)),
+    datasets: [{
+      label: 'Items per Retailer',
+      data: Object.values(retailerData),
+      backgroundColor: '#3b82f6',
       borderWidth: 1,
       borderRadius: 4
     }]
@@ -232,6 +204,15 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
           <h3 className="text-lg font-semibold mb-4">Popular Brands</h3>
           <div className="h-[300px] relative">
             <Bar data={brandChartData} options={barOptions} />
+          </div>
+        </div>
+      )}
+
+      {Object.keys(retailerData).length > 0 && (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <h3 className="text-lg font-semibold mb-4">Retailers</h3>
+          <div className="h-[300px] relative">
+            <Bar data={retailerChartData} options={barOptions} />
           </div>
         </div>
       )}
