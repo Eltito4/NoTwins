@@ -5,6 +5,7 @@ import { DressCard } from './DressCard';
 import { DressScrapingModal } from './DressScrapingModal';
 import { EventTrends } from './EventTrends';
 import { EventHistory } from './EventHistory';
+import { DuplicateAlerts } from './DuplicateAlerts';
 import { addDressToEvent, getEventDresses, deleteDress } from '../services/eventService';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -68,13 +69,6 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
     }
   };
 
-  const checkDuplicates = (dress: Dress) => {
-    return dresses.some(d => 
-      d._id !== dress._id && 
-      d.name.toLowerCase() === dress.name.toLowerCase()
-    );
-  };
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -91,82 +85,95 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <div className="sticky top-0 bg-white border-b z-10">
-            <div className="p-6 flex justify-between items-center">
-              <div className="space-y-2">
-                <p className="text-gray-600">
-                  {new Date(event.date).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </p>
-                <p className="text-gray-600">{event.location}</p>
-                <div className="flex items-center gap-4 text-gray-600">
-                  <div className="flex items-center gap-2">
-                    <Users size={18} />
-                    <span>{event.participants.length} participants</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2" title="Public items">
-                      <Eye size={18} className="text-green-500" />
-                      <span>{dresses.filter(d => !d.isPrivate).length}</span>
+          <div className="sticky top-0 bg-white z-20">
+            <div className="p-6 border-b">
+              <div className="flex justify-between items-start">
+                <div className="space-y-2">
+                  <p className="text-gray-600">
+                    {new Date(event.date).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </p>
+                  <p className="text-gray-600">{event.location}</p>
+                  <div className="flex items-center gap-4 text-gray-600">
+                    <div className="flex items-center gap-2">
+                      <Users size={18} />
+                      <span>{event.participants.length} participants</span>
                     </div>
-                    <div className="flex items-center gap-2" title="Private items">
-                      <Lock size={18} className="text-gray-400" />
-                      <span>{dresses.filter(d => d.isPrivate).length}</span>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2" title="Public items">
+                        <Eye size={18} className="text-green-500" />
+                        <span>{dresses.filter(d => !d.isPrivate).length}</span>
+                      </div>
+                      <div className="flex items-center gap-2" title="Private items">
+                        <Lock size={18} className="text-gray-400" />
+                        <span>{dresses.filter(d => d.isPrivate).length}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex bg-gray-100 rounded-lg p-1">
-                  <button
-                    onClick={() => setActiveView('grid')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
-                      activeView === 'grid'
-                        ? 'bg-white text-purple-600 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-800'
-                    }`}
-                  >
-                    <Grid size={18} />
-                    <span>Grid</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveView('trends')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
-                      activeView === 'trends'
-                        ? 'bg-white text-purple-600 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-800'
-                    }`}
-                  >
-                    <BarChart size={18} />
-                    <span>Trends</span>
-                  </button>
-                  {isEventCreator && (
+                <div className="flex items-center gap-4">
+                  <div className="flex bg-gray-100 rounded-lg p-1">
                     <button
-                      onClick={() => setActiveView('history')}
+                      onClick={() => setActiveView('grid')}
                       className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
-                        activeView === 'history'
+                        activeView === 'grid'
                           ? 'bg-white text-purple-600 shadow-sm'
                           : 'text-gray-600 hover:text-gray-800'
                       }`}
                     >
-                      <History size={18} />
-                      <span>History</span>
+                      <Grid size={18} />
+                      <span>Grid</span>
                     </button>
-                  )}
+                    <button
+                      onClick={() => setActiveView('trends')}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+                        activeView === 'trends'
+                          ? 'bg-white text-purple-600 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-800'
+                      }`}
+                    >
+                      <BarChart size={18} />
+                      <span>Trends</span>
+                    </button>
+                    {isEventCreator && (
+                      <button
+                        onClick={() => setActiveView('history')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+                          activeView === 'history'
+                            ? 'bg-white text-purple-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-800'
+                        }`}
+                      >
+                        <History size={18} />
+                        <span>History</span>
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setShowScrapingModal(true)}
+                    className="flex items-center gap-2 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    <PlusCircle size={20} />
+                    <span>Add Item</span>
+                  </button>
                 </div>
-                <button
-                  onClick={() => setShowScrapingModal(true)}
-                  className="flex items-center gap-2 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
-                >
-                  <PlusCircle size={20} />
-                  <span>Add Item</span>
-                </button>
               </div>
             </div>
+
+            {activeView === 'grid' && (
+              <div className="px-6 py-3 border-b bg-white">
+                <DuplicateAlerts
+                  dresses={dresses}
+                  participants={participants}
+                  currentUserId={currentUser?.id}
+                  isEventCreator={isEventCreator}
+                />
+              </div>
+            )}
           </div>
 
           <div className="p-6">
@@ -192,7 +199,6 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
                     <DressCard
                       key={dress._id}
                       dress={dress}
-                      hasConflict={checkDuplicates(dress)}
                       isEventCreator={isEventCreator}
                       userName={participants[dress.userId]?.name}
                       onDelete={handleDeleteDress}

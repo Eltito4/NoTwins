@@ -1,28 +1,21 @@
 import React from 'react';
 import { Dress } from '../types';
-import { AlertTriangle, Lock, Eye, Trash2, Loader2, Store } from 'lucide-react';
+import { Lock, Eye, Trash2, Loader2, Store } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 interface DressCardProps {
   dress: Dress;
-  hasConflict: boolean;
   isEventCreator: boolean;
   userName?: string;
   onDelete: (dressId: string) => Promise<void>;
-  duplicateInfo?: {
-    type: 'exact' | 'partial';
-    items: Array<{ userName: string; color?: string }>;
-  };
 }
 
 export function DressCard({ 
-  dress, 
-  hasConflict, 
-  isEventCreator, 
+  dress,
+  isEventCreator,
   userName,
-  onDelete,
-  duplicateInfo
+  onDelete
 }: DressCardProps) {
   const { currentUser } = useAuth();
   const [imageError, setImageError] = React.useState(false);
@@ -74,41 +67,8 @@ export function DressCard({
 
   const retailerName = dress.imageUrl ? getRetailerName(dress.imageUrl) : null;
 
-  // Only show conflict warning if user is involved or is event creator
-  const shouldShowWarning = hasConflict && (isEventCreator || isOwner || duplicateInfo?.items.some(item => item.userName === currentUser?.name));
-
   return (
     <div className="relative bg-white rounded-xl shadow-lg overflow-hidden transition-transform hover:scale-105">
-      {shouldShowWarning && (
-        <div className={`sticky top-2 right-2 p-2 rounded-full shadow-lg z-10 group cursor-help ${
-          duplicateInfo?.type === 'exact' ? 'bg-red-500' : 'bg-amber-500'
-        }`}>
-          <AlertTriangle size={20} className="text-white" />
-          <div className="absolute right-0 top-full mt-2 w-48 bg-white text-gray-800 text-sm p-2 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-            {duplicateInfo ? (
-              <>
-                <p className="font-medium">
-                  {duplicateInfo.type === 'exact' ? 
-                    'Exact duplicate found:' : 
-                    'Similar items found:'
-                  }
-                </p>
-                <ul className="mt-1">
-                  {duplicateInfo.items.map((item, i) => (
-                    <li key={i}>
-                      {item.userName}
-                      {item.color && ` (${item.color})`}
-                    </li>
-                  ))}
-                </ul>
-              </>
-            ) : (
-              "Duplicate item found"
-            )}
-          </div>
-        </div>
-      )}
-
       {canViewDetails ? (
         <>
           <div className="aspect-square overflow-hidden bg-gray-100 relative">
