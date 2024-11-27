@@ -1,9 +1,10 @@
 import { FC, useState, useEffect } from 'react';
 import { Event, Dress, User } from '../types';
-import { PlusCircle, X, Users, Grid, BarChart, Lock, Eye } from 'lucide-react';
+import { PlusCircle, X, Users, Grid, BarChart, Lock, Eye, History } from 'lucide-react';
 import { DressCard } from './DressCard';
 import { DressScrapingModal } from './DressScrapingModal';
 import { EventTrends } from './EventTrends';
+import { EventHistory } from './EventHistory';
 import { addDressToEvent, getEventDresses, deleteDress } from '../services/eventService';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -15,9 +16,11 @@ interface EventDetailsModalProps {
   participants: Record<string, User>;
 }
 
+type ViewType = 'grid' | 'trends' | 'history';
+
 export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, onDressAdded, participants }) => {
   const [showScrapingModal, setShowScrapingModal] = useState(false);
-  const [activeView, setActiveView] = useState<'grid' | 'trends'>('grid');
+  const [activeView, setActiveView] = useState<ViewType>('grid');
   const [dresses, setDresses] = useState<Dress[]>([]);
   const [loading, setLoading] = useState(true);
   const { currentUser } = useAuth();
@@ -141,6 +144,19 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
                     <BarChart size={18} />
                     <span>Trends</span>
                   </button>
+                  {isEventCreator && (
+                    <button
+                      onClick={() => setActiveView('history')}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+                        activeView === 'history'
+                          ? 'bg-white text-purple-600 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-800'
+                      }`}
+                    >
+                      <History size={18} />
+                      <span>History</span>
+                    </button>
+                  )}
                 </div>
                 <button
                   onClick={() => setShowScrapingModal(true)}
@@ -184,8 +200,10 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
                   ))}
                 </div>
               )
-            ) : (
+            ) : activeView === 'trends' ? (
               <EventTrends dresses={dresses} />
+            ) : (
+              <EventHistory dresses={dresses} participants={participants} />
             )}
           </div>
         </div>
