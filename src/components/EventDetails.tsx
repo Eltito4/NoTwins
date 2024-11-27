@@ -1,6 +1,8 @@
 import React from 'react';
 import { Event, Dress, User } from '../types';
+import { PlusCircle } from 'lucide-react';
 import { DressCard } from './DressCard';
+import { DressScrapingModal } from './DressScrapingModal';
 import { DuplicateAlerts } from './DuplicateAlerts';
 import { addDressToEvent, deleteDress } from '../services/eventService';
 import { useAuth } from '../contexts/AuthContext';
@@ -57,7 +59,8 @@ export function EventDetails({ event, onBack, onDressAdded, participants }: Even
           onClick={() => setShowScrapingModal(true)}
           className="flex items-center gap-2 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
         >
-          Add Item
+          <PlusCircle size={20} />
+          <span>Add Item</span>
         </button>
       </div>
 
