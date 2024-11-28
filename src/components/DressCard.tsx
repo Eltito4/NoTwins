@@ -74,10 +74,36 @@ export function DressCard({
   return (
     <div className="relative bg-white rounded-xl shadow-lg overflow-hidden transition-transform hover:scale-105">
       {duplicateInfo && (
-        <div className={`absolute top-2 right-2 z-10 ${
-          duplicateInfo.type === 'exact' ? 'text-red-500' : 'text-amber-500'
-        }`}>
-          <AlertTriangle size={20} />
+        <div className={`absolute top-2 right-2 z-10 group`}>
+          <div className={`p-2 rounded-full ${
+            duplicateInfo.type === 'exact' ? 'bg-red-500' : 'bg-amber-500'
+          }`}>
+            <AlertTriangle size={20} className="text-white" />
+          </div>
+          <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 p-3 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200">
+            <p className="font-medium text-gray-900">
+              {duplicateInfo.type === 'exact' ? 'Exact duplicate found:' : 'Similar item found:'}
+            </p>
+            <ul className="mt-2 space-y-1.5">
+              {duplicateInfo.items.map((item, idx) => (
+                <li key={idx} className="flex items-center gap-2 text-sm text-gray-600">
+                  <span>{item.userName}</span>
+                  {item.color && (
+                    <>
+                      <span className="text-gray-400">·</span>
+                      <div className="flex items-center gap-1.5">
+                        <div
+                          className="w-2.5 h-2.5 rounded-full border border-gray-200"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span>{item.color}</span>
+                      </div>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
 
