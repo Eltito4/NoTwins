@@ -1,6 +1,6 @@
 import React from 'react';
 import { Dress, User } from '../types';
-import { AlertTriangle } from 'lucide-react';
+import { Bell } from 'lucide-react';
 
 interface DuplicateAlertsProps {
   dresses: Dress[];
@@ -94,36 +94,38 @@ export function DuplicateAlerts({
       {duplicates.map((group, index) => (
         <div
           key={`${group.name}-${index}`}
-          className={`flex items-start gap-2 p-2 rounded-lg ${
+          className={`flex items-start gap-2 p-3 rounded-lg ${
             group.type === 'exact' 
-              ? 'bg-red-50 text-red-800 border border-red-200'
-              : 'bg-amber-50 text-amber-800 border border-amber-200'
+              ? 'bg-red-50 border border-red-100'
+              : 'bg-amber-50 border border-amber-100'
           } ${compact ? 'text-sm' : ''}`}
         >
-          <AlertTriangle 
+          <Bell 
             className={`flex-shrink-0 ${compact ? 'h-4 w-4' : 'h-5 w-5'} mt-0.5 ${
-              group.type === 'exact' ? 'text-red-500' : 'text-amber-500'
+              group.type === 'exact' 
+                ? 'text-red-500 animate-[ring_4s_ease-in-out_infinite]' 
+                : 'text-amber-500'
             }`}
           />
           <div className="min-w-0 flex-1">
-            <p className={`font-medium truncate ${compact ? 'text-sm' : ''}`}>
+            <p className={`font-medium ${compact ? 'text-sm' : ''}`}>
               {isEventCreator ? (
                 <>"{group.name}" - {group.items.length} items</>
               ) : (
-                group.type === 'exact' ? 'Exact duplicate found' : 'Similar item found'
+                group.type === 'exact' ? 'Identical item found' : 'Similar item found'
               )}
             </p>
             {(!compact || isEventCreator) && (
-              <ul className={`mt-1 space-y-0.5 ${compact ? 'text-xs' : 'text-sm'}`}>
+              <ul className={`mt-1.5 space-y-1 ${compact ? 'text-xs' : 'text-sm'}`}>
                 {group.items.map((item) => (
-                  <li key={item.id} className="flex items-center gap-2">
+                  <li key={item.id} className="flex items-center gap-2 text-gray-600">
                     <span>{item.userName}</span>
                     {item.color && (
                       <>
-                        <span className="text-gray-500">·</span>
+                        <span className="text-gray-400">·</span>
                         <div className="flex items-center gap-1.5">
                           <div
-                            className="w-2.5 h-2.5 rounded-full border border-current"
+                            className="w-2.5 h-2.5 rounded-full border border-gray-200"
                             style={{ backgroundColor: item.color }}
                           />
                           <span>{item.color}</span>
