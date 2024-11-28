@@ -55,11 +55,11 @@ export function ParticipantsList({ participants, creatorId, compact = false }: P
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full mt-1 w-64 bg-[#FFF8E1] rounded-lg shadow-lg border border-[#E57373] py-2 z-50">
+        <div className="absolute left-0 top-full mt-1 w-64 bg-white rounded-lg shadow-lg border border-[#E57373] py-2 z-50">
           {creator && (
-            <div className="px-4 py-2 flex items-center gap-2 border-b border-[#E57373]/20">
+            <div className="px-4 py-2 flex items-center gap-2 border-b border-gray-100">
               <Crown size={16} className="text-[#D84315]" />
-              <span className="font-medium text-[#8D6E63]">{creator.name}</span>
+              <span className="font-medium text-gray-900">{creator.name}</span>
               <span className="text-xs text-[#D84315] ml-auto">Creator</span>
             </div>
           )}
@@ -67,9 +67,9 @@ export function ParticipantsList({ participants, creatorId, compact = false }: P
             {otherParticipants.map(participant => (
               <div
                 key={participant.id}
-                className="px-4 py-2 hover:bg-[#FFEDC2] transition-colors flex items-center gap-2"
+                className="px-4 py-2 hover:bg-gray-50 transition-colors flex items-center gap-2"
               >
-                <span className="text-[#8D6E63]">{participant.name}</span>
+                <span className="text-gray-700">{participant.name}</span>
               </div>
             ))}
           </div>
