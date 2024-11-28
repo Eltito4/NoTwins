@@ -1,6 +1,6 @@
 import React from 'react';
 import { Dress } from '../types';
-import { Lock, Eye, Trash2, Loader2, Store } from 'lucide-react';
+import { Lock, Eye, Trash2, Loader2, Store, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -9,13 +9,18 @@ interface DressCardProps {
   isEventCreator: boolean;
   userName?: string;
   onDelete: (dressId: string) => Promise<void>;
+  duplicateInfo?: {
+    type: 'exact' | 'partial';
+    items: Array<{ userName: string; color?: string }>;
+  };
 }
 
 export function DressCard({ 
   dress,
   isEventCreator,
   userName,
-  onDelete
+  onDelete,
+  duplicateInfo
 }: DressCardProps) {
   const { currentUser } = useAuth();
   const [imageError, setImageError] = React.useState(false);
@@ -32,7 +37,6 @@ export function DressCard({
   const handleImageError = () => {
     setImageLoading(false);
     setImageError(true);
-    console.error(`Failed to load image: ${dress.imageUrl}`);
   };
 
   const handleDelete = async () => {
@@ -69,6 +73,14 @@ export function DressCard({
 
   return (
     <div className="relative bg-white rounded-xl shadow-lg overflow-hidden transition-transform hover:scale-105">
+      {duplicateInfo && (
+        <div className={`absolute top-2 right-2 z-10 ${
+          duplicateInfo.type === 'exact' ? 'text-red-500' : 'text-amber-500'
+        }`}>
+          <AlertTriangle size={20} />
+        </div>
+      )}
+
       {canViewDetails ? (
         <>
           <div className="aspect-square overflow-hidden bg-gray-100 relative">
