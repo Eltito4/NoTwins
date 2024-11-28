@@ -1,11 +1,12 @@
 import { FC, useState, useEffect } from 'react';
 import { Event, Dress, User } from '../types';
-import { PlusCircle, X, Users, Grid, BarChart, Lock, Eye, History } from 'lucide-react';
+import { PlusCircle, X, Grid, BarChart, Lock, Eye, History } from 'lucide-react';
 import { DressCard } from './DressCard';
 import { DressScrapingModal } from './DressScrapingModal';
 import { EventTrends } from './EventTrends';
 import { EventHistory } from './EventHistory';
 import { DuplicateAlerts } from './DuplicateAlerts';
+import { ParticipantsList } from './ParticipantsList';
 import { addDressToEvent, getEventDresses, deleteDress } from '../services/eventService';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -99,10 +100,10 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
                   </p>
                   <p className="text-gray-600">{event.location}</p>
                   <div className="flex items-center gap-4 text-gray-600">
-                    <div className="flex items-center gap-2">
-                      <Users size={18} />
-                      <span>{event.participants.length} participants</span>
-                    </div>
+                    <ParticipantsList 
+                      participants={participants}
+                      creatorId={event.creatorId}
+                    />
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2" title="Public items">
                         <Eye size={18} className="text-green-500" />
@@ -225,4 +226,4 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
       )}
     </div>
   );
-};
+}
