@@ -78,13 +78,13 @@ export function DressCard({
           <div className={`relative group`}>
             <div className={`p-2 rounded-full ${
               duplicateInfo.type === 'exact' 
-                ? 'bg-[#FFEBE8] text-[#D84315] animate-bounce'
-                : 'bg-[#FFEDC2] text-[#8D6E63]'
+                ? 'bg-red-50 text-red-500 animate-bounce'
+                : 'bg-amber-50 text-amber-500'
             } shadow-lg cursor-pointer transition-transform hover:scale-110`}>
               <Bell size={20} className={`${duplicateInfo.type === 'exact' ? 'animate-[ring_4s_ease-in-out_infinite]' : ''}`} />
             </div>
-            <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-lg shadow-lg border border-[#E57373] p-3 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200">
-              <p className="font-medium text-[#D84315]">
+            <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 p-3 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200">
+              <p className="font-medium text-gray-900">
                 {duplicateInfo.type === 'exact' ? 'Identical item found!' : 'Similar item found'}
               </p>
               <ul className="mt-2 space-y-1.5">
@@ -117,7 +117,7 @@ export function DressCard({
             <div className="aspect-square overflow-hidden bg-gray-100 relative">
               {imageLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D84315]"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
                 </div>
               )}
               {!imageError ? (
@@ -146,7 +146,7 @@ export function DressCard({
                 <div>
                   <p className="text-lg font-semibold line-clamp-1">{dress.name}</p>
                   {userName && (
-                    <p className="text-sm text-[#8D6E63]">Added by {userName}</p>
+                    <p className="text-sm text-gray-500">Added by {userName}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
@@ -154,7 +154,7 @@ export function DressCard({
                     <button
                       onClick={handleDelete}
                       disabled={isDeleting}
-                      className="p-1 text-[#D84315] hover:text-[#D84315]/80 transition-colors disabled:opacity-50"
+                      className="p-1 text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
                       title="Delete item"
                     >
                       {isDeleting ? (
@@ -165,37 +165,37 @@ export function DressCard({
                     </button>
                   )}
                   {dress.isPrivate ? (
-                    <Lock className="w-4 h-4 text-[#8D6E63]" />
+                    <Lock className="w-4 h-4 text-gray-400" />
                   ) : (
-                    <Eye className="w-4 h-4 text-[#8D6E63]" />
+                    <Eye className="w-4 h-4 text-gray-400" />
                   )}
                 </div>
               </div>
               {dress.brand && (
-                <p className="text-sm text-[#8D6E63] mb-2 line-clamp-1">Brand: {dress.brand}</p>
+                <p className="text-sm text-gray-500 mb-2 line-clamp-1">Brand: {dress.brand}</p>
               )}
               {dress.price && (
-                <p className="text-sm text-[#8D6E63] mb-2">
+                <p className="text-sm text-gray-500 mb-2">
                   Price: ${dress.price.toFixed(2)}
                 </p>
               )}
               {dress.type && (
-                <p className="text-sm text-[#8D6E63] mb-2 capitalize">
+                <p className="text-sm text-gray-500 mb-2 capitalize">
                   Type: {dress.type}
                 </p>
               )}
               {dress.color && (
                 <div className="flex items-center mt-3 gap-2">
                   <div
-                    className="w-6 h-6 rounded-full border-2 border-[#8D6E63]/20 flex-shrink-0"
+                    className="w-6 h-6 rounded-full border-2 border-gray-200 flex-shrink-0"
                     style={{ backgroundColor: dress.color }}
                     title={dress.color}
                   />
-                  <span className="text-sm text-[#8D6E63] capitalize line-clamp-1">{dress.color}</span>
+                  <span className="text-sm text-gray-500 capitalize line-clamp-1">{dress.color}</span>
                 </div>
               )}
               {retailerName && (
-                <div className="flex items-center mt-2 gap-2 text-[#8D6E63]">
+                <div className="flex items-center mt-2 gap-2 text-gray-500">
                   <Store size={16} />
                   <span className="text-sm">{retailerName}</span>
                 </div>
@@ -204,9 +204,9 @@ export function DressCard({
           </>
         ) : (
           <div className="p-6 flex flex-col items-center justify-center text-center h-full min-h-[300px]">
-            <Lock className="w-8 h-8 text-[#8D6E63] mb-2" />
-            <p className="text-[#8D6E63]">This item is private</p>
-            <p className="text-sm text-[#8D6E63]/60 mt-1">Only visible to the owner{isEventCreator ? ' and event creator' : ''}</p>
+            <Lock className="w-8 h-8 text-gray-400 mb-2" />
+            <p className="text-gray-500">This item is private</p>
+            <p className="text-sm text-gray-400 mt-1">Only visible to the owner{isEventCreator ? ' and event creator' : ''}</p>
           </div>
         )}
       </div>

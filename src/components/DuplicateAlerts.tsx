@@ -28,6 +28,8 @@ export function DuplicateAlerts({
   isEventCreator,
   compact = false 
 }: DuplicateAlertsProps) {
+  const [expandedGroup, setExpandedGroup] = React.useState<string | null>(null);
+
   const findDuplicates = () => {
     const duplicateGroups: DuplicateGroup[] = [];
     const processedNames = new Set<string>();
@@ -94,49 +96,51 @@ export function DuplicateAlerts({
       {duplicates.map((group, index) => (
         <div
           key={`${group.name}-${index}`}
-          className={`flex items-start gap-2 p-3 rounded-lg ${
+          className={`relative ${
             group.type === 'exact' 
-              ? 'bg-red-50 border border-red-100'
-              : 'bg-amber-50 border border-amber-100'
-          } ${compact ? 'text-sm' : ''}`}
+              ? 'bg-red-50'
+              : 'bg-amber-50'
+          } rounded-lg p-3`}
         >
-          <Bell 
-            className={`flex-shrink-0 ${compact ? 'h-4 w-4' : 'h-5 w-5'} mt-0.5 ${
-              group.type === 'exact' 
-                ? 'text-red-500 animate-[ring_4s_ease-in-out_infinite]' 
-                : 'text-amber-500'
-            }`}
-          />
-          <div className="min-w-0 flex-1">
-            <p className={`font-medium ${compact ? 'text-sm' : ''}`}>
-              {isEventCreator ? (
-                <>"{group.name}" - {group.items.length} items</>
-              ) : (
-                group.type === 'exact' ? 'Identical item found' : 'Similar item found'
+          <button
+            onClick={() => setExpandedGroup(expandedGroup === group.name ? null : group.name)}
+            className="w-full flex items-start gap-2 text-left"
+          >
+            <Bell 
+              className={`flex-shrink-0 ${compact ? 'h-4 w-4' : 'h-5 w-5'} mt-0.5 ${
+                group.type === 'exact' 
+                  ? 'text-red-500 animate-[ring_4s_ease-in-out_infinite]' 
+                  : 'text-amber-500'
+              }`}
+            />
+            <div className="flex-1 min-w-0">
+              <p className={`font-medium ${compact ? 'text-sm' : ''}`}>
+                "{group.name}" - {group.items.length} items
+                {group.type === 'exact' ? ' (same color)' : ' (different colors)'}
+              </p>
+              {expandedGroup === group.name && (
+                <ul className={`mt-2 space-y-1 ${compact ? 'text-xs' : 'text-sm'}`}>
+                  {group.items.map((item) => (
+                    <li key={item.id} className="flex items-center gap-2 text-gray-600">
+                      <span>{item.userName}</span>
+                      {item.color && (
+                        <>
+                          <span className="text-gray-400">·</span>
+                          <div className="flex items-center gap-1.5">
+                            <div
+                              className="w-2.5 h-2.5 rounded-full border border-gray-200"
+                              style={{ backgroundColor: item.color }}
+                            />
+                            <span>{item.color}</span>
+                          </div>
+                        </>
+                      )}
+                    </li>
+                  ))}
+                </ul>
               )}
-            </p>
-            {(!compact || isEventCreator) && (
-              <ul className={`mt-1.5 space-y-1 ${compact ? 'text-xs' : 'text-sm'}`}>
-                {group.items.map((item) => (
-                  <li key={item.id} className="flex items-center gap-2 text-gray-600">
-                    <span>{item.userName}</span>
-                    {item.color && (
-                      <>
-                        <span className="text-gray-400">·</span>
-                        <div className="flex items-center gap-1.5">
-                          <div
-                            className="w-2.5 h-2.5 rounded-full border border-gray-200"
-                            style={{ backgroundColor: item.color }}
-                          />
-                          <span>{item.color}</span>
-                        </div>
-                      </>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+            </div>
+          </button>
         </div>
       ))}
     </div>
