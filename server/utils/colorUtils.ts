@@ -1,4 +1,9 @@
-export const AVAILABLE_COLORS = [
+export interface ColorInfo {
+    name: string;
+    value: string;
+  }
+  
+  export const AVAILABLE_COLORS: ColorInfo[] = [
     { name: 'Black', value: '#000000' },
     { name: 'White', value: '#FFFFFF' },
     { name: 'Red', value: '#FF0000' },
@@ -66,4 +71,9 @@ export const AVAILABLE_COLORS = [
     return color.split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ');
+  }
+  
+  export function getColorValue(colorName: string): string | undefined {
+    const color = AVAILABLE_COLORS.find(c => c.name === colorName);
+    return color?.value;
   }

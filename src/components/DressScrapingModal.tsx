@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Link, Loader2, Eye, EyeOff } from 'lucide-react';
 import { scrapeDressDetails } from '../services/scrapingService';
 import { Dress } from '../types';
-import { AVAILABLE_COLORS, findClosestNamedColor, normalizeColorName } from '../utils/colorUtils';
+import { AVAILABLE_COLORS, findClosestNamedColor, normalizeColorName, ColorInfo } from '../utils/colorUtils';
 import toast from 'react-hot-toast';
 
 interface DressScrapingModalProps {
@@ -83,6 +83,15 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
     });
   };
 
+  const handleColorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedColor(e.target.value);
+  };
+
+  const getSelectedColorValue = (colorName: string): string => {
+    const color = AVAILABLE_COLORS.find(c => c.name === colorName);
+    return color?.value || '';
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg w-full max-w-lg">
@@ -108,7 +117,7 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+                className="bg-[#FFAB91] text-white px-4 py-2 rounded-lg hover:bg-[#E57373] disabled:opacity-50 flex items-center gap-2"
               >
                 {loading ? (
                   <Loader2 className="animate-spin" size={20} />
@@ -141,12 +150,12 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
                 {showColorSelect ? (
                   <select
                     value={selectedColor}
-                    onChange={(e) => setSelectedColor(e.target.value)}
+                    onChange={handleColorChange}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
                     required
                   >
                     <option value="">Select a color</option>
-                    {AVAILABLE_COLORS.map(color => (
+                    {AVAILABLE_COLORS.map((color: ColorInfo) => (
                       <option key={color.name} value={color.name}>
                         {color.name}
                       </option>
@@ -156,13 +165,13 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
                   <div className="flex items-center gap-2 mt-1">
                     <div
                       className="w-6 h-6 rounded-full border-2 border-gray-200"
-                      style={{ backgroundColor: AVAILABLE_COLORS.find(c => c.name === selectedColor)?.value }}
+                      style={{ backgroundColor: getSelectedColorValue(selectedColor) }}
                     />
                     <span className="text-gray-900">{selectedColor}</span>
                     <button
                       type="button"
                       onClick={() => setShowColorSelect(true)}
-                      className="text-sm text-purple-600 hover:text-purple-700"
+                      className="text-sm text-[#E57373] hover:text-[#FFAB91]"
                     >
                       Change
                     </button>
@@ -197,7 +206,7 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${
                     isPrivate
                       ? 'border-gray-300 text-gray-700'
-                      : 'border-purple-500 text-purple-600'
+                      : 'border-[#E57373] text-[#E57373]'
                   }`}
                 >
                   {isPrivate ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -221,7 +230,7 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                className="px-4 py-2 bg-[#FFAB91] text-white rounded-lg hover:bg-[#E57373]"
               >
                 Add Item
               </button>
