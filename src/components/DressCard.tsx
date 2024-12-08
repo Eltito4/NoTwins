@@ -1,6 +1,6 @@
 import React from 'react';
 import { Dress } from '../types';
-import { Lock, Eye, Trash2, Loader2, Store, Bell } from 'lucide-react';
+import { Lock, Eye, Trash2, Loader2, Bell } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -60,17 +60,6 @@ export function DressCard({
     }
   };
 
-  const getRetailerName = (url: string) => {
-    try {
-      const urlObj = new URL(url);
-      return urlObj.hostname.replace('www.', '');
-    } catch {
-      return null;
-    }
-  };
-
-  const retailerName = dress.imageUrl ? getRetailerName(dress.imageUrl) : null;
-
   return (
     <div className="relative bg-white rounded-xl shadow-lg overflow-visible transition-transform hover:scale-105">
       {duplicateInfo && (
@@ -78,8 +67,8 @@ export function DressCard({
           <div className={`relative group`}>
             <div className={`p-2 rounded-full ${
               duplicateInfo.type === 'exact' 
-                ? 'bg-red-50 text-red-500 animate-bounce'
-                : 'bg-amber-50 text-amber-500'
+                ? 'bg-[#FFEBE8] text-[#D84315] animate-bounce'
+                : 'bg-[#FFEDC2] text-[#8D6E63]'
             } shadow-lg cursor-pointer transition-transform hover:scale-110`}>
               <Bell size={20} className={`${duplicateInfo.type === 'exact' ? 'animate-[ring_4s_ease-in-out_infinite]' : ''}`} />
             </div>
@@ -192,12 +181,6 @@ export function DressCard({
                     title={dress.color}
                   />
                   <span className="text-sm text-gray-500 capitalize line-clamp-1">{dress.color}</span>
-                </div>
-              )}
-              {retailerName && (
-                <div className="flex items-center mt-2 gap-2 text-gray-500">
-                  <Store size={16} />
-                  <span className="text-sm">{retailerName}</span>
                 </div>
               )}
             </div>

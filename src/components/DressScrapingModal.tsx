@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Link, Loader2, Eye, EyeOff } from 'lucide-react';
 import { scrapeDressDetails } from '../services/scrapingService';
 import { Dress } from '../types';
+import { AVAILABLE_COLORS, findClosestNamedColor, normalizeColorName } from '../utils/colorUtils';
 import toast from 'react-hot-toast';
 
 interface DressScrapingModalProps {
@@ -26,6 +27,8 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
   const [loading, setLoading] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [scrapedData, setScrapedData] = useState<ScrapedData | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string>('');
+  const [showColorSelect, setShowColorSelect] = useState(false);
 
   const handleScrape = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +40,19 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
     setLoading(true);
     try {
       const data = await scrapeDressDetails(url);
+      
+      // Handle color detection
+      if (data.color) {
+        const detectedColor = findClosestNamedColor(data.color);
+        if (detectedColor) {
+          setSelectedColor(detectedColor);
+        } else {
+          setShowColorSelect(true);
+        }
+      } else {
+        setShowColorSelect(true);
+      }
+      
       setScrapedData(data);
       toast.success('Product details fetched successfully!');
     } catch (error) {
@@ -50,11 +66,16 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
     e.preventDefault();
     if (!scrapedData) return;
 
+    if (!selectedColor && showColorSelect) {
+      toast.error('Please select a color');
+      return;
+    }
+
     onSubmit({
       name: scrapedData.name,
       imageUrl: scrapedData.imageUrl,
       description: scrapedData.description,
-      color: scrapedData.color,
+      color: selectedColor || scrapedData.color,
       brand: scrapedData.brand,
       price: scrapedData.price,
       type: scrapedData.type,
@@ -115,30 +136,44 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
                 </div>
               )}
 
-              {scrapedData.color && (
-                <div>
-                  <label className="font-medium text-gray-700">Color:</label>
+              <div>
+                <label className="font-medium text-gray-700">Color:</label>
+                {showColorSelect ? (
+                  <select
+                    value={selectedColor}
+                    onChange={(e) => setSelectedColor(e.target.value)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                    required
+                  >
+                    <option value="">Select a color</option>
+                    {AVAILABLE_COLORS.map(color => (
+                      <option key={color.name} value={color.name}>
+                        {color.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
                   <div className="flex items-center gap-2 mt-1">
                     <div
                       className="w-6 h-6 rounded-full border-2 border-gray-200"
-                      style={{ backgroundColor: scrapedData.color.toLowerCase() }}
+                      style={{ backgroundColor: AVAILABLE_COLORS.find(c => c.name === selectedColor)?.value }}
                     />
-                    <span className="text-gray-900">{scrapedData.color}</span>
+                    <span className="text-gray-900">{selectedColor}</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowColorSelect(true)}
+                      className="text-sm text-purple-600 hover:text-purple-700"
+                    >
+                      Change
+                    </button>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               {scrapedData.price && (
                 <div>
                   <label className="font-medium text-gray-700">Price:</label>
                   <p className="text-gray-900">${scrapedData.price.toFixed(2)}</p>
-                </div>
-              )}
-
-              {scrapedData.type && (
-                <div>
-                  <label className="font-medium text-gray-700">Type:</label>
-                  <p className="text-gray-900">{scrapedData.type}</p>
                 </div>
               )}
 
