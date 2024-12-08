@@ -1,10 +1,9 @@
 import { findBestImage } from './imageProcessor.js';
 import { selectors } from './selectors.js';
-import { normalizeText } from './normalizers.js';
+import { normalizeText, normalizeColor } from './normalizers.js';
 import { detectArticleType } from './typeDetector.js';
 import { detectPlatform, getGenericSelectors } from './platformDetector.js';
-import { findClosestNamedColor } from '../colors/utils.js';
-import { parsePrice } from '../currency/utils.js';
+import { COLOR_MAPPINGS } from './constants.js';
 
 export async function extractProductDetails($, url, retailerConfig) {
   try {
@@ -64,8 +63,8 @@ export async function extractProductDetails($, url, retailerConfig) {
       throw new Error('Could not find valid product image');
     }
 
-    // Extract price with currency
-    const price = extractPrice($, combinedSelectors.price, retailerConfig.defaultCurrency || 'EUR');
+    // Extract price
+    const price = extractPrice($, combinedSelectors.price);
     
     // Extract and normalize color
     let color = null;
@@ -78,7 +77,7 @@ export async function extractProductDetails($, url, retailerConfig) {
                         element.attr('data-value');
         
         if (rawColor) {
-          const normalizedColor = findClosestNamedColor(rawColor);
+          const normalizedColor = normalizeColor(rawColor);
           if (normalizedColor) {
             color = normalizedColor;
             break;
@@ -153,7 +152,7 @@ function extractName($, nameSelectors) {
   return null;
 }
 
-function extractPrice($, priceSelectors, defaultCurrency) {
+function extractPrice($, priceSelectors) {
   if (!Array.isArray(priceSelectors)) {
     return null;
   }
@@ -164,14 +163,27 @@ function extractPrice($, priceSelectors, defaultCurrency) {
       const element = $(selector);
       if (element.length) {
         const text = element.text().trim();
-        const price = parsePrice(text, defaultCurrency);
-        if (price) return price;
+        if (text) {
+          // Handle European price format (e.g., "149,00 €" or "149.00 EUR")
+          const match = text.match(/(\d+)[,.](\d{2})/);
+          if (match) {
+            const euros = parseInt(match[1], 10);
+            const cents = parseInt(match[2], 10);
+            return euros + (cents / 100);
+          }
+          
+          // Fallback to basic number extraction
+          const normalized = text.replace(/[^\d.,]/g, '')
+                               .replace(',', '.');
+          const price = parseFloat(normalized);
+          if (!isNaN(price)) return price;
+        }
 
         // Check content attribute for meta tags
         const content = element.attr('content');
         if (content) {
-          const metaPrice = parsePrice(content, defaultCurrency);
-          if (metaPrice) return metaPrice;
+          const price = parseFloat(content);
+          if (!isNaN(price)) return price;
         }
       }
     } catch (error) {
@@ -185,7 +197,7 @@ function extractPrice($, priceSelectors, defaultCurrency) {
     for (let i = 0; i < jsonLd.length; i++) {
       const data = JSON.parse($(jsonLd[i]).html());
       if (data['@type'] === 'Product' && data.offers?.price) {
-        return parsePrice(data.offers.price.toString(), defaultCurrency);
+        return parseFloat(data.offers.price);
       }
     }
   } catch (error) {
