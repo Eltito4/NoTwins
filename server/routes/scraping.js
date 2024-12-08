@@ -50,7 +50,6 @@ async function fetchWithPuppeteer(url, headers) {
 
 async function fetchWithRetry(url, config, retries = 0) {
   try {
-    // Try with Axios first
     const response = await axios({
       method: 'get',
       url,
