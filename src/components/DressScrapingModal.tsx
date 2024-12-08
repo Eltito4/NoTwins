@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { X, Link, Loader2, Eye, EyeOff } from 'lucide-react';
 import { scrapeDressDetails } from '../services/scrapingService';
 import { Dress } from '../types';
-import { AVAILABLE_COLORS, findClosestNamedColor, normalizeColorName, ColorInfo } from '../utils/colorUtils';
+import { AVAILABLE_COLORS, findClosestNamedColor, ColorInfo } from '../utils/colors';
 import toast from 'react-hot-toast';
 
 interface DressScrapingModalProps {
@@ -41,7 +41,6 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
     try {
       const data = await scrapeDressDetails(url);
       
-      // Handle color detection
       if (data.color) {
         const detectedColor = findClosestNamedColor(data.color);
         if (detectedColor) {
@@ -83,14 +82,14 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
     });
   };
 
-  const handleColorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleColorChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedColor(e.target.value);
-  };
+  }, []);
 
-  const getSelectedColorValue = (colorName: string): string => {
-    const color = AVAILABLE_COLORS.find(c => c.name === colorName);
+  const getSelectedColorValue = useCallback((colorName: string): string => {
+    const color = AVAILABLE_COLORS.find((c: ColorInfo) => c.name === colorName);
     return color?.value || '';
-  };
+  }, []);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
