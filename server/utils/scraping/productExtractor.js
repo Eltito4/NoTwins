@@ -1,8 +1,10 @@
 import { findBestImage } from './imageProcessor.js';
 import { selectors } from './selectors.js';
-import { normalizeText, normalizeColor } from './normalizers.js';
+import { normalizeText } from './normalizers.js';
 import { detectArticleType } from './typeDetector.js';
 import { detectPlatform, getGenericSelectors } from './platformDetector.js';
+import { findClosestNamedColor } from '../colors/utils.js';
+import { parsePrice } from '../currency/utils.js';
 
 export async function extractProductDetails($, url, retailerConfig) {
   try {
@@ -62,9 +64,28 @@ export async function extractProductDetails($, url, retailerConfig) {
       throw new Error('Could not find valid product image');
     }
 
-    // Extract other product details
-    const price = extractPrice($, combinedSelectors.price);
-    const color = extractColor($, combinedSelectors.color);
+    // Extract price with currency
+    const price = extractPrice($, combinedSelectors.price, retailerConfig.defaultCurrency || 'EUR');
+    
+    // Extract and normalize color
+    let color = null;
+    for (const selector of combinedSelectors.color) {
+      const element = $(selector);
+      if (element.length) {
+        const rawColor = element.text().trim() || 
+                        element.attr('data-color') || 
+                        element.attr('data-selected-color') || 
+                        element.attr('data-value');
+        
+        if (rawColor) {
+          const normalizedColor = findClosestNamedColor(rawColor);
+          if (normalizedColor) {
+            color = normalizedColor;
+            break;
+          }
+        }
+      }
+    }
     
     // Handle brand with fallback to retailer name
     let brand = null;
@@ -83,7 +104,7 @@ export async function extractProductDetails($, url, retailerConfig) {
       name: normalizeText(name),
       imageUrl,
       price,
-      color: normalizeColor(color),
+      color,
       brand,
       type,
       description: normalizeText(description)
@@ -132,7 +153,7 @@ function extractName($, nameSelectors) {
   return null;
 }
 
-function extractPrice($, priceSelectors) {
+function extractPrice($, priceSelectors, defaultCurrency) {
   if (!Array.isArray(priceSelectors)) {
     return null;
   }
@@ -143,13 +164,13 @@ function extractPrice($, priceSelectors) {
       const element = $(selector);
       if (element.length) {
         const text = element.text().trim();
-        const price = parsePrice(text);
+        const price = parsePrice(text, defaultCurrency);
         if (price) return price;
 
         // Check content attribute for meta tags
         const content = element.attr('content');
         if (content) {
-          const metaPrice = parsePrice(content);
+          const metaPrice = parsePrice(content, defaultCurrency);
           if (metaPrice) return metaPrice;
         }
       }
@@ -164,51 +185,11 @@ function extractPrice($, priceSelectors) {
     for (let i = 0; i < jsonLd.length; i++) {
       const data = JSON.parse($(jsonLd[i]).html());
       if (data['@type'] === 'Product' && data.offers?.price) {
-        return parseFloat(data.offers.price);
+        return parsePrice(data.offers.price.toString(), defaultCurrency);
       }
     }
   } catch (error) {
     console.error('Error parsing JSON-LD price:', error);
-  }
-
-  return null;
-}
-
-function extractColor($, colorSelectors) {
-  if (!Array.isArray(colorSelectors)) {
-    return null;
-  }
-
-  // Try direct selectors
-  for (const selector of colorSelectors) {
-    try {
-      const element = $(selector);
-      if (element.length) {
-        const text = element.text().trim();
-        if (text) return text;
-
-        // Check data attributes
-        const dataColor = element.attr('data-color') || 
-                         element.attr('data-selected-color') || 
-                         element.attr('data-value');
-        if (dataColor) return dataColor;
-      }
-    } catch (error) {
-      continue;
-    }
-  }
-
-  // Try JSON-LD
-  try {
-    const jsonLd = $('script[type="application/ld+json"]');
-    for (let i = 0; i < jsonLd.length; i++) {
-      const data = JSON.parse($(jsonLd[i]).html());
-      if (data['@type'] === 'Product' && data.color) {
-        return data.color;
-      }
-    }
-  } catch (error) {
-    console.error('Error parsing JSON-LD color:', error);
   }
 
   return null;
@@ -283,22 +264,4 @@ function extractDescription($, descriptionSelectors) {
   }
 
   return null;
-}
-
-function parsePrice(text) {
-  if (!text) return null;
-  
-  // Handle European price format (e.g., "149,00 €" or "149.00 EUR")
-  const match = text.match(/(\d+)[,.](\d{2})/);
-  if (match) {
-    const euros = parseInt(match[1], 10);
-    const cents = parseInt(match[2], 10);
-    return euros + (cents / 100);
-  }
-  
-  // Fallback to basic number extraction
-  const normalized = text.replace(/[^\d.,]/g, '')
-                       .replace(',', '.');
-  const price = parseFloat(normalized);
-  return isNaN(price) ? null : price;
 }
