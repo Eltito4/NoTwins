@@ -93,8 +93,8 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg w-full max-w-lg">
-        <div className="p-6 border-b">
+      <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="p-6 border-b flex-shrink-0">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Add Item from URL</h2>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
@@ -130,8 +130,8 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
         </div>
 
         {scrapedData && (
-          <form onSubmit={handleSubmit}>
-            <div className="p-6 space-y-4">
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="font-medium text-gray-700">Name:</label>
                 <p className="text-gray-900">{scrapedData.name}</p>
@@ -219,7 +219,7 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
               </div>
             </div>
 
-            <div className="p-6 border-t bg-gray-50 flex justify-end gap-4">
+            <div className="p-6 border-t bg-gray-50 flex justify-end gap-4 flex-shrink-0">
               <button
                 type="button"
                 onClick={onClose}
