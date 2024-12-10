@@ -1,4 +1,5 @@
 import { findBestImage } from './imageProcessor.js';
+import { findProductColor } from './colorDetector.js';
 import { normalizeColor } from './normalizers.js';
 import { detectProductType } from './typeDetector.js';
 
@@ -17,7 +18,7 @@ export async function extractProductDetails($, url, retailerConfig) {
 
     // Extract optional details
     const price = extractPrice($, retailerConfig.selectors.price);
-    const color = extractColor($, retailerConfig.selectors.color);
+    const color = findProductColor($, url, retailerConfig);
     const brand = retailerConfig.brand?.defaultValue || extractBrand($, retailerConfig.selectors.brand);
     const description = extractDescription($, retailerConfig.selectors.description);
 
