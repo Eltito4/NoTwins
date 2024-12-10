@@ -1,6 +1,5 @@
 import { findBestImage } from './imageProcessor.js';
 import { findProductColor } from './colorDetector.js';
-import { normalizeColor } from './normalizers.js';
 import { detectProductType } from './typeDetector.js';
 
 export async function extractProductDetails($, url, retailerConfig) {
@@ -16,9 +15,11 @@ export async function extractProductDetails($, url, retailerConfig) {
       throw new Error('Could not find valid product image');
     }
 
-    // Extract optional details
-    const price = extractPrice($, retailerConfig.selectors.price);
+    // Extract color
     const color = findProductColor($, url, retailerConfig);
+
+    // Extract other optional details
+    const price = extractPrice($, retailerConfig.selectors.price);
     const brand = retailerConfig.brand?.defaultValue || extractBrand($, retailerConfig.selectors.brand);
     const description = extractDescription($, retailerConfig.selectors.description);
 
@@ -28,8 +29,8 @@ export async function extractProductDetails($, url, retailerConfig) {
     return {
       name,
       imageUrl,
+      color,
       price,
-      color: normalizeColor(color),
       brand,
       type,
       description
@@ -41,106 +42,40 @@ export async function extractProductDetails($, url, retailerConfig) {
 }
 
 function extractText($, selectors) {
-  if (!Array.isArray(selectors)) return null;
+  if (!selectors) return null;
 
   for (const selector of selectors) {
-    try {
-      const element = $(selector);
-      if (element.length) {
-        // Try text content first
-        const text = element.text().trim();
-        if (text) return text;
-        
-        // Try content attribute (for meta tags)
-        const content = element.attr('content');
-        if (content) return content.trim();
-      }
-    } catch (error) {
-      continue;
+    const element = $(selector);
+    if (element.length) {
+      const text = element.text().trim();
+      if (text) return text;
+
+      const content = element.attr('content');
+      if (content) return content.trim();
     }
   }
+
   return null;
 }
 
 function extractPrice($, selectors) {
-  if (!Array.isArray(selectors)) return null;
+  const priceText = extractText($, selectors);
+  if (!priceText) return null;
 
-  for (const selector of selectors) {
-    try {
-      const element = $(selector);
-      if (element.length) {
-        const text = element.text().trim() || element.attr('content');
-        if (text) {
-          // Try to find price with decimal
-          const match = text.match(/(\d+)[,.](\d{2})/);
-          if (match) {
-            const euros = parseInt(match[1], 10);
-            const cents = parseInt(match[2], 10);
-            return euros + (cents / 100);
-          }
-          
-          // Try to find just numbers
-          const numericMatch = text.match(/\d+/);
-          if (numericMatch) {
-            return parseInt(numericMatch[0], 10);
-          }
-        }
-      }
-    } catch (error) {
-      continue;
-    }
-  }
-  return null;
-}
+  // Remove currency symbols and normalize decimal separator
+  const normalized = priceText
+    .replace(/[^\d.,]/g, '')
+    .replace(/[.,](\d{2})$/, '.$1')
+    .replace(/[.,]/g, '');
 
-function extractColor($, selectors) {
-  if (!Array.isArray(selectors)) return null;
-
-  for (const selector of selectors) {
-    try {
-      const element = $(selector);
-      if (element.length) {
-        // Try various ways to get color info
-        return element.text().trim() || 
-               element.attr('data-color') || 
-               element.attr('data-selected-color') ||
-               element.attr('content');
-      }
-    } catch (error) {
-      continue;
-    }
-  }
-  return null;
+  const price = parseFloat(normalized);
+  return isNaN(price) ? null : price;
 }
 
 function extractBrand($, selectors) {
-  if (!Array.isArray(selectors)) return null;
-
-  for (const selector of selectors) {
-    try {
-      const element = $(selector);
-      if (element.length) {
-        return element.text().trim() || element.attr('content');
-      }
-    } catch (error) {
-      continue;
-    }
-  }
-  return null;
+  return extractText($, selectors);
 }
 
 function extractDescription($, selectors) {
-  if (!Array.isArray(selectors)) return null;
-
-  for (const selector of selectors) {
-    try {
-      const element = $(selector);
-      if (element.length) {
-        return element.text().trim() || element.attr('content');
-      }
-    } catch (error) {
-      continue;
-    }
-  }
-  return null;
+  return extractText($, selectors);
 }

@@ -24,6 +24,22 @@ export function findProductColor($, url, retailerConfig) {
     }
   }
 
+  // Try to find color in product name
+  const productName = $('h1').first().text() || '';
+  const nameColor = findColorInText(productName);
+  if (nameColor) return nameColor;
+
+  // Try meta tags
+  const metaColor = $('meta[property="product:color"], meta[name="product:color"]').attr('content');
+  if (metaColor) {
+    const color = normalizeColorName(metaColor);
+    if (color) return color;
+  }
+
+  // Try finding color in URL
+  const urlColor = findColorInText(url);
+  if (urlColor) return urlColor;
+
   // Try JSON-LD data
   const jsonLdScripts = $('script[type="application/ld+json"]');
   for (let i = 0; i < jsonLdScripts.length; i++) {
@@ -37,27 +53,6 @@ export function findProductColor($, url, retailerConfig) {
       continue;
     }
   }
-
-  // Try meta tags
-  const metaColor = $('meta[property="product:color"], meta[name="product:color"]').attr('content');
-  if (metaColor) {
-    const color = normalizeColorName(metaColor);
-    if (color) return color;
-  }
-
-  // Try finding color in product name or description
-  const productName = $('h1').first().text() || '';
-  const productDesc = $('.product-description, [data-testid="product-description"]').first().text() || '';
-  
-  const nameColor = findColorInText(productName);
-  if (nameColor) return nameColor;
-  
-  const descColor = findColorInText(productDesc);
-  if (descColor) return descColor;
-
-  // Try finding color in URL
-  const urlColor = findColorInText(url);
-  if (urlColor) return urlColor;
 
   return null;
 }
