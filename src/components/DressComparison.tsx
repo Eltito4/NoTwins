@@ -1,6 +1,7 @@
-import type { FC } from 'react';
+import { FC } from 'react';
 import { Dress } from '../types';
 import { AlertTriangle, CheckCircle } from 'lucide-react';
+import { getCategoryName, getSubcategoryName } from '../utils/categorization';
 
 interface DressComparisonProps {
   dresses: Dress[];
@@ -10,8 +11,8 @@ interface DressComparisonProps {
 export const DressComparison: FC<DressComparisonProps> = ({ dresses, selectedDress }) => {
   const conflicts = dresses.filter(dress => 
     dress.id !== selectedDress.id && (
-      dress.color?.toLowerCase() === selectedDress.color?.toLowerCase() ||
-      dress.type?.toLowerCase() === selectedDress.type?.toLowerCase()
+      dress.type?.subcategory === selectedDress.type?.subcategory ||
+      dress.color?.toLowerCase() === selectedDress.color?.toLowerCase()
     )
   );
 
@@ -37,7 +38,9 @@ export const DressComparison: FC<DressComparisonProps> = ({ dresses, selectedDre
                   className="w-20 h-20 object-cover rounded-lg"
                 />
                 <div>
-                  <p className="font-medium">{dress.type || 'Dress'}</p>
+                  <p className="font-medium">
+                    {dress.type ? getCategoryName(dress.type.category) : 'Other'}
+                  </p>
                   <p className="text-sm text-gray-600">{dress.description || dress.name}</p>
                   {dress.color && (
                     <div className="flex items-center mt-2 gap-2">

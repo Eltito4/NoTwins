@@ -45,6 +45,7 @@ export interface Event {
   dresses: Dress[];
   createdAt?: Date;
 }
+
 export interface ScrapedProduct {
   name: string;
   imageUrl: string;
@@ -52,5 +53,5 @@ export interface ScrapedProduct {
   brand?: string;
   price?: number;
   description?: string;
-  type?: string;
+  type?: ProductType;
 }

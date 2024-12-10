@@ -1,34 +1,31 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { X, Link, Loader2, Eye, EyeOff } from 'lucide-react';
 import { scrapeDressDetails } from '../services/scrapingService';
-import { Dress } from '../types';
-import { AVAILABLE_COLORS, findClosestNamedColor, ColorInfo } from '../utils/colors';
+import { ScrapedProduct } from '../types';
+import { ProductType } from '../utils/categorization/types';
+import { detectProductType } from '../utils/categorization/detector';
 import toast from 'react-hot-toast';
 
 interface DressScrapingModalProps {
   onClose: () => void;
-  onSubmit: (dressData: Omit<Dress, '_id' | 'id' | 'userId' | 'eventId'>) => void;
+  onSubmit: (dressData: {
+    name: string;
+    imageUrl: string;
+    description?: string;
+    color?: string;
+    brand?: string;
+    price?: number;
+    type?: ProductType;
+    isPrivate: boolean;
+  }) => void;
   isEventCreator: boolean;
-  existingItems?: Dress[];
-}
-
-interface ScrapedData {
-  name: string;
-  imageUrl: string;
-  color?: string;
-  brand?: string;
-  price?: number;
-  description?: string;
-  type?: string;
 }
 
 export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressScrapingModalProps) {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
-  const [scrapedData, setScrapedData] = useState<ScrapedData | null>(null);
-  const [selectedColor, setSelectedColor] = useState<string>('');
-  const [showColorSelect, setShowColorSelect] = useState(false);
+  const [scrapedData, setScrapedData] = useState<ScrapedProduct | null>(null);
 
   const handleScrape = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,19 +37,8 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
     setLoading(true);
     try {
       const data = await scrapeDressDetails(url);
-      
-      if (data.color) {
-        const detectedColor = findClosestNamedColor(data.color);
-        if (detectedColor) {
-          setSelectedColor(detectedColor);
-        } else {
-          setShowColorSelect(true);
-        }
-      } else {
-        setShowColorSelect(true);
-      }
-      
-      setScrapedData(data);
+      const type = detectProductType(data.name + ' ' + (data.description || ''));
+      setScrapedData({ ...data, type });
       toast.success('Product details fetched successfully!');
     } catch (error) {
       // Error is already handled in scrapeDressDetails
@@ -65,16 +51,11 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
     e.preventDefault();
     if (!scrapedData) return;
 
-    if (!selectedColor && showColorSelect) {
-      toast.error('Please select a color');
-      return;
-    }
-
     onSubmit({
       name: scrapedData.name,
       imageUrl: scrapedData.imageUrl,
       description: scrapedData.description,
-      color: selectedColor || scrapedData.color,
+      color: scrapedData.color,
       brand: scrapedData.brand,
       price: scrapedData.price,
       type: scrapedData.type,
@@ -82,19 +63,10 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
     });
   };
 
-  const handleColorChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedColor(e.target.value);
-  }, []);
-
-  const getSelectedColorValue = useCallback((colorName: string): string => {
-    const color = AVAILABLE_COLORS.find((c: ColorInfo) => c.name === colorName);
-    return color?.value || '';
-  }, []);
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] flex flex-col">
-        <div className="p-6 border-b flex-shrink-0">
+      <div className="bg-white rounded-lg w-full max-w-lg">
+        <div className="p-6 border-b">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Add Item from URL</h2>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
@@ -116,7 +88,7 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-[#FFAB91] text-white px-4 py-2 rounded-lg hover:bg-[#E57373] disabled:opacity-50 flex items-center gap-2"
+                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
               >
                 {loading ? (
                   <Loader2 className="animate-spin" size={20} />
@@ -130,8 +102,8 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
         </div>
 
         {scrapedData && (
-          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+          <form onSubmit={handleSubmit}>
+            <div className="p-6 space-y-4">
               <div>
                 <label className="font-medium text-gray-700">Name:</label>
                 <p className="text-gray-900">{scrapedData.name}</p>
@@ -144,39 +116,18 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
                 </div>
               )}
 
-              <div>
-                <label className="font-medium text-gray-700">Color:</label>
-                {showColorSelect ? (
-                  <select
-                    value={selectedColor}
-                    onChange={handleColorChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-                    required
-                  >
-                    <option value="">Select a color</option>
-                    {AVAILABLE_COLORS.map((color: ColorInfo) => (
-                      <option key={color.name} value={color.name}>
-                        {color.name}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
+              {scrapedData.color && (
+                <div>
+                  <label className="font-medium text-gray-700">Color:</label>
                   <div className="flex items-center gap-2 mt-1">
                     <div
                       className="w-6 h-6 rounded-full border-2 border-gray-200"
-                      style={{ backgroundColor: getSelectedColorValue(selectedColor) }}
+                      style={{ backgroundColor: scrapedData.color.toLowerCase() }}
                     />
-                    <span className="text-gray-900">{selectedColor}</span>
-                    <button
-                      type="button"
-                      onClick={() => setShowColorSelect(true)}
-                      className="text-sm text-[#E57373] hover:text-[#FFAB91]"
-                    >
-                      Change
-                    </button>
+                    <span className="text-gray-900">{scrapedData.color}</span>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
               {scrapedData.price && (
                 <div>
@@ -205,7 +156,7 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${
                     isPrivate
                       ? 'border-gray-300 text-gray-700'
-                      : 'border-[#E57373] text-[#E57373]'
+                      : 'border-purple-500 text-purple-600'
                   }`}
                 >
                   {isPrivate ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -219,7 +170,7 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
               </div>
             </div>
 
-            <div className="p-6 border-t bg-gray-50 flex justify-end gap-4 flex-shrink-0">
+            <div className="p-6 border-t bg-gray-50 flex justify-end gap-4">
               <button
                 type="button"
                 onClick={onClose}
@@ -229,7 +180,7 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-[#FFAB91] text-white rounded-lg hover:bg-[#E57373]"
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
               >
                 Add Item
               </button>

@@ -1,6 +1,6 @@
-import type { FC } from 'react';
-import { useMemo } from 'react';
+import { FC, useMemo } from 'react';
 import { Dress } from '../types';
+import { getCategoryName, getSubcategoryName } from '../utils/categorization';
 import {
   Chart as ChartJS,
   ArcElement,
@@ -23,51 +23,6 @@ ChartJS.register(
   Legend
 );
 
-// Color mapping with base colors
-const COLOR_MAP: Record<string, { value: string; base: string }> = {
-  'white': { value: '#FFFFFF', base: 'white' },
-  'black': { value: '#000000', base: 'black' },
-  'red': { value: '#FF0000', base: 'red' },
-  'blue': { value: '#0000FF', base: 'blue' },
-  'light blue': { value: '#ADD8E6', base: 'blue' },
-  'dark blue': { value: '#00008B', base: 'blue' },
-  'navy blue': { value: '#000080', base: 'blue' },
-  'navy': { value: '#000080', base: 'blue' },
-  'green': { value: '#008000', base: 'green' },
-  'light green': { value: '#90EE90', base: 'green' },
-  'dark green': { value: '#006400', base: 'green' },
-  'yellow': { value: '#FFD700', base: 'yellow' },
-  'purple': { value: '#800080', base: 'purple' },
-  'pink': { value: '#FFC0CB', base: 'pink' },
-  'light pink': { value: '#FFB6C1', base: 'pink' },
-  'hot pink': { value: '#FF69B4', base: 'pink' },
-  'orange': { value: '#FFA500', base: 'orange' },
-  'brown': { value: '#8B4513', base: 'brown' },
-  'gray': { value: '#808080', base: 'gray' },
-  'grey': { value: '#808080', base: 'gray' },
-  'dark gray': { value: '#404040', base: 'gray' },
-  'light gray': { value: '#D3D3D3', base: 'gray' },
-  'silver': { value: '#C0C0C0', base: 'silver' },
-  'gold': { value: '#FFD700', base: 'gold' },
-  'beige': { value: '#F5F5DC', base: 'beige' },
-  'cream': { value: '#FFFDD0', base: 'cream' },
-  'khaki': { value: '#C3B091', base: 'khaki' },
-  'dark khaki': { value: '#BDB76B', base: 'khaki' },
-  'olive': { value: '#808000', base: 'olive' },
-  'burgundy': { value: '#800020', base: 'red' },
-  'maroon': { value: '#800000', base: 'red' },
-  'teal': { value: '#008080', base: 'blue' },
-  'turquoise': { value: '#40E0D0', base: 'blue' },
-  'coral': { value: '#FF7F50', base: 'orange' },
-  'salmon': { value: '#FA8072', base: 'pink' },
-  'magenta': { value: '#FF00FF', base: 'purple' },
-  'violet': { value: '#8F00FF', base: 'purple' },
-  'indigo': { value: '#4B0082', base: 'purple' },
-  'pastel pink': { value: '#FFB6C1', base: 'pink' },
-  'pastel blue': { value: '#B0E0E6', base: 'blue' },
-  'pastel green': { value: '#98FB98', base: 'green' }
-};
-
 interface EventTrendsProps {
   dresses: Dress[];
 }
@@ -82,8 +37,7 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
       // Handle colors
       if (dress.color) {
         const colorKey = dress.color.toLowerCase();
-        const baseColor = COLOR_MAP[colorKey]?.base || colorKey;
-        colors[baseColor] = (colors[baseColor] || 0) + 1;
+        colors[colorKey] = (colors[colorKey] || 0) + 1;
       }
 
       // Handle brands
@@ -94,7 +48,7 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
 
       // Handle types
       if (dress.type) {
-        const type = dress.type.toLowerCase();
+        const type = dress.type.subcategory;
         types[type] = (types[type] || 0) + 1;
       }
     });
@@ -119,14 +73,14 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
     labels: Object.keys(colorData).map(color => color.charAt(0).toUpperCase() + color.slice(1)),
     datasets: [{
       data: Object.values(colorData),
-      backgroundColor: Object.keys(colorData).map(color => COLOR_MAP[color]?.value || color),
+      backgroundColor: Object.keys(colorData),
       borderColor: '#ffffff',
       borderWidth: 2
     }]
   };
 
   const typeChartData = {
-    labels: Object.keys(typeData).map(type => type.charAt(0).toUpperCase() + type.slice(1)),
+    labels: Object.keys(typeData).map(type => getSubcategoryName('garments', type)),
     datasets: [{
       data: Object.values(typeData),
       backgroundColor: [
@@ -165,17 +119,6 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
             size: 12
           }
         }
-      },
-      tooltip: {
-        callbacks: {
-          label: (context: any) => {
-            const label = context.label || '';
-            const value = context.raw || 0;
-            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-            const percentage = ((value / total) * 100).toFixed(1);
-            return `${label}: ${value} (${percentage}%)`;
-          }
-        }
       }
     }
   };
@@ -186,9 +129,6 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
     plugins: {
       legend: {
         display: false
-      },
-      tooltip: {
-        enabled: true
       }
     },
     scales: {
