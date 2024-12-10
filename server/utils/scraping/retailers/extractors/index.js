@@ -1,55 +1,83 @@
-import { extractCosProduct } from './cos.js';
-import { extractCarolinaHerreraProduct } from './carolina-herrera.js';
-import { extractMangoProduct } from './mango.js';
-import { extractHMProduct } from './hm.js';
-import { extractElCorteInglesProduct } from './el-corte-ingles.js';
-import { extractRosaClaraProduct } from './rosa-clara.js';
-import { extractLouisVuittonProduct } from './louis-vuitton.js';
+import { load } from 'cheerio';
+import { findBestImage } from '../../imageProcessor.js';
+import { normalizeColor } from '../../normalizers.js';
+import { detectProductType } from '../../typeDetector.js';
 
-// Map domains to their extractors
-const retailerExtractors = {
-  'cos.com': extractCosProduct,
-  'chcarolinaherrera.com': extractCarolinaHerreraProduct,
-  'carolinaherrera.com': extractCarolinaHerreraProduct,
-  'shop.mango.com': extractMangoProduct,
-  'mango.com': extractMangoProduct,
-  'hm.com': extractHMProduct,
-  'www2.hm.com': extractHMProduct,
-  'elcorteingles.es': extractElCorteInglesProduct,
-  'rosaclara.es': extractRosaClaraProduct,
-  'louisvuitton.com': extractLouisVuittonProduct
-};
+export async function extractCosProduct($, url) {
+  const selectors = {
+    name: [
+      '[data-test-id="product-title"]',
+      '.product-hero h1',
+      '.product-title'
+    ],
+    price: [
+      '[data-test-id="product-price"]',
+      '.product-price',
+      '.price-value'
+    ],
+    color: [
+      '[data-test-id="selected-color"]',
+      '.color-selector .active',
+      '.selected-color'
+    ]
+  };
 
-export function getRetailerExtractor(url) {
-  try {
-    const hostname = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
-    
-    // Handle special cases first
-    if (hostname === 'chcarolinaherrera.com' || hostname === 'carolinaherrera.com') {
-      return retailerExtractors['carolinaherrera.com'];
-    }
+  const name = extractText($, selectors.name);
+  const imageUrl = await findBestImage($, url);
+  const price = extractPrice($, selectors.price);
+  const color = extractColor($, selectors.color);
+  const type = detectProductType(name);
 
-    // Find matching extractor
-    const extractor = retailerExtractors[hostname] || 
-                     Object.entries(retailerExtractors)
-                       .find(([key]) => hostname.includes(key))?.[1];
-    
-    if (!extractor) {
-      return null; // Return null instead of throwing error to allow fallback
-    }
-    
-    return extractor;
-  } catch (error) {
-    return null; // Return null on invalid URLs to allow fallback
-  }
+  return {
+    name,
+    imageUrl,
+    price,
+    color: normalizeColor(color),
+    brand: 'COS',
+    type
+  };
 }
 
-export {
-  extractCosProduct,
-  extractCarolinaHerreraProduct,
-  extractMangoProduct,
-  extractHMProduct,
-  extractElCorteInglesProduct,
-  extractRosaClaraProduct,
-  extractLouisVuittonProduct
-};
+function extractText($, selectors) {
+  for (const selector of selectors) {
+    const element = $(selector);
+    if (element.length) {
+      const text = element.text().trim();
+      if (text) return text;
+      
+      const content = element.attr('content');
+      if (content) return content.trim();
+    }
+  }
+  return null;
+}
+
+function extractPrice($, selectors) {
+  for (const selector of selectors) {
+    const element = $(selector);
+    if (element.length) {
+      const text = element.text().trim();
+      if (text) {
+        const match = text.match(/(\d+)[,.](\d{2})/);
+        if (match) {
+          const euros = parseInt(match[1], 10);
+          const cents = parseInt(match[2], 10);
+          return euros + (cents / 100);
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function extractColor($, selectors) {
+  for (const selector of selectors) {
+    const element = $(selector);
+    if (element.length) {
+      return element.text().trim() || 
+             element.attr('data-color') || 
+             element.attr('data-selected-color');
+    }
+  }
+  return null;
+}
