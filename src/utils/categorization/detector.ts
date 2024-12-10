@@ -1,5 +1,5 @@
 import { CATEGORIES } from './categories';
-import { ProductType } from './types';
+import { ProductType, ProductTypeImpl } from './types';
 
 export function detectProductType(text: string): ProductType {
   const normalizedText = text.toLowerCase();
@@ -7,21 +7,17 @@ export function detectProductType(text: string): ProductType {
   for (const category of CATEGORIES) {
     for (const subcategory of category.subcategories) {
       if (subcategory.keywords.some(keyword => normalizedText.includes(keyword.toLowerCase()))) {
-        return {
-          category: category.id,
-          subcategory: subcategory.id,
-          name: subcategory.name
-        };
+        return new ProductTypeImpl(
+          category.id,
+          subcategory.id,
+          subcategory.name
+        );
       }
     }
   }
 
   // Default to garments/other if no specific match found
-  return {
-    category: 'garments',
-    subcategory: 'other',
-    name: 'Other'
-  };
+  return new ProductTypeImpl('garments', 'other', 'Other');
 }
 
 export function getCategoryName(categoryId: string): string {

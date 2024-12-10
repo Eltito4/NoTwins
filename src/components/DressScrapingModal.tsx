@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { X, Link, Loader2, Eye, EyeOff } from 'lucide-react';
 import { scrapeDressDetails } from '../services/scrapingService';
 import { ScrapedProduct } from '../types';
 import { ProductType } from '../utils/categorization/types';
 import { detectProductType } from '../utils/categorization/detector';
+import { getCategoryName } from '../utils/categorization';
 import toast from 'react-hot-toast';
 
 interface DressScrapingModalProps {
@@ -108,6 +109,14 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
                 <label className="font-medium text-gray-700">Name:</label>
                 <p className="text-gray-900">{scrapedData.name}</p>
               </div>
+
+              {scrapedData.type && (
+                <div>
+                  <label className="font-medium text-gray-700">Category:</label>
+                  <p className="text-gray-900">{getCategoryName(scrapedData.type.category)}</p>
+                  <p className="text-gray-600 text-sm">{scrapedData.type.name}</p>
+                </div>
+              )}
 
               {scrapedData.brand && (
                 <div>
