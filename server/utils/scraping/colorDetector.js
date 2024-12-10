@@ -55,6 +55,10 @@ export function findProductColor($, url, retailerConfig) {
   const descColor = findColorInText(productDesc);
   if (descColor) return descColor;
 
+  // Try finding color in URL
+  const urlColor = findColorInText(url);
+  if (urlColor) return urlColor;
+
   return null;
 }
 
@@ -69,7 +73,7 @@ function normalizeColorName(colorText) {
   }
 
   // Check for compound colors (e.g., "dark blue", "light green")
-  const colorWords = text.split(/\s+/);
+  const colorWords = text.split(/[\s-]+/);
   for (let i = 0; i < colorWords.length; i++) {
     const word = colorWords[i];
     const nextWord = colorWords[i + 1];
