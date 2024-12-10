@@ -119,56 +119,6 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
           {isCreator && (
             <span className="text-sm text-purple-600">Event Creator</span>
           )}
-          
-          {userDuplicates.length > 0 && (
-            <div className="mt-2 space-y-2">
-              {exactDuplicates.length > 0 && (
-                <div className="flex items-start gap-2 text-red-600 bg-red-50 p-2 rounded-lg">
-                  <Bell size={18} className="flex-shrink-0 mt-0.5 animate-[ring_4s_ease-in-out_infinite]" />
-                  <div className="text-sm">
-                    <p className="font-medium">Exact duplicates found:</p>
-                    <ul className="mt-1 space-y-1">
-                      {exactDuplicates.map(dup => (
-                        <li key={dup.name}>
-                          "{dup.name}" ({dup.items.length} items, same color)
-                          <ul className="ml-4 text-xs text-gray-600">
-                            {dup.items.map(item => (
-                              <li key={item.id}>
-                                {formatUserInfo(item)}
-                              </li>
-                            ))}
-                          </ul>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )}
-              
-              {partialDuplicates.length > 0 && (
-                <div className="flex items-start gap-2 text-amber-600 bg-amber-50 p-2 rounded-lg">
-                  <Bell size={18} className="flex-shrink-0 mt-0.5" />
-                  <div className="text-sm">
-                    <p className="font-medium">Similar items found:</p>
-                    <ul className="mt-1 space-y-1">
-                      {partialDuplicates.map(dup => (
-                        <li key={dup.name}>
-                          "{dup.name}" ({dup.items.length} items, different colors)
-                          <ul className="ml-4 text-xs text-gray-600">
-                            {dup.items.map(item => (
-                              <li key={item.id}>
-                                {formatUserInfo(item)}
-                              </li>
-                            ))}
-                          </ul>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -195,6 +145,52 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
           </button>
         </div>
       </div>
+
+      {userDuplicates.length > 0 && (
+        <div className="mb-4 bg-amber-50 rounded-lg p-4">
+          {exactDuplicates.length > 0 && (
+            <div className="flex items-start gap-2 text-red-600">
+              <Bell size={18} className="flex-shrink-0 mt-0.5 animate-[ring_4s_ease-in-out_infinite]" />
+              <div>
+                <p className="font-medium">Exact duplicates found:</p>
+                <ul className="mt-1 space-y-1 text-sm">
+                  {exactDuplicates.map(dup => (
+                    <li key={dup.name}>
+                      "{dup.name}" ({dup.items.length} items, same color)
+                      <ul className="ml-4 text-gray-600">
+                        {dup.items.map(item => (
+                          <li key={item.id}>{formatUserInfo(item)}</li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+          
+          {partialDuplicates.length > 0 && (
+            <div className="flex items-start gap-2 text-amber-600 mt-3">
+              <Bell size={18} className="flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium">Similar items found:</p>
+                <ul className="mt-1 space-y-1 text-sm">
+                  {partialDuplicates.map(dup => (
+                    <li key={dup.name}>
+                      "{dup.name}" ({dup.items.length} items, different colors)
+                      <ul className="ml-4 text-gray-600">
+                        {dup.items.map(item => (
+                          <li key={item.id}>{formatUserInfo(item)}</li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-3">
         <div className="flex items-center gap-2 text-gray-600">

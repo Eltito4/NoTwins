@@ -89,7 +89,7 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+                className="bg-[#FFAB91] text-white px-4 py-2 rounded-lg hover:bg-[#E57373] disabled:opacity-50 flex items-center gap-2"
               >
                 {loading ? (
                   <Loader2 className="animate-spin" size={20} />
@@ -104,49 +104,46 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
 
         {scrapedData && (
           <form onSubmit={handleSubmit}>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-6">
               <div>
-                <label className="font-medium text-gray-700">Name:</label>
-                <p className="text-gray-900">{scrapedData.name}</p>
+                <h3 className="text-xl font-semibold mb-4">{scrapedData.name}</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {scrapedData.type && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Category</label>
+                      <p className="text-gray-900">{getCategoryName(scrapedData.type.category)}</p>
+                      <p className="text-sm text-gray-500">{scrapedData.type.name}</p>
+                    </div>
+                  )}
+                  {scrapedData.brand && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Brand</label>
+                      <p className="text-gray-900">{scrapedData.brand}</p>
+                    </div>
+                  )}
+                  {scrapedData.color && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Color</label>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-4 h-4 rounded-full border border-gray-200"
+                          style={{ backgroundColor: scrapedData.color.toLowerCase() }}
+                        />
+                        <span className="text-gray-900">{scrapedData.color}</span>
+                      </div>
+                    </div>
+                  )}
+                  {scrapedData.price && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Price</label>
+                      <p className="text-gray-900">${scrapedData.price.toFixed(2)}</p>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {scrapedData.type && (
-                <div>
-                  <label className="font-medium text-gray-700">Category:</label>
-                  <p className="text-gray-900">{getCategoryName(scrapedData.type.category)}</p>
-                  <p className="text-gray-600 text-sm">{scrapedData.type.name}</p>
-                </div>
-              )}
-
-              {scrapedData.brand && (
-                <div>
-                  <label className="font-medium text-gray-700">Brand:</label>
-                  <p className="text-gray-900">{scrapedData.brand}</p>
-                </div>
-              )}
-
-              {scrapedData.color && (
-                <div>
-                  <label className="font-medium text-gray-700">Color:</label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div
-                      className="w-6 h-6 rounded-full border-2 border-gray-200"
-                      style={{ backgroundColor: scrapedData.color.toLowerCase() }}
-                    />
-                    <span className="text-gray-900">{scrapedData.color}</span>
-                  </div>
-                </div>
-              )}
-
-              {scrapedData.price && (
-                <div>
-                  <label className="font-medium text-gray-700">Price:</label>
-                  <p className="text-gray-900">${scrapedData.price.toFixed(2)}</p>
-                </div>
-              )}
-
               <div>
-                <label className="font-medium text-gray-700 block mb-2">Preview:</label>
+                <label className="text-sm font-medium text-gray-700 block mb-2">Preview</label>
                 <div className="relative aspect-square overflow-hidden bg-gray-50 rounded-lg">
                   <img
                     src={scrapedData.imageUrl}
