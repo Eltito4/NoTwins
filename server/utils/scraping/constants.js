@@ -25,30 +25,7 @@ export const COLOR_MAPPINGS = {
   'teal': 'Teal',
   'olive': 'Olive',
   'khaki': 'Khaki',
-  'pastel pink': 'Pastel Pink',
-  'pastelrosa': 'Pastel Pink',
-  'hellblau': 'Light Blue',
-  'pastell': 'Pastel',
-  'navy blue': 'Navy Blue',
-  'light blue': 'Light Blue',
-  'dark blue': 'Dark Blue',
-  'light green': 'Light Green',
-  'dark green': 'Dark Green',
-  'light pink': 'Light Pink',
-  'hot pink': 'Hot Pink',
-  'light gray': 'Light Gray',
-  'dark gray': 'Dark Gray',
-  'coral': 'Coral',
-  'turquoise': 'Turquoise',
-  'lavender': 'Lavender',
-  'mint': 'Mint',
-  'salmon': 'Salmon',
-  'plum': 'Plum',
-  'indigo': 'Indigo',
-  'violet': 'Violet',
-  'magenta': 'Magenta',
-
-  // Spanish
+  // Spanish translations
   'negro': 'Black',
   'blanco': 'White',
   'rojo': 'Red',
@@ -59,64 +36,141 @@ export const COLOR_MAPPINGS = {
   'rosa': 'Pink',
   'naranja': 'Orange',
   'marrón': 'Brown',
-  'marron': 'Brown',
   'gris': 'Gray',
   'dorado': 'Gold',
   'plateado': 'Silver',
   'beige': 'Beige',
   'crema': 'Cream',
-  'marfil': 'Ivory',
-  'azul marino': 'Navy Blue',
-  'azul claro': 'Light Blue',
-  'verde claro': 'Light Green',
-  'verde oscuro': 'Dark Green',
-  'rosa claro': 'Light Pink',
-  'rosa fuerte': 'Hot Pink',
-  'gris claro': 'Light Gray',
-  'gris oscuro': 'Dark Gray',
-  'coral': 'Coral',
-  'turquesa': 'Turquoise',
-  'lavanda': 'Lavender',
-  'menta': 'Mint',
-  'salmón': 'Salmon',
-  'ciruela': 'Plum',
-  'índigo': 'Indigo',
-  'violeta': 'Violet',
-  'magenta': 'Magenta',
+  'marfil': 'Ivory'
+};
 
-  // German
-  'schwarz': 'Black',
-  'weiß': 'White',
-  'weiss': 'White',
-  'rot': 'Red',
-  'blau': 'Blue',
-  'grün': 'Green',
-  'gelb': 'Yellow',
-  'lila': 'Purple',
-  'rosa': 'Pink',
-  'orange': 'Orange',
-  'braun': 'Brown',
-  'grau': 'Gray',
-  'golden': 'Gold',
-  'silber': 'Silver',
-  'beige': 'Beige',
-  'creme': 'Cream',
-  'elfenbein': 'Ivory',
-  'marineblau': 'Navy Blue',
-  'hellblau': 'Light Blue',
-  'dunkelblau': 'Dark Blue',
-  'hellgrün': 'Light Green',
-  'dunkelgrün': 'Dark Green',
-  'hellrosa': 'Light Pink',
-  'hellgrau': 'Light Gray',
-  'dunkelgrau': 'Dark Gray',
-  'koralle': 'Coral',
-  'türkis': 'Turquoise',
-  'lavendel': 'Lavender',
-  'minze': 'Mint',
-  'lachs': 'Salmon',
-  'pflaume': 'Plum',
-  'indigo': 'Indigo',
-  'violett': 'Violet',
-  'magenta': 'Magenta'
+// Article types with translations
+export const ARTICLE_TYPES = {
+  clothes: {
+    name: 'Clothes',
+    subcategories: {
+      tops: {
+        name: 'Tops',
+        items: [
+          // English
+          'basic tee', 'tank top', 'long sleeve', 'crop top',
+          'formal shirt', 'casual shirt', 'denim shirt', 'linen shirt',
+          'silk blouse', 'lace blouse', 'ruffle blouse',
+          'cotton polo', 'technical polo',
+          'wool sweater', 'knit sweater', 'turtleneck',
+          'hoodie', 'sweatshirt', 'vest',
+          // Spanish
+          'camiseta básica', 'tirantes', 'manga larga', 'crop top',
+          'camisa formal', 'camisa informal', 'camisa vaquera', 'camisa lino',
+          'blusa seda', 'blusa encaje', 'blusa volantes',
+          'polo algodón', 'polo técnico',
+          'jersey lana', 'jersey punto', 'cuello alto',
+          'sudadera', 'chaleco'
+        ]
+      },
+      bottoms: {
+        name: 'Bottoms',
+        items: [
+          // English
+          'pants', 'trousers', 'jeans', 'shorts', 'skirt',
+          'dress pants', 'casual pants', 'cargo pants',
+          'denim shorts', 'bermuda shorts',
+          'pencil skirt', 'pleated skirt', 'midi skirt',
+          'leggings', 'joggers',
+          // Spanish
+          'pantalón', 'vaqueros', 'shorts', 'falda',
+          'pantalón vestir', 'pantalón casual', 'pantalón cargo',
+          'shorts vaqueros', 'bermudas',
+          'falda lápiz', 'falda plisada', 'falda midi',
+          'leggings', 'joggers'
+        ]
+      },
+      dresses: {
+        name: 'Dresses',
+        items: [
+          // English
+          'dress', 'gown', 'jumpsuit', 'romper',
+          'formal dress', 'casual dress', 'evening dress',
+          'summer dress', 'cocktail dress', 'maxi dress',
+          // Spanish
+          'vestido', 'mono', 'peto',
+          'vestido formal', 'vestido casual', 'vestido noche',
+          'vestido verano', 'vestido cóctel', 'vestido largo'
+        ]
+      },
+      outerwear: {
+        name: 'Outerwear',
+        items: [
+          // English
+          'coat', 'jacket', 'blazer', 'cardigan',
+          'winter coat', 'rain coat', 'trench coat',
+          'leather jacket', 'denim jacket', 'bomber jacket',
+          // Spanish
+          'abrigo', 'chaqueta', 'blazer', 'cardigan',
+          'abrigo invierno', 'impermeable', 'gabardina',
+          'chaqueta cuero', 'chaqueta vaquera', 'bomber'
+        ]
+      }
+    }
+  },
+  accessories: {
+    name: 'Accessories',
+    subcategories: {
+      shoes: {
+        name: 'Shoes',
+        items: [
+          // English
+          'shoes', 'boots', 'sandals', 'sneakers',
+          'heels', 'flats', 'loafers', 'oxfords',
+          // Spanish
+          'zapatos', 'botas', 'sandalias', 'zapatillas',
+          'tacones', 'bailarinas', 'mocasines', 'oxford'
+        ]
+      },
+      bags: {
+        name: 'Bags',
+        items: [
+          // English
+          'bag', 'handbag', 'purse', 'backpack',
+          'tote', 'clutch', 'shoulder bag',
+          // Spanish
+          'bolso', 'cartera', 'mochila',
+          'bolso tote', 'clutch', 'bandolera'
+        ]
+      },
+      jewelry: {
+        name: 'Jewelry',
+        items: [
+          // English
+          'necklace', 'bracelet', 'ring', 'earrings',
+          'pendant', 'brooch', 'anklet',
+          // Spanish
+          'collar', 'pulsera', 'anillo', 'pendientes',
+          'colgante', 'broche', 'tobillera'
+        ]
+      },
+      hats: {
+        name: 'Hats',
+        items: [
+          // English
+          'hat', 'cap', 'beanie', 'beret',
+          'fedora', 'panama hat', 'sun hat',
+          // Spanish
+          'sombrero', 'gorra', 'gorro', 'boina',
+          'fedora', 'pamela', 'sombrero sol'
+        ]
+      },
+      other: {
+        name: 'Other Accessories',
+        items: [
+          // English
+          'scarf', 'belt', 'gloves', 'sunglasses',
+          'wallet', 'watch', 'umbrella',
+          // Spanish
+          'bufanda', 'cinturón', 'guantes', 'gafas de sol',
+          'cartera', 'reloj', 'paraguas'
+        ]
+      }
+    }
+  }
 };
