@@ -4,7 +4,7 @@ import { scrapeDressDetails } from '../services/scrapingService';
 import { ScrapedProduct } from '../types';
 import { ProductType } from '../utils/categorization/types';
 import { detectProductType } from '../utils/categorization/detector';
-import { getCategoryName } from '../utils/categorization';
+import { getCategoryName, getSubcategoryName, getAllCategories } from '../utils/categorization';
 import { formatPrice } from '../utils/currency';
 import { AVAILABLE_COLORS } from '../utils/colorUtils';
 import toast from 'react-hot-toast';
@@ -30,6 +30,11 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
   const [isPrivate, setIsPrivate] = useState(false);
   const [scrapedData, setScrapedData] = useState<ScrapedProduct | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>('');
+  const [selectedType, setSelectedType] = useState<ProductType | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
+
+  const categories = getAllCategories();
 
   const handleScrape = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +47,10 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
     try {
       const data = await scrapeDressDetails(url);
       const type = detectProductType(data.name + ' ' + (data.description || ''));
-      setScrapedData({ ...data, type });
+      setScrapedData(data);
+      setSelectedType(type);
+      setSelectedCategory(type.category);
+      setSelectedSubcategory(type.subcategory);
       if (data.color) {
         setSelectedColor(data.color);
       }
@@ -56,7 +64,7 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!scrapedData) return;
+    if (!scrapedData || !selectedType) return;
 
     onSubmit({
       name: scrapedData.name,
@@ -65,9 +73,28 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
       color: selectedColor || scrapedData.color,
       brand: scrapedData.brand,
       price: scrapedData.price,
-      type: scrapedData.type,
+      type: selectedType,
       isPrivate
     });
+  };
+
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const category = e.target.value;
+    setSelectedCategory(category);
+    setSelectedSubcategory('');
+    setSelectedType(null);
+  };
+
+  const handleSubcategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const subcategory = e.target.value;
+    setSelectedSubcategory(subcategory);
+    if (selectedCategory && subcategory) {
+      setSelectedType({
+        category: selectedCategory,
+        subcategory: subcategory,
+        name: getSubcategoryName(selectedCategory, subcategory)
+      });
+    }
   };
 
   return (
@@ -114,25 +141,50 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
               <div>
                 <h3 className="text-xl font-semibold mb-4">{scrapedData.name}</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  {scrapedData.type && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Category</label>
-                      <p className="text-gray-900">{getCategoryName(scrapedData.type.category)}</p>
-                      <p className="text-sm text-gray-500">{scrapedData.type.name}</p>
-                    </div>
-                  )}
-                  {scrapedData.brand && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Brand</label>
-                      <p className="text-gray-900">{scrapedData.brand}</p>
-                    </div>
-                  )}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Category</label>
+                    <select
+                      value={selectedCategory}
+                      onChange={handleCategoryChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                      required
+                    >
+                      <option value="">Select category</option>
+                      {categories.map(category => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Type</label>
+                    <select
+                      value={selectedSubcategory}
+                      onChange={handleSubcategoryChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                      required
+                      disabled={!selectedCategory}
+                    >
+                      <option value="">Select type</option>
+                      {selectedCategory && categories
+                        .find(c => c.id === selectedCategory)
+                        ?.subcategories.map(sub => (
+                          <option key={sub.id} value={sub.id}>
+                            {sub.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
                   <div>
                     <label className="text-sm font-medium text-gray-700">Color</label>
                     <select
                       value={selectedColor}
                       onChange={(e) => setSelectedColor(e.target.value)}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                      required
                     >
                       <option value="">Select a color</option>
                       {AVAILABLE_COLORS.map((color) => (
@@ -142,10 +194,18 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
                       ))}
                     </select>
                   </div>
+
+                  {scrapedData.brand && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Brand</label>
+                      <p className="mt-1 text-gray-900">{scrapedData.brand}</p>
+                    </div>
+                  )}
+
                   {scrapedData.price && (
                     <div>
                       <label className="text-sm font-medium text-gray-700">Price</label>
-                      <p className="text-gray-900">{formatPrice(scrapedData.price)}</p>
+                      <p className="mt-1 text-gray-900">{formatPrice(scrapedData.price)}</p>
                     </div>
                   )}
                 </div>
