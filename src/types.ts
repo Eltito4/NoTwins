@@ -1,3 +1,5 @@
+import { ProductType } from './utils/categorization/types';
+
 export interface User {
   id: string;
   email: string;
@@ -5,8 +7,8 @@ export interface User {
 }
 
 export interface Dress {
-  _id: string; // MongoDB ID
-  id: string; // Client-side ID
+  _id: string;
+  id: string;
   userId: string;
   eventId: string;
   name: string;
@@ -15,7 +17,7 @@ export interface Dress {
   color?: string;
   brand?: string;
   price?: number;
-  type?: string;
+  type?: ProductType;
   isPrivate: boolean;
   createdAt?: Date;
 }
@@ -43,7 +45,6 @@ export interface Event {
   dresses: Dress[];
   createdAt?: Date;
 }
-
 export interface ScrapedProduct {
   name: string;
   imageUrl: string;

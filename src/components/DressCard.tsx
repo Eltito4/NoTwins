@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dress } from '../types';
 import { Lock, Eye, Trash2, Loader2, Bell } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { getCategoryName, getSubcategoryName } from '../utils/categorization';
+import { formatPrice } from '../utils/currency';
 import toast from 'react-hot-toast';
 
 interface DressCardProps {
@@ -23,9 +25,9 @@ export function DressCard({
   duplicateInfo
 }: DressCardProps) {
   const { currentUser } = useAuth();
-  const [imageError, setImageError] = React.useState(false);
-  const [imageLoading, setImageLoading] = React.useState(true);
-  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const isOwner = currentUser?.id === dress.userId;
   const canViewDetails = isOwner || !dress.isPrivate || isEventCreator;
 
@@ -165,13 +167,18 @@ export function DressCard({
               )}
               {dress.price && (
                 <p className="text-sm text-gray-500 mb-2">
-                  Price: ${dress.price.toFixed(2)}
+                  Price: {formatPrice(dress.price)}
                 </p>
               )}
               {dress.type && (
-                <p className="text-sm text-gray-500 mb-2 capitalize">
-                  Type: {dress.type}
-                </p>
+                <div className="flex flex-col gap-1 mt-2">
+                  <p className="text-sm text-gray-500">
+                    Category: {getCategoryName(dress.type.category)}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Type: {getSubcategoryName(dress.type.category, dress.type.subcategory)}
+                  </p>
+                </div>
               )}
               {dress.color && (
                 <div className="flex items-center mt-3 gap-2">
