@@ -5,6 +5,8 @@ import { ScrapedProduct } from '../types';
 import { ProductType } from '../utils/categorization/types';
 import { detectProductType } from '../utils/categorization/detector';
 import { getCategoryName } from '../utils/categorization';
+import { formatPrice } from '../utils/currency';
+import { AVAILABLE_COLORS } from '../utils/colorUtils';
 import toast from 'react-hot-toast';
 
 interface DressScrapingModalProps {
@@ -27,6 +29,7 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
   const [loading, setLoading] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [scrapedData, setScrapedData] = useState<ScrapedProduct | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string>('');
 
   const handleScrape = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,6 +43,9 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
       const data = await scrapeDressDetails(url);
       const type = detectProductType(data.name + ' ' + (data.description || ''));
       setScrapedData({ ...data, type });
+      if (data.color) {
+        setSelectedColor(data.color);
+      }
       toast.success('Product details fetched successfully!');
     } catch (error) {
       // Error is already handled in scrapeDressDetails
@@ -56,7 +62,7 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
       name: scrapedData.name,
       imageUrl: scrapedData.imageUrl,
       description: scrapedData.description,
-      color: scrapedData.color,
+      color: selectedColor || scrapedData.color,
       brand: scrapedData.brand,
       price: scrapedData.price,
       type: scrapedData.type,
@@ -121,22 +127,25 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
                       <p className="text-gray-900">{scrapedData.brand}</p>
                     </div>
                   )}
-                  {scrapedData.color && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Color</label>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-4 h-4 rounded-full border border-gray-200"
-                          style={{ backgroundColor: scrapedData.color.toLowerCase() }}
-                        />
-                        <span className="text-gray-900">{scrapedData.color}</span>
-                      </div>
-                    </div>
-                  )}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Color</label>
+                    <select
+                      value={selectedColor}
+                      onChange={(e) => setSelectedColor(e.target.value)}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                    >
+                      <option value="">Select a color</option>
+                      {AVAILABLE_COLORS.map((color) => (
+                        <option key={color.name} value={color.name}>
+                          {color.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   {scrapedData.price && (
                     <div>
                       <label className="text-sm font-medium text-gray-700">Price</label>
-                      <p className="text-gray-900">${scrapedData.price.toFixed(2)}</p>
+                      <p className="text-gray-900">{formatPrice(scrapedData.price)}</p>
                     </div>
                   )}
                 </div>
