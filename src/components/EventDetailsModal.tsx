@@ -221,9 +221,8 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
           onClose={() => setShowScrapingModal(false)}
           onSubmit={handleAddDress}
           isEventCreator={isEventCreator}
-          existingItems={dresses}
         />
       )}
     </div>
   );
-}
+};
