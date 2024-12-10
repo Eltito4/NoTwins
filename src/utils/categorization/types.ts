@@ -13,4 +13,5 @@ export interface Category {
   export interface ProductType {
     category: string;
     subcategory: string;
+    name: string;
   }

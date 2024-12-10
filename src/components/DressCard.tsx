@@ -176,7 +176,7 @@ export function DressCard({
                     Category: {getCategoryName(dress.type.category)}
                   </p>
                   <p className="text-sm text-gray-500">
-                    Type: {getSubcategoryName(dress.type.category, dress.type.subcategory)}
+                    Type: {dress.type.name}
                   </p>
                 </div>
               )}

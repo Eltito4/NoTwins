@@ -9,7 +9,8 @@ export function detectProductType(text: string): ProductType {
       if (subcategory.keywords.some(keyword => normalizedText.includes(keyword.toLowerCase()))) {
         return {
           category: category.id,
-          subcategory: subcategory.id
+          subcategory: subcategory.id,
+          name: subcategory.name
         };
       }
     }
@@ -18,7 +19,8 @@ export function detectProductType(text: string): ProductType {
   // Default to garments/other if no specific match found
   return {
     category: 'garments',
-    subcategory: 'other'
+    subcategory: 'other',
+    name: 'Other'
   };
 }
 
