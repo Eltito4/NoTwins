@@ -4,6 +4,7 @@ import { ProductType, ProductTypeImpl } from './types';
 export function detectProductType(text: string): ProductType {
   const normalizedText = text.toLowerCase();
 
+  // First try to find a match in subcategories
   for (const category of CATEGORIES) {
     for (const subcategory of category.subcategories) {
       if (subcategory.keywords.some(keyword => normalizedText.includes(keyword.toLowerCase()))) {
@@ -16,7 +17,19 @@ export function detectProductType(text: string): ProductType {
     }
   }
 
-  // Default to garments/other if no specific match found
+  // If no specific match, try to determine the category at least
+  for (const category of CATEGORIES) {
+    const allKeywords = category.subcategories.flatMap(sub => sub.keywords);
+    if (allKeywords.some(keyword => normalizedText.includes(keyword.toLowerCase()))) {
+      return new ProductTypeImpl(
+        category.id,
+        'other',
+        `Other ${category.name}`
+      );
+    }
+  }
+
+  // Default to garments/other if no match found
   return new ProductTypeImpl('garments', 'other', 'Other');
 }
 
