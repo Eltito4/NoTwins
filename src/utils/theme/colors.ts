@@ -1,7 +1,7 @@
 export const colors = {
     // Base colors
     background: '#CADFD9',
-    eventCard: '#FEFCE9',
+    eventCard: '#CADFD9',
     primary: '#629FA2',
     
     // Semantic colors
