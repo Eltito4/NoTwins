@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Event, DuplicateInfo, User } from '../types';
 import { Calendar, MapPin, Users, Share2, Check, Copy, Trash2, Bell, Eye, Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { formatDate } from '../utils/date';
+import { handleShare, copyToClipboard } from '../utils/sharing';
 import toast from 'react-hot-toast';
 
 interface EventCardProps {
@@ -34,44 +36,25 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
     return `${userName}${item.color ? ` - ${item.color}` : ''}`;
   };
 
-  const handleShare = async (e: React.MouseEvent) => {
+  const handleShareClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const shareUrl = `${window.location.origin}/join/${event.shareId}`;
-    
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `Join ${event.name}`,
-          text: `Join my event "${event.name}" using the event ID: ${event.shareId}`,
-          url: shareUrl
-        });
-      } catch (err) {
-        await copyToClipboard(shareUrl);
-      }
-    } else {
-      await copyToClipboard(shareUrl);
-    }
-  };
-
-  const copyToClipboard = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(text);
-      toast.success('Link copied to clipboard!');
+      await handleShare(event.shareId);
       setShowShareSuccess(true);
       setTimeout(() => setShowShareSuccess(false), 2000);
-    } catch (err) {
-      toast.error('Failed to copy link');
+    } catch (error) {
+      toast.error('Failed to share event');
     }
   };
 
   const handleCopyId = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await navigator.clipboard.writeText(event.shareId);
-      toast.success('Event ID copied to clipboard!');
+      await copyToClipboard(event.shareId);
       setShowCopySuccess(true);
       setTimeout(() => setShowCopySuccess(false), 2000);
-    } catch (err) {
+      toast.success('Event ID copied to clipboard!');
+    } catch (error) {
       toast.error('Failed to copy event ID');
     }
   };
@@ -96,28 +79,19 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
   const privateItems = event.dresses.filter(d => d.isPrivate).length;
   const publicItems = event.dresses.filter(d => !d.isPrivate).length;
 
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-xl shadow-lg p-6 cursor-pointer transition-transform hover:scale-105"
+      className="bg-eventCard border border-gray-200 rounded-xl shadow-event p-6 cursor-pointer transition-transform hover:scale-105"
     >
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h3 className="text-xl font-bold">{event.name}</h3>
+          <h3 className="text-xl font-bold text-gray-800">{event.name}</h3>
           {isCreator && (
-            <span className="text-sm text-purple-600">Event Creator</span>
+            <span className="text-sm text-primary">Event Creator</span>
           )}
         </div>
 
@@ -133,8 +107,8 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
             </button>
           )}
           <button
-            onClick={handleShare}
-            className="p-2 text-purple-600 hover:text-purple-700 transition-colors rounded-lg hover:bg-purple-50"
+            onClick={handleShareClick}
+            className="p-2 text-primary hover:text-primary-600 transition-colors rounded-lg hover:bg-primary-50"
             title="Share event"
           >
             {showShareSuccess ? (

@@ -7,7 +7,7 @@ export default function App() {
   const { currentUser } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-16">
         {currentUser ? <Dashboard /> : <AuthForm />}
       </div>
