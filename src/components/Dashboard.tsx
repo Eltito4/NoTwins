@@ -199,7 +199,7 @@ export const Dashboard: FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -211,20 +211,24 @@ export const Dashboard: FC = () => {
           <h1 className="text-3xl font-bold text-gray-800">Your Events</h1>
         </div>
         <div className="flex items-center gap-4">
+          {/* Join Event Button - Light background with primary border */}
           <button
             onClick={() => setShowJoinEvent(true)}
-            className="flex items-center gap-2 bg-white text-purple-600 border border-purple-600 py-2 px-4 rounded-lg hover:bg-purple-50 transition-colors"
+            className="flex items-center gap-2 bg-background border border-primary text-primary py-2 px-4 rounded-lg hover:bg-background/80 transition-colors"
           >
             <UserPlus size={20} />
             <span>Join Event</span>
           </button>
+
+          {/* Create Event Button - Primary background */}
           <button
             onClick={() => setShowCreateEvent(true)}
-            className="flex items-center gap-2 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+            className="flex items-center gap-2 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary-600 transition-colors"
           >
             <PlusCircle size={20} />
             <span>Create Event</span>
           </button>
+
           <div className="flex items-center gap-4 pl-4 border-l border-gray-200">
             <div className="flex items-center gap-2 text-gray-700">
               <UserIcon size={20} className="text-gray-500" />
@@ -247,14 +251,14 @@ export const Dashboard: FC = () => {
           <div className="flex justify-center gap-4">
             <button
               onClick={() => setShowJoinEvent(true)}
-              className="text-purple-600 hover:text-purple-700"
+              className="text-primary hover:text-primary-600"
             >
               Join an event
             </button>
             <span className="text-gray-400">or</span>
             <button
               onClick={() => setShowCreateEvent(true)}
-              className="text-purple-600 hover:text-purple-700"
+              className="text-primary hover:text-primary-600"
             >
               create your first event
             </button>
