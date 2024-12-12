@@ -8,7 +8,7 @@ export default {
     extend: {
       colors: {
         background: '#CADFD9',
-        eventCard: '#FEFCE9',
+        eventCard: '#CADFD9',
         primary: {
           DEFAULT: '#629FA2',
           50: '#edf4f4',
