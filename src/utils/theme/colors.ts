@@ -19,8 +19,8 @@ export const colors = {
     
     // Feedback colors
     success: '#10B981',
-    error: '#EF4444',
-    warning: '#F59E0B',
+    error: '#F8D4D8',
+    warning: '#F8CE47',
     info: '#3B82F6',
     
     // Utility colors
