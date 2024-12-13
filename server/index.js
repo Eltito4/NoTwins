@@ -11,6 +11,8 @@ import authRouter from './routes/auth.js';
 import eventsRouter from './routes/events.js';
 import dressesRouter from './routes/dresses.js';
 import scrapingRouter from './routes/scraping.js';
+import messageRoutes from './routes/messages.js';
+
 
 config();
 
@@ -123,3 +125,6 @@ app.use(errorHandler);
 app.listen(PORT, '0.0.0.0', () => {
   logger.info(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
 });
+
+//Messages
+app.use('/api/messages', messageRoutes);
