@@ -8,6 +8,7 @@ interface MessageContextType {
   messages: Message[];
   loadMessages: () => Promise<void>;
   markAsRead: (messageId: string) => Promise<void>;
+  hasUnreadMessages: boolean;
 }
 
 const MessageContext = createContext<MessageContextType | null>(null);
@@ -34,16 +35,22 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (currentUser) {
       loadMessages();
-      // Set up polling for new messages
-      const interval = setInterval(loadMessages, 30000); // Poll every 30 seconds
+      const interval = setInterval(loadMessages, 30000);
       return () => clearInterval(interval);
     }
   }, [currentUser]);
 
   const unreadCount = messages.filter(msg => !msg.readAt).length;
+  const hasUnreadMessages = unreadCount > 0;
 
   return (
-    <MessageContext.Provider value={{ messages, unreadCount, loadMessages, markAsRead }}>
+    <MessageContext.Provider value={{ 
+      messages, 
+      unreadCount, 
+      loadMessages, 
+      markAsRead,
+      hasUnreadMessages 
+    }}>
       {children}
     </MessageContext.Provider>
   );

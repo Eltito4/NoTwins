@@ -1,14 +1,7 @@
+
 import api from '../lib/api';
 import toast from 'react-hot-toast';
-
-export interface ScrapedProduct {
-  name: string;
-  imageUrl: string;
-  color?: string;
-  brand?: string;
-  price?: number;
-  description?: string;
-}
+import { ScrapedProduct } from '../types';
 
 export async function scrapeDressDetails(url: string): Promise<ScrapedProduct> {
   try {
@@ -18,13 +11,15 @@ export async function scrapeDressDetails(url: string): Promise<ScrapedProduct> {
       throw new Error('Invalid product data received');
     }
     
+    // Ensure all fields are properly formatted
     return {
       name: data.name,
       imageUrl: data.imageUrl,
       color: data.color,
       brand: data.brand,
       price: data.price,
-      description: `${data.name}${data.color ? ` - ${data.color}` : ''}${data.price ? ` - $${data.price.toFixed(2)}` : ''}`
+      type: data.type,
+      description: data.description
     };
   } catch (error: any) {
     const errorMessage = error.response?.data?.error || 

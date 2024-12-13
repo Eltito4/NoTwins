@@ -125,30 +125,38 @@ export function MessageComposer({ toUserId, userName, relatedDressId, onClose }:
 
             {scrapedItem && (
               <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                <h3 className="font-medium mb-2">{scrapedItem.name}</h3>
-                <div className="flex gap-4">
+                  <h3 className="font-medium mb-2">{scrapedItem.name}</h3>
+                  <div className="flex gap-4">
                   <img
-                    src={scrapedItem.imageUrl}
-                    alt={scrapedItem.name}
-                    className="w-20 h-20 object-cover rounded"
-                    crossOrigin="anonymous"
-                    referrerPolicy="no-referrer"
+                      src={scrapedItem.imageUrl}
+                      alt={scrapedItem.name}
+                      className="w-20 h-20 object-cover rounded"
+                      crossOrigin="anonymous"
+                      referrerPolicy="no-referrer"
                   />
-                  <div>
-                    {scrapedItem.price && (
+                  <div className="flex flex-col gap-2">
+                      {scrapedItem.brand && (
+                      <p className="text-sm text-gray-600">Brand: {scrapedItem.brand}</p>
+                      )}
+                      {scrapedItem.price && (
                       <p className="text-sm text-gray-600">Price: ${scrapedItem.price}</p>
-                    )}
-                    {scrapedItem.color && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <div
+                      )}
+                      {scrapedItem.color && (
+                      <div className="flex items-center gap-2">
+                          <div
                           className="w-4 h-4 rounded-full border"
                           style={{ backgroundColor: scrapedItem.color }}
-                        />
-                        <span className="text-sm text-gray-600">{scrapedItem.color}</span>
+                          />
+                          <span className="text-sm text-gray-600">{scrapedItem.color}</span>
                       </div>
-                    )}
+                      )}
+                      {scrapedItem.type && (
+                      <p className="text-sm text-gray-600">
+                          Type: {scrapedItem.type.name}
+                      </p>
+                      )}
                   </div>
-                </div>
+                  </div>
               </div>
             )}
 
