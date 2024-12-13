@@ -149,7 +149,7 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
 
       {/* Alerts section */}
       {userDuplicates.length > 0 && (
-        <div className="mb-4 bg-eventCard/50 rounded-lg p-4 border border-primary/20">
+        <div className="mb-4 bg-alert-warning text-alert-warning-text rounded-lg p-4 border border-primary/20">
           {exactDuplicates.length > 0 && (
             <div className="flex items-start gap-2 text-red-600">
               <Bell size={18} className="flex-shrink-0 mt-0.5 animate-[ring_4s_ease-in-out_infinite]" />
