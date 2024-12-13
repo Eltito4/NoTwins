@@ -17,9 +17,9 @@ export const colors = {
         background: '#E4EDE1',
         text: '#F8CE47'
       },
-    error: {
-      background: '#E4EDE1',
-      text: '#F8D4D8'
+      error: {
+        background: '#E4EDE1',
+        text: '#F8D4D8'
       }
     },
 
