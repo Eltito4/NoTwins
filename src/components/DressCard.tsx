@@ -63,7 +63,7 @@ export function DressCard({
   };
 
   return (
-    <div className="relative bg-[#CADFD9] rounded-xl shadow-lg overflow-visible transition-transform hover:scale-105">
+    <div className="relative bg-white rounded-xl shadow-lg overflow-visible transition-transform hover:scale-105">
       {duplicateInfo && (
         <div className="absolute -top-2 -right-2 z-30">
           <div className={`relative group`}>
@@ -74,7 +74,7 @@ export function DressCard({
             } shadow-lg cursor-pointer transition-transform hover:scale-110`}>
               <Bell size={20} className={`${duplicateInfo.type === 'exact' ? 'animate-[ring_4s_ease-in-out_infinite]' : ''}`} />
             </div>
-            <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 p-3 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200">
+            <div className="absolute right-0 top-full mt-2 w-64 bg-[#E4EDE1] rounded-lg shadow-lg border border-gray-200 p-3 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200">
               <p className="font-medium text-gray-900">
                 {duplicateInfo.type === 'exact' ? 'Identical item found!' : 'Similar item found'}
               </p>
