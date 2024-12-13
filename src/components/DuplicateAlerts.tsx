@@ -1,6 +1,7 @@
 import React from 'react';
 import { Dress, User } from '../types';
-import { Bell } from 'lucide-react';
+import { Bell, Mail } from 'lucide-react';
+import { MessageComposer } from './messages/MessageComposer';
 
 interface DuplicateAlertsProps {
   dresses: Dress[];
@@ -8,17 +9,6 @@ interface DuplicateAlertsProps {
   currentUserId?: string;
   isEventCreator: boolean;
   compact?: boolean;
-}
-
-interface DuplicateGroup {
-  name: string;
-  items: Array<{
-    id: string;
-    userId: string;
-    userName: string;
-    color?: string;
-  }>;
-  type: 'exact' | 'partial';
 }
 
 export function DuplicateAlerts({ 
@@ -29,63 +19,76 @@ export function DuplicateAlerts({
   compact = false 
 }: DuplicateAlertsProps) {
   const [expandedGroup, setExpandedGroup] = React.useState<string | null>(null);
+  const [messageToUser, setMessageToUser] = React.useState<{userId: string, userName: string} | null>(null);
 
   const findDuplicates = () => {
-    const duplicateGroups: DuplicateGroup[] = [];
-    const processedNames = new Set<string>();
+    const duplicateGroups = new Map<string, {
+      name: string;
+      items: Array<{
+        id: string;
+        userId: string;
+        userName: string;
+        color?: string;
+      }>;
+      type: 'exact' | 'partial';
+    }>();
 
     dresses.forEach(dress => {
       const name = dress.name.toLowerCase();
-      if (processedNames.has(name)) return;
-      processedNames.add(name);
-
       const duplicates = dresses.filter(d => 
-        d.name.toLowerCase() === name && 
+        d._id !== dress._id && 
+        d.name.toLowerCase() === name &&
         (isEventCreator || d.userId === currentUserId || dress.userId === currentUserId)
       );
 
-      if (duplicates.length > 1) {
-        // Group by color
-        const itemsByColor = duplicates.reduce((acc, item) => {
-          const color = (item.color || 'unknown').toLowerCase();
-          if (!acc[color]) acc[color] = [];
-          acc[color].push(item);
-          return acc;
-        }, {} as Record<string, Dress[]>);
+      if (duplicates.length > 0) {
+        // Create a unique key for this group
+        const key = `${name}-${dress.color || 'nocolor'}`;
+        
+        if (!duplicateGroups.has(key)) {
+          // Group by color
+          const allItems = [dress, ...duplicates];
+          const itemsByColor = allItems.reduce((acc, item) => {
+            const color = (item.color || 'unknown').toLowerCase();
+            if (!acc[color]) acc[color] = [];
+            acc[color].push(item);
+            return acc;
+          }, {} as Record<string, Dress[]>);
 
-        // Check for exact color matches
-        Object.entries(itemsByColor).forEach(([color, items]) => {
-          if (items.length > 1) {
-            duplicateGroups.push({
+          // Check for exact color matches
+          Object.entries(itemsByColor).forEach(([color, items]) => {
+            if (items.length > 1) {
+              duplicateGroups.set(`${key}-exact`, {
+                name,
+                items: items.map(item => ({
+                  id: item._id,
+                  userId: item.userId,
+                  userName: participants[item.userId]?.name || 'Unknown User',
+                  color: item.color
+                })),
+                type: 'exact'
+              });
+            }
+          });
+
+          // Add partial matches if there are different colors
+          if (Object.keys(itemsByColor).length > 1) {
+            duplicateGroups.set(`${key}-partial`, {
               name,
-              items: items.map(item => ({
+              items: allItems.map(item => ({
                 id: item._id,
                 userId: item.userId,
                 userName: participants[item.userId]?.name || 'Unknown User',
                 color: item.color
               })),
-              type: 'exact'
+              type: 'partial'
             });
           }
-        });
-
-        // Add partial matches if there are different colors
-        if (Object.keys(itemsByColor).length > 1) {
-          duplicateGroups.push({
-            name,
-            items: duplicates.map(item => ({
-              id: item._id,
-              userId: item.userId,
-              userName: participants[item.userId]?.name || 'Unknown User',
-              color: item.color
-            })),
-            type: 'partial'
-          });
         }
       }
     });
 
-    return duplicateGroups;
+    return Array.from(duplicateGroups.values());
   };
 
   const duplicates = findDuplicates();
@@ -121,19 +124,33 @@ export function DuplicateAlerts({
               {expandedGroup === group.name && (
                 <ul className={`mt-2 space-y-1 ${compact ? 'text-xs' : 'text-sm'}`}>
                   {group.items.map((item) => (
-                    <li key={item.id} className="flex items-center gap-2 text-gray-600">
-                      <span>{item.userName}</span>
-                      {item.color && (
-                        <>
-                          <span className="text-gray-400">·</span>
-                          <div className="flex items-center gap-1.5">
-                            <div
-                              className="w-2.5 h-2.5 rounded-full border border-gray-200"
-                              style={{ backgroundColor: item.color }}
-                            />
-                            <span>{item.color}</span>
-                          </div>
-                        </>
+                    <li key={item.id} className="flex items-center justify-between text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <span>{item.userName}</span>
+                        {item.color && (
+                          <>
+                            <span className="text-gray-400">·</span>
+                            <div className="flex items-center gap-1.5">
+                              <div
+                                className="w-2.5 h-2.5 rounded-full border border-gray-200"
+                                style={{ backgroundColor: item.color }}
+                              />
+                              <span>{item.color}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      {isEventCreator && item.userId !== currentUserId && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMessageToUser({ userId: item.userId, userName: item.userName });
+                          }}
+                          className="p-1 text-primary hover:text-primary-600 transition-colors"
+                          title="Send message"
+                        >
+                          <Mail size={16} />
+                        </button>
                       )}
                     </li>
                   ))}
@@ -143,6 +160,14 @@ export function DuplicateAlerts({
           </button>
         </div>
       ))}
+
+      {messageToUser && (
+        <MessageComposer
+          toUserId={messageToUser.userId}
+          userName={messageToUser.userName}
+          onClose={() => setMessageToUser(null)}
+        />
+      )}
     </div>
   );
 }
