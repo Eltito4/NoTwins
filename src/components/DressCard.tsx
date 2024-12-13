@@ -63,7 +63,7 @@ export function DressCard({
   };
 
   return (
-    <div className="relative bg-white rounded-xl shadow-lg overflow-visible transition-transform hover:scale-105">
+    <div className="relative bg-[#CADFD9] rounded-xl shadow-lg overflow-visible transition-transform hover:scale-105">
       {duplicateInfo && (
         <div className="absolute -top-2 -right-2 z-30">
           <div className={`relative group`}>
