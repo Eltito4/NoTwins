@@ -151,7 +151,7 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
       {userDuplicates.length > 0 && (
         <div className="mb-4 bg-[#E4EDE1] rounded-lg p-4 border border-primary/20">
           {exactDuplicates.length > 0 && (
-            <div className="flex items-start gap-2 bg-[#E4EDE1] text-[#ED583F]">
+            <div className="flex items-start gap-2 bg-[#F8D4D8] text-black">
               <Bell size={18} className="flex-shrink-0 mt-0.5 animate-[ring_4s_ease-in-out_infinite]" />
               <div>
                 <p className="font-medium">Exact duplicates found:</p>
