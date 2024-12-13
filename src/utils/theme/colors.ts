@@ -11,6 +11,18 @@ export const colors = {
       muted: '#6B7280',
     },
     
+    // Alert colors
+    alert: {
+      warning: {
+        background: '#E4EDE1',
+        text: '#F8CE47'
+      },
+    error: {
+      background: '#E4EDE1',
+      text: '#F8D4D8'
+      }
+    },
+
     // State colors
     hover: {
       primary: '#548b8e',  // Darker shade of primary

@@ -113,6 +113,7 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
       onClick={onClick}
       className="bg-eventCard border border-gray-200 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 p-6 cursor-pointer transform hover:scale-[1.02]"
     >
+      {/* Event title */}
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="text-xl font-bold text-gray-800">{event.name}</h3>
@@ -146,6 +147,7 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
         </div>
       </div>
 
+      {/* Alerts section */}
       {userDuplicates.length > 0 && (
         <div className="mb-4 bg-eventCard/50 rounded-lg p-4 border border-primary/20">
           {exactDuplicates.length > 0 && (
