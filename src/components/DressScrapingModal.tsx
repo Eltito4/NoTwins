@@ -122,7 +122,7 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-[#FFAB91] text-white px-4 py-2 rounded-lg hover:bg-[#E57373] disabled:opacity-50 flex items-center gap-2"
+                className="bg-[#FFAB91] text-white px-4 py-2 rounded-lg hover:bg-[#F8D4D8] disabled:opacity-50 flex items-center gap-2"
               >
                 {loading ? (
                   <Loader2 className="animate-spin" size={20} />
