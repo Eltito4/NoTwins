@@ -22,6 +22,15 @@ interface ImageUploadModalProps {
   onBack: () => void;
 }
 
+const convertBlobToBase64 = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
 export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: ImageUploadModalProps) {
   const [imageUrl, setImageUrl] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -46,12 +55,13 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
 
     setLoading(true);
     try {
-      // For now, we'll use a temporary URL. In production, you'd upload to a server
-      const url = URL.createObjectURL(file);
-      setImageUrl(url);
-      await analyzeImage(url);
+      // Convert file to base64
+      const base64Image = await convertBlobToBase64(file);
+      setImageUrl(base64Image);
+      await analyzeImage(base64Image);
     } catch (error) {
       toast.error('Failed to process image');
+      console.error('File processing error:', error);
     } finally {
       setLoading(false);
     }

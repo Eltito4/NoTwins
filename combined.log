@@ -1,2 +1,57 @@
-{"level":"info","message":"Server running on port 3001 in development mode","timestamp":"2025-02-02T13:42:19.751Z"}
-{"level":"info","message":"MongoDB Connected in development mode","timestamp":"2025-02-02T13:42:20.187Z"}
+2025-02-02T17:15:34.540Z [34mdebug[39m: Initializing Vision API client...
+2025-02-02T17:15:34.629Z [32minfo[39m: ✓
+2025-02-02T17:15:35.209Z [32minfo[39m: ✓
+2025-02-02T17:15:35.211Z [32minfo[39m: ✓
+2025-02-02T17:15:35.212Z [32minfo[39m: Environment:
+2025-02-02T17:15:35.212Z [34mdebug[39m: Vision API credentials:
+Metadata: {
+  "hasClientEmail": false,
+  "hasPrivateKey": false
+}
+2025-02-02T17:16:31.078Z [34mdebug[39m: Vision API health check
+2025-02-02T17:16:46.290Z [34mdebug[39m: Vision API health check
+2025-02-02T17:16:56.926Z [34mdebug[39m: Vision analysis request received:
+Metadata: {
+  "imageUrl": "blob:http://localhost:5173/5c420b0b-2d1c-4816-a1af-6ad69fb315f3"
+}
+2025-02-02T17:16:56.927Z [34mdebug[39m: Starting image analysis for URL:
+Metadata: {
+  "imageUrl": "blob:http://localhost:5173/5c420b0b-2d1c-4816-a1af-6ad69fb315f3"
+}
+2025-02-02T17:16:57.049Z [34mdebug[39m: Analysis completed successfully:
+Metadata: {
+  "labels": [],
+  "color": null,
+  "type": null
+}
+2025-02-02T17:16:57.050Z [32minfo[39m: ✓
+2025-02-02T17:17:38.010Z [34mdebug[39m: Vision analysis request received:
+Metadata: {
+  "imageUrl": "blob:http://localhost:5173/f8172dc4-fc16-4906-865d-0aac71323323"
+}
+2025-02-02T17:17:38.010Z [34mdebug[39m: Starting image analysis for URL:
+Metadata: {
+  "imageUrl": "blob:http://localhost:5173/f8172dc4-fc16-4906-865d-0aac71323323"
+}
+2025-02-02T17:17:38.068Z [34mdebug[39m: Analysis completed successfully:
+Metadata: {
+  "labels": [],
+  "color": null,
+  "type": null
+}
+2025-02-02T17:17:38.069Z [32minfo[39m: ✓
+2025-02-02T17:18:02.660Z [34mdebug[39m: Vision analysis request received:
+Metadata: {
+  "imageUrl": "blob:http://localhost:5173/aa48f9bf-6819-4766-940f-d6367c6510e2"
+}
+2025-02-02T17:18:02.661Z [34mdebug[39m: Starting image analysis for URL:
+Metadata: {
+  "imageUrl": "blob:http://localhost:5173/aa48f9bf-6819-4766-940f-d6367c6510e2"
+}
+2025-02-02T17:18:02.713Z [34mdebug[39m: Analysis completed successfully:
+Metadata: {
+  "labels": [],
+  "color": null,
+  "type": null
+}
+2025-02-02T17:18:02.713Z [32minfo[39m: ✓

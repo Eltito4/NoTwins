@@ -17,15 +17,25 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Routes
+// Import routes
 import eventRoutes from './routes/events.js';
 import dressRoutes from './routes/dresses.js';
 import visionRoutes from './routes/vision.js';
 import authRoutes from './routes/auth.js';
+import messageRoutes from './routes/messages.js';
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.json({ 
+    status: 'healthy',
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString(),
+    vision: {
+      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+      hasCredentials: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY
+    }
+  });
 });
 
 // Register routes
@@ -33,6 +43,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/dresses', dressRoutes);
 app.use('/api/vision', visionRoutes);
+app.use('/api/messages', messageRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -44,10 +55,22 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.listen(port, () => {
-  logger.info(`Server running on port ${port}`);
-  logger.info('Environment:', process.env.NODE_ENV);
-  logger.debug('Vision API credentials path:', process.env.GOOGLE_APPLICATION_CREDENTIALS);
-});
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    logger.success('Connected to MongoDB');
+    app.listen(port, () => {
+      logger.success(`Server running on port ${port}`);
+      logger.info('Environment:', process.env.NODE_ENV);
+      logger.debug('Vision API credentials:', {
+        projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+        hasClientEmail: !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
+        hasPrivateKey: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY?.length
+      });
+    });
+  })
+  .catch(err => {
+    logger.error('MongoDB connection error:', err);
+    process.exit(1);
+  });
 
 export default app;

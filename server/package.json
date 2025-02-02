@@ -4,13 +4,10 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js",
-    "postinstall": "npx puppeteer browsers install chrome"
+    "dev": "nodemon index.js"
   },
   "dependencies": {
-    "@azure/cognitiveservices-computervision": "^8.2.0",
-    "@azure/ms-rest-js": "^2.6.6",
-    "@google-cloud/vision": "^3.1.4",
+    "@google-cloud/vision": "^4.0.2",
     "axios": "^1.4.0",
     "bcryptjs": "^2.4.3",
     "cheerio": "^1.0.0-rc.12",
@@ -22,7 +19,6 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.2.0",
     "morgan": "^1.10.0",
-    "puppeteer": "^22.3.0",
     "winston": "^3.11.0"
   },
   "devDependencies": {

@@ -1,113 +1,28 @@
 import express from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
+import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import { config } from 'dotenv';
-import winston from 'winston';
-import { errorHandler } from './middleware/errorHandler.js';
-import { apiLimiter } from './middleware/rateLimiter.js';
-import authRouter from './routes/auth.js';
-import eventsRouter from './routes/events.js';
-import dressesRouter from './routes/dresses.js';
-import scrapingRouter from './routes/scraping.js';
-import messageRoutes from './routes/messages.js';
+import { logger } from './utils/logger.js';
 
-
-config();
+// Load environment variables
+dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
-const isDevelopment = process.env.NODE_ENV === 'development';
-
-// Configure logger
-const logger = winston.createLogger({
-  level: isDevelopment ? 'debug' : 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
-  transports: [
-    new winston.transports.File({ filename: 'error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'combined.log' })
-  ]
-});
-
-if (isDevelopment) {
-  logger.add(new winston.transports.Console({
-    format: winston.format.simple()
-  }));
-} else {
-  logger.add(new winston.transports.Console({
-    format: winston.format.json()
-  }));
-}
-
-// Connect to MongoDB
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    logger.info(`MongoDB Connected in ${process.env.NODE_ENV} mode`);
-  } catch (error) {
-    logger.error('MongoDB connection error:', error);
-    setTimeout(connectDB, 5000);
-  }
-};
-
-connectDB();
-
-// Trust proxy for rate limiting behind reverse proxy
-app.set('trust proxy', 1);
-
-// CORS configuration
-const corsOptions = {
-  origin: isDevelopment 
-    ? ['http://localhost:5173', 'https://notwins.netlify.app']
-    : ['https://notwins.netlify.app'],
-  credentials: false,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-  exposedHeaders: ['Content-Length', 'X-Requested-With']
-};
-
-app.use(cors(corsOptions));
-
-// Security middleware
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      connectSrc: isDevelopment 
-        ? ["'self'", "https://notwins.netlify.app", "http://localhost:5173"]
-        : ["'self'", "https://notwins.netlify.app"],
-      imgSrc: ["'self'", "*", "data:", "blob:"],
-      scriptSrc: ["'self'", "'unsafe-inline'", ...(isDevelopment ? ["'unsafe-eval'"] : [])],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      fontSrc: ["'self'", "data:", "https:"],
-      objectSrc: ["'none'"],
-      upgradeInsecureRequests: []
-    }
-  }
-}));
-
-// Pre-flight requests
-app.options('*', cors(corsOptions));
+const port = process.env.PORT || 3001;
 
 // Middleware
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  credentials: true
+}));
 app.use(express.json());
-app.use(morgan(isDevelopment ? 'dev' : 'combined'));
-app.use(apiLimiter);
 
-// Routes
-app.use('/api/auth', authRouter);
-app.use('/api/events', eventsRouter);
-app.use('/api/dresses', dressesRouter);
-app.use('/api/scraping', scrapingRouter);
+// Import routes
+import eventRoutes from './routes/events.js';
+import dressRoutes from './routes/dresses.js';
+import visionRoutes from './routes/vision.js';
+import authRoutes from './routes/auth.js';
+import messageRoutes from './routes/messages.js';
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -115,16 +30,47 @@ app.get('/api/health', (req, res) => {
     status: 'healthy',
     mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     environment: process.env.NODE_ENV,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    vision: {
+      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+      hasCredentials: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY
+    }
   });
 });
 
-// Error handling
-app.use(errorHandler);
+// Register routes
+app.use('/api/auth', authRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/dresses', dressRoutes);
+app.use('/api/vision', visionRoutes);
+app.use('/api/messages', messageRoutes);
 
-app.listen(PORT, '0.0.0.0', () => {
-  logger.info(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+// Error handling middleware
+app.use((err, req, res, next) => {
+  logger.error('Server error:', err);
+  res.status(500).json({ 
+    error: 'Something went wrong!',
+    details: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
-//Messages
-app.use('/api/messages', messageRoutes);
+// Start server
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    logger.success('Connected to MongoDB');
+    app.listen(port, () => {
+      logger.success(`Server running on port ${port}`);
+      logger.info('Environment:', process.env.NODE_ENV);
+      logger.debug('Vision API credentials:', {
+        projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+        hasClientEmail: !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
+        hasPrivateKey: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY?.length
+      });
+    });
+  })
+  .catch(err => {
+    logger.error('MongoDB connection error:', err);
+    process.exit(1);
+  });
+
+export default app;
