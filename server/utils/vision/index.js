@@ -2,18 +2,25 @@ import vision from '@google-cloud/vision';
 import { logger } from '../logger.js';
 import { detectProductType } from '../categorization/detector.js';
 import { findClosestNamedColor } from '../colors/utils.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-// Initialize Google Cloud Vision client with credentials
+// Initialize Google Cloud Vision client
 const googleVisionClient = new vision.ImageAnnotatorClient({
-  keyFilename: path.join(__dirname, '../../config/google-credentials.json')
+  credentials: {
+    client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
+    private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    project_id: process.env.GOOGLE_CLOUD_PROJECT_ID
+  }
 });
 
 export async function analyzeGarmentImage(imageUrl) {
   try {
+    // First check if the image URL is accessible
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error('Failed to access image URL');
+    }
+
+    // Analyze the image
     const [result] = await googleVisionClient.annotateImage({
       image: { source: { imageUri: imageUrl } },
       features: [
@@ -24,10 +31,15 @@ export async function analyzeGarmentImage(imageUrl) {
       ]
     });
 
+    if (!result) {
+      throw new Error('No analysis results received');
+    }
+
+    logger.info('Vision API response:', result);
     return processVisionResponse(result);
   } catch (error) {
     logger.error('Vision analysis error:', error);
-    throw new Error('Failed to analyze image');
+    throw new Error(`Failed to analyze image: ${error.message}`);
   }
 }
 
@@ -62,16 +74,4 @@ function processVisionResponse(result) {
     confidence: Math.max(...labels.map(l => l.score)) * 100,
     rawLabels: garmentLabels
   };
-}
-
-function isBrandName(text) {
-  const commonBrands = [
-    'zara', 'hm', 'mango', 'nike', 'adidas', 'gucci', 'prada', 'louis vuitton',
-    'chanel', 'hermes', 'uniqlo', 'cos', 'massimo dutti', 'calvin klein',
-    'ralph lauren', 'tommy hilfiger', 'lacoste', 'levi\'s', 'gap'
-  ];
-  return commonBrands.some(brand => 
-    text.toLowerCase().includes(brand) || 
-    brand.includes(text.toLowerCase())
-  );
 }
