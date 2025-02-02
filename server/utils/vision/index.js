@@ -2,27 +2,34 @@ import vision from '@google-cloud/vision';
 import { logger } from '../logger.js';
 import { detectProductType } from '../categorization/detector.js';
 import { findClosestNamedColor } from '../colors/utils.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const credentialsPath = path.resolve(__dirname, '../../config/google-credentials.json');
-
-logger.debug('Vision API initialization starting...');
-logger.debug('Credentials path:', credentialsPath);
-
-// Initialize Google Cloud Vision client
+// Initialize Google Cloud Vision client with credentials from environment variables
 let googleVisionClient;
 try {
+  logger.debug('Initializing Vision API client...');
+  
+  const credentials = {
+    type: 'service_account',
+    project_id: process.env.GOOGLE_CLOUD_PROJECT_ID,
+    private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
+    client_id: process.env.GOOGLE_CLOUD_CLIENT_ID,
+    auth_uri: "https://accounts.google.com/o/oauth2/auth",
+    token_uri: "https://oauth2.googleapis.com/token",
+    auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+    client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${encodeURIComponent(process.env.GOOGLE_CLOUD_CLIENT_EMAIL)}`
+  };
+
   googleVisionClient = new vision.ImageAnnotatorClient({
-    keyFilename: credentialsPath
+    credentials,
+    projectId: process.env.GOOGLE_CLOUD_PROJECT_ID
   });
+  
   logger.success('Vision API client initialized successfully');
 } catch (error) {
   logger.error('Failed to initialize Vision API client:', {
     error: error.message,
-    stack: error.stack,
-    credentialsPath
+    stack: error.stack
   });
   throw error;
 }
