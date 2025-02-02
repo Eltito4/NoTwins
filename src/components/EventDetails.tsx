@@ -82,7 +82,7 @@ export function EventDetails({ event, onBack, onDressAdded, participants }: Even
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="space-y-3">
           {event.dresses.map((dress) => (
             <DressCard
               key={dress._id}
@@ -90,6 +90,7 @@ export function EventDetails({ event, onBack, onDressAdded, participants }: Even
               isEventCreator={isEventCreator}
               userName={participants[dress.userId]?.name}
               onDelete={handleDeleteDress}
+              compact={true}
             />
           ))}
         </div>

@@ -15,6 +15,7 @@ interface DressCardProps {
     type: 'exact' | 'partial';
     items: Array<{ userName: string; color?: string }>;
   };
+  compact?: boolean;
 }
 
 export function DressCard({ 
@@ -22,7 +23,8 @@ export function DressCard({
   isEventCreator,
   userName,
   onDelete,
-  duplicateInfo
+  duplicateInfo,
+  compact = false
 }: DressCardProps) {
   const { currentUser } = useAuth();
   const [imageError, setImageError] = useState(false);
@@ -62,6 +64,122 @@ export function DressCard({
     }
   };
 
+  if (!canViewDetails) {
+    return (
+      <div className={`bg-white rounded-lg shadow-sm overflow-hidden ${
+        compact ? 'flex h-24' : 'min-h-[300px]'
+      }`}>
+        <div className="flex items-center justify-center h-full w-full p-4">
+          <div className="text-center">
+            <Lock className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+            <p className="text-gray-500 text-sm">This item is private</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (compact) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+        <div className="flex h-24">
+          {/* Image Section */}
+          <div className="w-24 h-24 flex-shrink-0 relative bg-gray-50">
+            {imageLoading && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+              </div>
+            )}
+            {!imageError ? (
+              <img
+                src={dress.imageUrl}
+                alt={dress.name}
+                className={`w-full h-full object-cover transition-opacity duration-200 ${
+                  imageLoading ? 'opacity-0' : 'opacity-100'
+                }`}
+                onLoad={handleImageLoad}
+                onError={handleImageError}
+                crossOrigin="anonymous"
+                referrerPolicy="no-referrer"
+                loading="lazy"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                Image not available
+              </div>
+            )}
+          </div>
+
+          {/* Content Section */}
+          <div className="flex-1 p-3 min-w-0">
+            <div className="flex justify-between items-start">
+              <div className="min-w-0">
+                <h3 className="font-medium text-gray-900 truncate">{dress.name}</h3>
+                {userName && (
+                  <p className="text-xs text-gray-500">Added by {userName}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                {isOwner && (
+                  <button
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="p-1 text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
+                    title="Delete item"
+                  >
+                    {isDeleting ? (
+                      <Loader2 className="animate-spin" size={16} />
+                    ) : (
+                      <Trash2 size={16} />
+                    )}
+                  </button>
+                )}
+                {dress.isPrivate ? (
+                  <Lock className="w-4 h-4 text-gray-400" />
+                ) : (
+                  <Eye className="w-4 h-4 text-gray-400" />
+                )}
+              </div>
+            </div>
+
+            <div className="mt-1 flex items-center gap-3 text-sm">
+              {dress.brand && (
+                <span className="text-gray-600 truncate">{dress.brand}</span>
+              )}
+              {dress.price && (
+                <span className="text-gray-600">{formatPrice(dress.price)}</span>
+              )}
+            </div>
+
+            {dress.color && (
+              <div className="mt-2 flex items-center gap-2">
+                <div
+                  className="w-4 h-4 rounded-full border border-gray-200 flex-shrink-0"
+                  style={{ backgroundColor: dress.color }}
+                  title={dress.color}
+                />
+                <span className="text-sm text-gray-600 truncate">{dress.color}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Duplicate Alert */}
+          {duplicateInfo && (
+            <div className="absolute -top-1 -right-1">
+              <div className={`p-1.5 rounded-full ${
+                duplicateInfo.type === 'exact' 
+                  ? 'bg-red-100 text-red-600 animate-bounce'
+                  : 'bg-amber-100 text-amber-600'
+              }`}>
+                <Bell size={14} />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative bg-white rounded-xl shadow-lg overflow-visible transition-transform hover:scale-105">
       {duplicateInfo && (
@@ -74,7 +192,7 @@ export function DressCard({
             } shadow-lg cursor-pointer transition-transform hover:scale-110`}>
               <Bell size={20} className={`${duplicateInfo.type === 'exact' ? 'animate-[ring_4s_ease-in-out_infinite]' : ''}`} />
             </div>
-            <div className="absolute right-0 top-full mt-2 w-64 bg-[#E4EDE1] rounded-lg shadow-lg border border-gray-200 p-3 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200">
+            <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 p-3 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200">
               <p className="font-medium text-gray-900">
                 {duplicateInfo.type === 'exact' ? 'Identical item found!' : 'Similar item found'}
               </p>
@@ -103,102 +221,92 @@ export function DressCard({
       )}
 
       <div className="overflow-hidden rounded-t-xl">
-        {canViewDetails ? (
-          <>
-            <div className="aspect-square overflow-hidden bg-gray-100 relative">
-              {imageLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-                </div>
-              )}
-              {!imageError ? (
-                <img
-                  src={dress.imageUrl}
-                  alt={dress.name}
-                  className={`w-full h-full object-cover transition-opacity duration-200 ${
-                    imageLoading ? 'opacity-0' : 'opacity-100'
-                  }`}
-                  onLoad={handleImageLoad}
-                  onError={handleImageError}
-                  crossOrigin="anonymous"
-                  referrerPolicy="no-referrer"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400">
-                  <p className="text-sm text-center px-4">
-                    Image not available
-                  </p>
-                </div>
+        <div className="aspect-square overflow-hidden bg-gray-100 relative">
+          {imageLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+            </div>
+          )}
+          {!imageError ? (
+            <img
+              src={dress.imageUrl}
+              alt={dress.name}
+              className={`w-full h-full object-cover transition-opacity duration-200 ${
+                imageLoading ? 'opacity-0' : 'opacity-100'
+              }`}
+              onLoad={handleImageLoad}
+              onError={handleImageError}
+              crossOrigin="anonymous"
+              referrerPolicy="no-referrer"
+              loading="lazy"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-400">
+              <p className="text-sm text-center px-4">
+                Image not available
+              </p>
+            </div>
+          )}
+        </div>
+        <div className="p-4">
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              <p className="text-lg font-semibold line-clamp-1">{dress.name}</p>
+              {userName && (
+                <p className="text-sm text-gray-500">Added by {userName}</p>
               )}
             </div>
-            <div className="p-4">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <p className="text-lg font-semibold line-clamp-1">{dress.name}</p>
-                  {userName && (
-                    <p className="text-sm text-gray-500">Added by {userName}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {isOwner && (
-                    <button
-                      onClick={handleDelete}
-                      disabled={isDeleting}
-                      className="p-1 text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
-                      title="Delete item"
-                    >
-                      {isDeleting ? (
-                        <Loader2 className="animate-spin" size={18} />
-                      ) : (
-                        <Trash2 size={18} />
-                      )}
-                    </button>
-                  )}
-                  {dress.isPrivate ? (
-                    <Lock className="w-4 h-4 text-gray-400" />
+            <div className="flex items-center gap-2">
+              {isOwner && (
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="p-1 text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
+                  title="Delete item"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="animate-spin" size={18} />
                   ) : (
-                    <Eye className="w-4 h-4 text-gray-400" />
+                    <Trash2 size={18} />
                   )}
-                </div>
-              </div>
-              {dress.brand && (
-                <p className="text-sm text-gray-500 mb-2 line-clamp-1">Brand: {dress.brand}</p>
+                </button>
               )}
-              {dress.price && (
-                <p className="text-sm text-gray-500 mb-2">
-                  Price: {formatPrice(dress.price)}
-                </p>
-              )}
-              {dress.type && (
-                <div className="flex flex-col gap-1 mt-2">
-                  <p className="text-sm text-gray-500">
-                    Category: {getCategoryName(dress.type.category)}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Type: {dress.type.name}
-                  </p>
-                </div>
-              )}
-              {dress.color && (
-                <div className="flex items-center mt-3 gap-2">
-                  <div
-                    className="w-6 h-6 rounded-full border-2 border-gray-200 flex-shrink-0"
-                    style={{ backgroundColor: dress.color }}
-                    title={dress.color}
-                  />
-                  <span className="text-sm text-gray-500 capitalize line-clamp-1">{dress.color}</span>
-                </div>
+              {dress.isPrivate ? (
+                <Lock className="w-4 h-4 text-gray-400" />
+              ) : (
+                <Eye className="w-4 h-4 text-gray-400" />
               )}
             </div>
-          </>
-        ) : (
-          <div className="p-6 flex flex-col items-center justify-center text-center h-full min-h-[300px]">
-            <Lock className="w-8 h-8 text-gray-400 mb-2" />
-            <p className="text-gray-500">This item is private</p>
-            <p className="text-sm text-gray-400 mt-1">Only visible to the owner{isEventCreator ? ' and event creator' : ''}</p>
           </div>
-        )}
+          {dress.brand && (
+            <p className="text-sm text-gray-500 mb-2 line-clamp-1">Brand: {dress.brand}</p>
+          )}
+          {dress.price && (
+            <p className="text-sm text-gray-500 mb-2">
+              Price: {formatPrice(dress.price)}
+            </p>
+          )}
+          {dress.type && (
+            <div className="flex flex-col gap-1 mt-2">
+              <p className="text-sm text-gray-500">
+                Category: {getCategoryName(dress.type.category)}
+              </p>
+              <p className="text-sm text-gray-500">
+                Type: {dress.type.name}
+              </p>
+            </div>
+          )}
+          {dress.color && (
+            <div className="flex items-center mt-3 gap-2">
+              <div
+                className="w-6 h-6 rounded-full border-2 border-gray-200 flex-shrink-0"
+                style={{ backgroundColor: dress.color }}
+                title={dress.color}
+              />
+              <span className="text-sm text-gray-500 capitalize line-clamp-1">{dress.color}</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
