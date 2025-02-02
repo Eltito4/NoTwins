@@ -14,28 +14,25 @@ const googleVisionClient = new vision.ImageAnnotatorClient({
 
 export async function analyzeGarmentImage(imageUrl) {
   try {
-    // First check if the image URL is accessible
-    const response = await fetch(imageUrl);
-    if (!response.ok) {
-      throw new Error('Failed to access image URL');
-    }
+    logger.info('Analyzing image:', imageUrl);
 
     // Analyze the image
     const [result] = await googleVisionClient.annotateImage({
       image: { source: { imageUri: imageUrl } },
       features: [
-        { type: 'OBJECT_LOCALIZATION' },
-        { type: 'LABEL_DETECTION' },
+        { type: 'LABEL_DETECTION', maxResults: 10 },
         { type: 'IMAGE_PROPERTIES' },
-        { type: 'PRODUCT_SEARCH' }
+        { type: 'OBJECT_LOCALIZATION' },
+        { type: 'LOGO_DETECTION' }
       ]
     });
+
+    logger.info('Vision API response:', JSON.stringify(result, null, 2));
 
     if (!result) {
       throw new Error('No analysis results received');
     }
 
-    logger.info('Vision API response:', result);
     return processVisionResponse(result);
   } catch (error) {
     logger.error('Vision analysis error:', error);
@@ -44,17 +41,14 @@ export async function analyzeGarmentImage(imageUrl) {
 }
 
 function processVisionResponse(result) {
+  // Extract labels
   const labels = result.labelAnnotations || [];
-  const objects = result.localizedObjectAnnotations || [];
-  const colors = result.imagePropertiesAnnotation?.dominantColors?.colors || [];
-
-  // Extract garment type
   const garmentLabels = labels
     .filter(label => label.score > 0.7)
     .map(label => label.description);
-  const detectedType = detectProductType(garmentLabels.join(' '));
 
   // Extract dominant color
+  const colors = result.imagePropertiesAnnotation?.dominantColors?.colors || [];
   const dominantColor = colors
     .sort((a, b) => b.score - a.score)
     .map(color => {
@@ -62,16 +56,18 @@ function processVisionResponse(result) {
       return findClosestNamedColor(`rgb(${rgb.red}, ${rgb.green}, ${rgb.blue})`);
     })[0];
 
-  // Extract brand if available
-  const brand = result.webDetection?.webEntities
-    ?.find(entity => entity.score > 0.8 && isBrandName(entity.description))
-    ?.description;
+  // Extract brand from logo detection
+  const logos = result.logoAnnotations || [];
+  const brand = logos.length > 0 ? logos[0].description : null;
+
+  // Detect product type
+  const type = detectProductType(garmentLabels.join(' '));
 
   return {
-    type: detectedType,
+    labels: garmentLabels,
     color: dominantColor,
-    brand: brand,
-    confidence: Math.max(...labels.map(l => l.score)) * 100,
-    rawLabels: garmentLabels
+    brand,
+    type,
+    confidence: Math.max(...labels.map(l => l.score)) * 100
   };
 }
