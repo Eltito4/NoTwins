@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dress } from '../types';
-import { Lock, Eye, Trash2, Loader2, Store, Bell } from 'lucide-react';
+import { Lock, Eye, Trash2, Loader2, Bell } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { getCategoryName, getSubcategoryName } from '../utils/categorization';
+import { formatPrice } from '../utils/currency';
 import toast from 'react-hot-toast';
 
 interface DressCardProps {
@@ -23,9 +25,9 @@ export function DressCard({
   duplicateInfo
 }: DressCardProps) {
   const { currentUser } = useAuth();
-  const [imageError, setImageError] = React.useState(false);
-  const [imageLoading, setImageLoading] = React.useState(true);
-  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const isOwner = currentUser?.id === dress.userId;
   const canViewDetails = isOwner || !dress.isPrivate || isEventCreator;
 
@@ -60,17 +62,6 @@ export function DressCard({
     }
   };
 
-  const getRetailerName = (url: string) => {
-    try {
-      const urlObj = new URL(url);
-      return urlObj.hostname.replace('www.', '');
-    } catch {
-      return null;
-    }
-  };
-
-  const retailerName = dress.imageUrl ? getRetailerName(dress.imageUrl) : null;
-
   return (
     <div className="relative bg-white rounded-xl shadow-lg overflow-visible transition-transform hover:scale-105">
       {duplicateInfo && (
@@ -78,12 +69,12 @@ export function DressCard({
           <div className={`relative group`}>
             <div className={`p-2 rounded-full ${
               duplicateInfo.type === 'exact' 
-                ? 'bg-red-50 text-red-500 animate-bounce'
-                : 'bg-amber-50 text-amber-500'
+                ? 'bg-[#FFEBE8] text-[#D84315] animate-bounce'
+                : 'bg-[#FFEDC2] text-[#8D6E63]'
             } shadow-lg cursor-pointer transition-transform hover:scale-110`}>
               <Bell size={20} className={`${duplicateInfo.type === 'exact' ? 'animate-[ring_4s_ease-in-out_infinite]' : ''}`} />
             </div>
-            <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 p-3 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200">
+            <div className="absolute right-0 top-full mt-2 w-64 bg-[#E4EDE1] rounded-lg shadow-lg border border-gray-200 p-3 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200">
               <p className="font-medium text-gray-900">
                 {duplicateInfo.type === 'exact' ? 'Identical item found!' : 'Similar item found'}
               </p>
@@ -176,13 +167,18 @@ export function DressCard({
               )}
               {dress.price && (
                 <p className="text-sm text-gray-500 mb-2">
-                  Price: ${dress.price.toFixed(2)}
+                  Price: {formatPrice(dress.price)}
                 </p>
               )}
               {dress.type && (
-                <p className="text-sm text-gray-500 mb-2 capitalize">
-                  Type: {dress.type}
-                </p>
+                <div className="flex flex-col gap-1 mt-2">
+                  <p className="text-sm text-gray-500">
+                    Category: {getCategoryName(dress.type.category)}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Type: {dress.type.name}
+                  </p>
+                </div>
               )}
               {dress.color && (
                 <div className="flex items-center mt-3 gap-2">
@@ -192,12 +188,6 @@ export function DressCard({
                     title={dress.color}
                   />
                   <span className="text-sm text-gray-500 capitalize line-clamp-1">{dress.color}</span>
-                </div>
-              )}
-              {retailerName && (
-                <div className="flex items-center mt-2 gap-2 text-gray-500">
-                  <Store size={16} />
-                  <span className="text-sm">{retailerName}</span>
                 </div>
               )}
             </div>

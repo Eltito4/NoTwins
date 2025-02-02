@@ -34,6 +34,11 @@ const dressSchema = new mongoose.Schema({
   price: { 
     type: Number 
   },
+  type: {
+    category: String,
+    subcategory: String,
+    name: String
+  },
   isPrivate: { 
     type: Boolean, 
     default: false 

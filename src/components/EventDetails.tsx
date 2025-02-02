@@ -100,7 +100,6 @@ export function EventDetails({ event, onBack, onDressAdded, participants }: Even
           onClose={() => setShowScrapingModal(false)}
           onSubmit={handleAddDress}
           isEventCreator={isEventCreator}
-          existingItems={event.dresses}
         />
       )}
     </div>

@@ -66,7 +66,7 @@ export function AuthForm() {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-purple-500 focus:ring-purple-500"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-primary-200 focus:ring-primary-200"
               required={!isLogin}
               disabled={loading}
             />
@@ -82,7 +82,7 @@ export function AuthForm() {
             name="email"
             value={formData.email}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-purple-500 focus:ring-purple-500"
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-primary focus:ring-primary"
             required
             disabled={loading}
           />
@@ -97,7 +97,7 @@ export function AuthForm() {
             name="password"
             value={formData.password}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-purple-500 focus:ring-purple-500"
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-primary focus:ring-primary"
             required
             disabled={loading}
           />
@@ -105,7 +105,7 @@ export function AuthForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50"
+          className="w-full flex items-center justify-center gap-2 bg-primary text-white py-2 px-4 rounded-md hover:bg-primary-600 transition-colors disabled:opacity-50"
         >
           {loading ? (
             <>
@@ -124,7 +124,7 @@ export function AuthForm() {
       <button
         onClick={() => setIsLogin(!isLogin)}
         disabled={loading}
-        className="mt-4 w-full text-center text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50"
+        className="mt-4 w-full text-center text-sm text-primary hover:text-primary-700 disabled:opacity-50"
       >
         {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
       </button>

@@ -1,31 +1,40 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { X, Link, Loader2, Eye, EyeOff } from 'lucide-react';
 import { scrapeDressDetails } from '../services/scrapingService';
-import { Dress } from '../types';
+import { ScrapedProduct } from '../types';
+import { ProductType } from '../utils/categorization/types';
+import { detectProductType } from '../utils/categorization/detector';
+import { getCategoryName, getSubcategoryName, getAllCategories } from '../utils/categorization';
+import { formatPrice } from '../utils/currency';
+import { AVAILABLE_COLORS } from '../utils/colorUtils';
 import toast from 'react-hot-toast';
 
 interface DressScrapingModalProps {
   onClose: () => void;
-  onSubmit: (dressData: Omit<Dress, '_id' | 'id' | 'userId' | 'eventId'>) => void;
+  onSubmit: (dressData: {
+    name: string;
+    imageUrl: string;
+    description?: string;
+    color?: string;
+    brand?: string;
+    price?: number;
+    type?: ProductType;
+    isPrivate: boolean;
+  }) => void;
   isEventCreator: boolean;
-  existingItems?: Dress[];
-}
-
-interface ScrapedData {
-  name: string;
-  imageUrl: string;
-  color?: string;
-  brand?: string;
-  price?: number;
-  description?: string;
-  type?: string;
 }
 
 export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressScrapingModalProps) {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
-  const [scrapedData, setScrapedData] = useState<ScrapedData | null>(null);
+  const [scrapedData, setScrapedData] = useState<ScrapedProduct | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string>('');
+  const [selectedType, setSelectedType] = useState<ProductType | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
+
+  const categories = getAllCategories();
 
   const handleScrape = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +46,14 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
     setLoading(true);
     try {
       const data = await scrapeDressDetails(url);
+      const type = detectProductType(data.name + ' ' + (data.description || ''));
       setScrapedData(data);
+      setSelectedType(type);
+      setSelectedCategory(type.category);
+      setSelectedSubcategory(type.subcategory);
+      if (data.color) {
+        setSelectedColor(data.color);
+      }
       toast.success('Product details fetched successfully!');
     } catch (error) {
       // Error is already handled in scrapeDressDetails
@@ -48,24 +64,43 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!scrapedData) return;
+    if (!scrapedData || !selectedType) return;
 
     onSubmit({
       name: scrapedData.name,
       imageUrl: scrapedData.imageUrl,
       description: scrapedData.description,
-      color: scrapedData.color,
+      color: selectedColor || scrapedData.color,
       brand: scrapedData.brand,
       price: scrapedData.price,
-      type: scrapedData.type,
+      type: selectedType,
       isPrivate
     });
   };
 
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const category = e.target.value;
+    setSelectedCategory(category);
+    setSelectedSubcategory('');
+    setSelectedType(null);
+  };
+
+  const handleSubcategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const subcategory = e.target.value;
+    setSelectedSubcategory(subcategory);
+    if (selectedCategory && subcategory) {
+      setSelectedType({
+        category: selectedCategory,
+        subcategory: subcategory,
+        name: getSubcategoryName(selectedCategory, subcategory)
+      });
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg w-full max-w-lg">
-        <div className="p-6 border-b">
+      <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-6 border-b flex-shrink-0">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Add Item from URL</h2>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
@@ -87,7 +122,7 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+                className="bg-[#FFAB91] text-white px-4 py-2 rounded-lg hover:bg-[#F8D4D8] disabled:opacity-50 flex items-center gap-2"
               >
                 {loading ? (
                   <Loader2 className="animate-spin" size={20} />
@@ -101,49 +136,83 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
         </div>
 
         {scrapedData && (
-          <form onSubmit={handleSubmit}>
-            <div className="p-6 space-y-4">
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
               <div>
-                <label className="font-medium text-gray-700">Name:</label>
-                <p className="text-gray-900">{scrapedData.name}</p>
+                <h3 className="text-xl font-semibold mb-4">{scrapedData.name}</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Category</label>
+                    <select
+                      value={selectedCategory}
+                      onChange={handleCategoryChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                      required
+                    >
+                      <option value="">Select category</option>
+                      {categories.map(category => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Type</label>
+                    <select
+                      value={selectedSubcategory}
+                      onChange={handleSubcategoryChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                      required
+                      disabled={!selectedCategory}
+                    >
+                      <option value="">Select type</option>
+                      {selectedCategory && categories
+                        .find(c => c.id === selectedCategory)
+                        ?.subcategories.map(sub => (
+                          <option key={sub.id} value={sub.id}>
+                            {sub.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Color</label>
+                    <select
+                      value={selectedColor}
+                      onChange={(e) => setSelectedColor(e.target.value)}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                      required
+                    >
+                      <option value="">Select a color</option>
+                      {AVAILABLE_COLORS.map((color) => (
+                        <option key={color.name} value={color.name}>
+                          {color.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {scrapedData.brand && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Brand</label>
+                      <p className="mt-1 text-gray-900">{scrapedData.brand}</p>
+                    </div>
+                  )}
+
+                  {scrapedData.price && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Price</label>
+                      <p className="mt-1 text-gray-900">{formatPrice(scrapedData.price)}</p>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {scrapedData.brand && (
-                <div>
-                  <label className="font-medium text-gray-700">Brand:</label>
-                  <p className="text-gray-900">{scrapedData.brand}</p>
-                </div>
-              )}
-
-              {scrapedData.color && (
-                <div>
-                  <label className="font-medium text-gray-700">Color:</label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div
-                      className="w-6 h-6 rounded-full border-2 border-gray-200"
-                      style={{ backgroundColor: scrapedData.color.toLowerCase() }}
-                    />
-                    <span className="text-gray-900">{scrapedData.color}</span>
-                  </div>
-                </div>
-              )}
-
-              {scrapedData.price && (
-                <div>
-                  <label className="font-medium text-gray-700">Price:</label>
-                  <p className="text-gray-900">${scrapedData.price.toFixed(2)}</p>
-                </div>
-              )}
-
-              {scrapedData.type && (
-                <div>
-                  <label className="font-medium text-gray-700">Type:</label>
-                  <p className="text-gray-900">{scrapedData.type}</p>
-                </div>
-              )}
-
               <div>
-                <label className="font-medium text-gray-700 block mb-2">Preview:</label>
+                <label className="text-sm font-medium text-gray-700 block mb-2">Preview</label>
                 <div className="relative aspect-square overflow-hidden bg-gray-50 rounded-lg">
                   <img
                     src={scrapedData.imageUrl}
@@ -176,7 +245,7 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator }: DressS
               </div>
             </div>
 
-            <div className="p-6 border-t bg-gray-50 flex justify-end gap-4">
+            <div className="p-6 border-t bg-gray-50 flex justify-end gap-4 flex-shrink-0">
               <button
                 type="button"
                 onClick={onClose}

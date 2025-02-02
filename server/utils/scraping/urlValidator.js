@@ -8,8 +8,6 @@ const BLOCKED_DOMAINS = [
 
 const SUPPORTED_DOMAINS = [
   'ladypipa.com',
-  'hm.com',
-  'www2.hm.com',
   'cos.com',
   'zara.com',
   'massimodutti.com',
@@ -34,8 +32,6 @@ const SUPPORTED_DOMAINS = [
   'elcorteingles.es',
   'scalperscompany.com',
   'pronovias.com',
-  'rosaclara.es',
-  'mango.com',
   'massimodutti.com',
   'apparentia.com',
   'meryfor.com',
@@ -45,7 +41,17 @@ const SUPPORTED_DOMAINS = [
   'bruna.es',
   'redondobrand.com',
   'polinetmoi.com',
-  'carlaruiz.com'
+  'carlaruiz.com',
+  'chcarolinaherrera.com',
+  'carolinaherrera.com',
+  'shop.mango.com',
+  'mango.com',
+  'hm.com',
+  'www2.hm.com',
+  'rosaclara.es',
+  'louisvuitton.com',
+  'es.louisvuitton.com',
+  'matildecano.es'
 ];
 
 export function validateUrl(url) {

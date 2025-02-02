@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Event, DuplicateInfo, User } from '../types';
-import { Calendar, MapPin, Users, Share2, Check, Copy, Trash2, AlertTriangle, Eye, Lock } from 'lucide-react';
+import { Calendar, MapPin, Users, Share2, Check, Copy, Trash2, Bell, Eye, Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -111,63 +111,14 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-xl shadow-lg p-6 cursor-pointer transition-transform hover:scale-105"
+      className="bg-eventCard border border-gray-200 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 p-6 cursor-pointer transform hover:scale-[1.02]"
     >
+      {/* Event title */}
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h3 className="text-xl font-bold">{event.name}</h3>
+          <h3 className="text-xl font-bold text-gray-800">{event.name}</h3>
           {isCreator && (
-            <span className="text-sm text-purple-600">Event Creator</span>
-          )}
-          
-          {userDuplicates.length > 0 && (
-            <div className="mt-2 space-y-2">
-              {exactDuplicates.length > 0 && (
-                <div className="flex items-start gap-2 text-red-600 bg-red-50 p-2 rounded-lg">
-                  <AlertTriangle size={18} className="flex-shrink-0 mt-0.5" />
-                  <div className="text-sm">
-                    <p className="font-medium">Exact duplicates found:</p>
-                    <ul className="mt-1 space-y-1">
-                      {exactDuplicates.map(dup => (
-                        <li key={dup.name}>
-                          "{dup.name}" ({dup.items.length} items, same color)
-                          <ul className="ml-4 text-xs text-gray-600">
-                            {dup.items.map(item => (
-                              <li key={item.id}>
-                                {formatUserInfo(item)}
-                              </li>
-                            ))}
-                          </ul>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )}
-              
-              {partialDuplicates.length > 0 && (
-                <div className="flex items-start gap-2 text-amber-600 bg-amber-50 p-2 rounded-lg">
-                  <AlertTriangle size={18} className="flex-shrink-0 mt-0.5" />
-                  <div className="text-sm">
-                    <p className="font-medium">Similar items found:</p>
-                    <ul className="mt-1 space-y-1">
-                      {partialDuplicates.map(dup => (
-                        <li key={dup.name}>
-                          "{dup.name}" ({dup.items.length} items, different colors)
-                          <ul className="ml-4 text-xs text-gray-600">
-                            {dup.items.map(item => (
-                              <li key={item.id}>
-                                {formatUserInfo(item)}
-                              </li>
-                            ))}
-                          </ul>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )}
-            </div>
+            <span className="text-sm text-primary">Event Creator</span>
           )}
         </div>
 
@@ -184,7 +135,7 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
           )}
           <button
             onClick={handleShare}
-            className="p-2 text-purple-600 hover:text-purple-700 transition-colors rounded-lg hover:bg-purple-50"
+            className="p-2 text-primary hover:text-primary-600 transition-colors rounded-lg hover:bg-background/20"
             title="Share event"
           >
             {showShareSuccess ? (
@@ -195,6 +146,53 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
           </button>
         </div>
       </div>
+
+      {/* Alerts section */}
+      {userDuplicates.length > 0 && (
+        <div className="mb-4 bg-[#E4EDE1] rounded-lg p-4 border border-primary/20">
+          {exactDuplicates.length > 0 && (
+            <div className="flex items-start gap-2 bg-[#E4EDE1] text-[#ED583F]">
+              <Bell size={18} className="flex-shrink-0 mt-0.5 animate-[ring_4s_ease-in-out_infinite]" />
+              <div>
+                <p className="font-medium">Exact duplicates found:</p>
+                <ul className="mt-1 space-y-1 text-sm">
+                  {exactDuplicates.map(dup => (
+                    <li key={dup.name}>
+                      "{dup.name}" ({dup.items.length} items, same color)
+                      <ul className="ml-4 text-gray-600">
+                        {dup.items.map(item => (
+                          <li key={item.id}>{formatUserInfo(item)}</li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+          
+          {partialDuplicates.length > 0 && (
+            <div className="flex items-start gap-2 bg-[#E4EDE1] text-[#F8CE47] mt-3">
+              <Bell size={18} className="flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium">Similar items found:</p>
+                <ul className="mt-1 space-y-1 text-sm">
+                  {partialDuplicates.map(dup => (
+                    <li key={dup.name}>
+                      "{dup.name}" ({dup.items.length} items, different colors)
+                      <ul className="ml-4 text-gray-600">
+                        {dup.items.map(item => (
+                          <li key={item.id}>{formatUserInfo(item)}</li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-3">
         <div className="flex items-center gap-2 text-gray-600">
@@ -229,7 +227,7 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
             <span className="text-sm font-medium text-gray-500">Event ID:</span>
             <button
               onClick={handleCopyId}
-              className="flex items-center gap-2 px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 transition-colors group"
+              className="flex items-center gap-2 px-2 py-1 rounded bg-background/50 hover:bg-background transition-colors group"
             >
               <code className="text-sm">{event.shareId}</code>
               {showCopySuccess ? (

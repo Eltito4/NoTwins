@@ -43,7 +43,7 @@ export function ParticipantsList({ participants, creatorId, compact = false }: P
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 text-[#8D6E63] hover:text-[#D84315] transition-colors"
+        className="flex items-center gap-2 text-[#000000] hover:text-[#000000] transition-colors"
       >
         <Users size={compact ? 16 : 18} />
         <span>{participantsList.length} participants</span>

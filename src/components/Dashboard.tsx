@@ -1,17 +1,18 @@
 import { FC, useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, PlusCircle, UserPlus, User as UserIcon } from 'lucide-react';
+import { PlusCircle, UserPlus } from 'lucide-react';
 import { CreateEventModal } from './CreateEventModal';
 import { EventCard } from './EventCard';
 import { EventDetailsModal } from './EventDetailsModal';
 import { JoinEventModal } from './JoinEventModal';
+import { UserMenu } from './UserMenu';
 import type { Event, Dress, DuplicateInfo } from '../types';
 import type { User as UserType } from '../types';
 import { createEvent, getEventsByUser, joinEvent, deleteEvent, getEventDresses, getEventParticipants } from '../services/eventService';
 import toast from 'react-hot-toast';
 
 export const Dashboard: FC = () => {
-  const { currentUser, signOut } = useAuth();
+  const { currentUser } = useAuth();
   const [showCreateEvent, setShowCreateEvent] = useState(false);
   const [showJoinEvent, setShowJoinEvent] = useState(false);
   const [events, setEvents] = useState<Event[]>([]);
@@ -20,24 +21,8 @@ export const Dashboard: FC = () => {
   const [duplicateItems, setDuplicateItems] = useState<Record<string, DuplicateInfo[]>>({});
   const [participants, setParticipants] = useState<Record<string, Record<string, UserType>>>({});
 
-  useEffect(() => {
-    if (currentUser) {
-      loadEvents();
-    }
-  }, [currentUser]);
-
-  useEffect(() => {
-    events.forEach(event => {
-      loadParticipants(event.id);
-      checkDuplicateItems(event.id);
-    });
-  }, [events]);
-
   const loadEvents = async () => {
-    if (!currentUser?.id) return;
-    
     try {
-      setLoading(true);
       const userEvents = await getEventsByUser();
       setEvents(userEvents);
     } catch (error) {
@@ -48,33 +33,89 @@ export const Dashboard: FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (currentUser) {
+      loadEvents();
+    }
+  }, [currentUser]);
+
   const loadParticipants = async (eventId: string) => {
     try {
       const eventParticipants = await getEventParticipants(eventId);
       setParticipants(prev => ({
         ...prev,
-        [eventId]: Object.fromEntries(eventParticipants.map(user => [user.id, user]))
+        [eventId]: Object.fromEntries(
+          eventParticipants.map(p => [p.id, p])
+        )
       }));
     } catch (error) {
       console.error('Error loading participants:', error);
     }
   };
 
-  const handleCreateEvent = async (data: {
+  const checkDuplicateItems = async (eventId: string) => {
+    try {
+      const dresses = await getEventDresses(eventId, true);
+      const duplicates: DuplicateInfo[] = [];
+      
+      dresses.forEach(dress => {
+        const matches = dresses.filter(d => 
+          d._id !== dress._id && 
+          d.name.toLowerCase() === dress.name.toLowerCase()
+        );
+
+        if (matches.length > 0) {
+          duplicates.push({
+            name: dress.name,
+            items: [
+              {
+                id: dress._id,
+                userId: dress.userId,
+                userName: participants[eventId]?.[dress.userId]?.name || 'Unknown User',
+                color: dress.color
+              },
+              ...matches.map(match => ({
+                id: match._id,
+                userId: match.userId,
+                userName: participants[eventId]?.[match.userId]?.name || 'Unknown User',
+                color: match.color
+              }))
+            ],
+            type: matches.some(m => m.color?.toLowerCase() === dress.color?.toLowerCase())
+              ? 'exact'
+              : 'partial'
+          });
+        }
+      });
+
+      setDuplicateItems(prev => ({
+        ...prev,
+        [eventId]: duplicates
+      }));
+    } catch (error) {
+      console.error('Error checking duplicates:', error);
+    }
+  };
+
+  useEffect(() => {
+    events.forEach(event => {
+      loadParticipants(event.id);
+      checkDuplicateItems(event.id);
+    });
+  }, [events]);
+
+  const handleCreateEvent = async (eventData: {
     name: string;
     date: string;
     location: string;
     description: string;
   }) => {
-    if (!currentUser?.id) return;
-
     try {
       const newEvent = await createEvent({
-        ...data,
-        creatorId: currentUser.id,
-        participants: [currentUser.id]
+        ...eventData,
+        creatorId: currentUser!.id,
+        participants: [currentUser!.id]
       });
-      
       setEvents(prev => [...prev, newEvent]);
       setShowCreateEvent(false);
       toast.success('Event created successfully!');
@@ -86,40 +127,20 @@ export const Dashboard: FC = () => {
 
   const handleJoinEvent = async (shareId: string) => {
     try {
-      const joinedEvent = await joinEvent(shareId);
-      setEvents(prev => [...prev, joinedEvent]);
+      const event = await joinEvent(shareId);
+      setEvents(prev => [...prev, event]);
       setShowJoinEvent(false);
       toast.success('Successfully joined the event!');
     } catch (error) {
       console.error('Error joining event:', error);
-      toast.error('Failed to join event');
       throw error;
     }
-  };
-
-  const handleDressAdded = async (eventId: string, newDress: Dress) => {
-    setEvents(prev =>
-      prev.map(event =>
-        event.id === eventId
-          ? { ...event, dresses: [...event.dresses, newDress] }
-          : event
-      )
-    );
-    await checkDuplicateItems(eventId);
   };
 
   const handleDeleteEvent = async (eventId: string) => {
     try {
       await deleteEvent(eventId);
-      setEvents(prev => prev.filter(event => event.id !== eventId));
-      if (selectedEvent?.id === eventId) {
-        setSelectedEvent(null);
-      }
-      setDuplicateItems(prev => {
-        const newState = { ...prev };
-        delete newState[eventId];
-        return newState;
-      });
+      setEvents(prev => prev.filter(e => e.id !== eventId));
       toast.success('Event deleted successfully');
     } catch (error) {
       console.error('Error deleting event:', error);
@@ -127,79 +148,14 @@ export const Dashboard: FC = () => {
     }
   };
 
-  const checkDuplicateItems = async (eventId: string) => {
-    try {
-      const dresses = await getEventDresses(eventId, true);
-      const duplicates: DuplicateInfo[] = [];
-      
-      // Group dresses by name
-      const dressesByName = dresses.reduce((acc, dress) => {
-        const name = dress.name.toLowerCase();
-        if (!acc[name]) {
-          acc[name] = [];
-        }
-        acc[name].push(dress);
-        return acc;
-      }, {} as Record<string, Dress[]>);
-
-      // Check for duplicates
-      for (const [name, items] of Object.entries(dressesByName)) {
-        if (items.length > 1) {
-          // Group by color
-          const itemsByColor = items.reduce((acc, item) => {
-            const color = (item.color || 'unknown').toLowerCase();
-            if (!acc[color]) {
-              acc[color] = [];
-            }
-            acc[color].push(item);
-            return acc;
-          }, {} as Record<string, Dress[]>);
-
-          // Check for exact duplicates (same color)
-          for (const [color, colorItems] of Object.entries(itemsByColor)) {
-            if (colorItems.length > 1) {
-              duplicates.push({
-                name,
-                items: colorItems.map(item => ({
-                  id: item.id,
-                  userId: item.userId,
-                  userName: participants[eventId]?.[item.userId]?.name || 'Unknown User',
-                  color: item.color
-                })),
-                type: 'exact'
-              });
-            }
-          }
-
-          // Check for partial duplicates (different colors)
-          if (Object.keys(itemsByColor).length > 1) {
-            duplicates.push({
-              name,
-              items: items.map(item => ({
-                id: item.id,
-                userId: item.userId,
-                userName: participants[eventId]?.[item.userId]?.name || 'Unknown User',
-                color: item.color
-              })),
-              type: 'partial'
-            });
-          }
-        }
-      }
-
-      setDuplicateItems(prev => ({
-        ...prev,
-        [eventId]: duplicates
-      }));
-    } catch (error) {
-      console.error('Error checking for duplicate items:', error);
-    }
+  const handleDressAdded = async (eventId: string, dress: Dress) => {
+    await checkDuplicateItems(eventId);
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -211,32 +167,26 @@ export const Dashboard: FC = () => {
           <h1 className="text-3xl font-bold text-gray-800">Your Events</h1>
         </div>
         <div className="flex items-center gap-4">
+          {/* Join Event Button */}
           <button
             onClick={() => setShowJoinEvent(true)}
-            className="flex items-center gap-2 bg-white text-purple-600 border border-purple-600 py-2 px-4 rounded-lg hover:bg-purple-50 transition-colors"
+            className="flex items-center gap-2 bg-background border border-primary text-primary py-2 px-4 rounded-lg hover:bg-background/80 transition-colors"
           >
             <UserPlus size={20} />
             <span>Join Event</span>
           </button>
+
+          {/* Create Event Button */}
           <button
             onClick={() => setShowCreateEvent(true)}
-            className="flex items-center gap-2 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+            className="flex items-center gap-2 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary-600 transition-colors"
           >
             <PlusCircle size={20} />
             <span>Create Event</span>
           </button>
-          <div className="flex items-center gap-4 pl-4 border-l border-gray-200">
-            <div className="flex items-center gap-2 text-gray-700">
-              <UserIcon size={20} className="text-gray-500" />
-              <span className="font-medium">{currentUser?.name}</span>
-            </div>
-            <button
-              onClick={signOut}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
-            >
-              <LogOut size={20} />
-              <span>Logout</span>
-            </button>
+
+          <div className="pl-4 border-l border-gray-200">
+            <UserMenu />
           </div>
         </div>
       </div>
@@ -247,14 +197,14 @@ export const Dashboard: FC = () => {
           <div className="flex justify-center gap-4">
             <button
               onClick={() => setShowJoinEvent(true)}
-              className="text-purple-600 hover:text-purple-700"
+              className="text-primary hover:text-primary-600"
             >
               Join an event
             </button>
             <span className="text-gray-400">or</span>
             <button
               onClick={() => setShowCreateEvent(true)}
-              className="text-purple-600 hover:text-purple-700"
+              className="text-primary hover:text-primary-600"
             >
               create your first event
             </button>
