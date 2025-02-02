@@ -17,10 +17,6 @@ services:
         sync: false
       - key: CORS_ORIGIN
         value: https://notwins.netlify.app
-      - key: GOOGLE_CLOUD_PROJECT_ID
-        value: promising-haiku-449317-e0
-      - key: GOOGLE_CLOUD_CLIENT_EMAIL
-        value: vision-api-user-441@promising-haiku-449317-e0.iam.gserviceaccount.com
-      - key: GOOGLE_CLOUD_PRIVATE_KEY
-        sync: false
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: ./config/google-credentials.json
     autoDeploy: true

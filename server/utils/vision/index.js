@@ -2,14 +2,15 @@ import vision from '@google-cloud/vision';
 import { logger } from '../logger.js';
 import { detectProductType } from '../categorization/detector.js';
 import { findClosestNamedColor } from '../colors/utils.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const credentialsPath = path.resolve(__dirname, '../../config/google-credentials.json');
 
 // Initialize Google Cloud Vision client
 const googleVisionClient = new vision.ImageAnnotatorClient({
-  credentials: {
-    client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
-    private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    project_id: process.env.GOOGLE_CLOUD_PROJECT_ID
-  }
+  keyFilename: credentialsPath
 });
 
 export async function analyzeGarmentImage(imageUrl) {
