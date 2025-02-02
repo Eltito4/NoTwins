@@ -2,7 +2,7 @@ import React from 'react';
 import { Event, Dress, User } from '../types';
 import { PlusCircle } from 'lucide-react';
 import { DressCard } from './DressCard';
-import { DressScrapingModal } from './DressScrapingModal';
+import { AddItemModal } from './AddItemModal';
 import { DuplicateAlerts } from './DuplicateAlerts';
 import { addDressToEvent, deleteDress } from '../services/eventService';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,7 +16,7 @@ interface EventDetailsProps {
 }
 
 export function EventDetails({ event, onBack, onDressAdded, participants }: EventDetailsProps) {
-  const [showScrapingModal, setShowScrapingModal] = React.useState(false);
+  const [showAddItemModal, setShowAddItemModal] = React.useState(false);
   const { currentUser } = useAuth();
   const isEventCreator = currentUser?.id === event.creatorId;
 
@@ -24,7 +24,7 @@ export function EventDetails({ event, onBack, onDressAdded, participants }: Even
     try {
       const newDress = await addDressToEvent(event.id, dressData);
       onDressAdded(newDress);
-      setShowScrapingModal(false);
+      setShowAddItemModal(false);
       toast.success('Item added successfully!');
     } catch (error) {
       console.error('Error adding dress:', error);
@@ -56,7 +56,7 @@ export function EventDetails({ event, onBack, onDressAdded, participants }: Even
           <h2 className="text-2xl font-bold">{event.name}</h2>
         </div>
         <button
-          onClick={() => setShowScrapingModal(true)}
+          onClick={() => setShowAddItemModal(true)}
           className="flex items-center gap-2 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
         >
           <PlusCircle size={20} />
@@ -75,7 +75,7 @@ export function EventDetails({ event, onBack, onDressAdded, participants }: Even
         <div className="text-center py-12">
           <p className="text-gray-600 mb-4">No items added yet</p>
           <button
-            onClick={() => setShowScrapingModal(true)}
+            onClick={() => setShowAddItemModal(true)}
             className="text-purple-600 hover:text-purple-700"
           >
             Add your first item
@@ -96,9 +96,9 @@ export function EventDetails({ event, onBack, onDressAdded, participants }: Even
         </div>
       )}
 
-      {showScrapingModal && (
-        <DressScrapingModal
-          onClose={() => setShowScrapingModal(false)}
+      {showAddItemModal && (
+        <AddItemModal
+          onClose={() => setShowAddItemModal(false)}
           onSubmit={handleAddDress}
           isEventCreator={isEventCreator}
         />
