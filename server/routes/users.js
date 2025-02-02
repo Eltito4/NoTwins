@@ -1,67 +1,69 @@
-import { Router } from 'express';
-import { z } from 'zod';
-import User from '../models/User.js';
-import Dress from '../models/Dress.js';
-import Event from '../models/Event.js';
+import express from 'express';
+import { analyzeGarmentImage } from '../utils/vision/index.js';
 import { logger } from '../utils/logger.js';
+import { authMiddleware } from '../middleware/auth.js';
 
-const router = Router();
+const router = express.Router();
 
-const profileSchema = z.object({
-  name: z.string().min(1),
-  avatar: z.string().url().optional()
-});
-
-// Get user profile
-router.get('/profile', async (req, res, next) => {
+router.get('/health', async (req, res) => {
   try {
-    let user = await User.findOne({ firebaseId: req.user.uid });
+    logger.debug('Vision API health check');
     
-    if (!user) {
-      user = new User({
-        firebaseId: req.user.uid,
-        email: req.user.email,
-        name: req.user.name || 'Anonymous'
-      });
-      await user.save();
-    }
-    
-    res.json(user);
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Update user profile
-router.put('/profile', async (req, res, next) => {
-  try {
-    const profileData = profileSchema.parse(req.body);
-    const user = await User.findOneAndUpdate(
-      { firebaseId: req.user.uid },
-      profileData,
-      { new: true }
+    const hasCredentials = !!(
+      process.env.GOOGLE_CLOUD_PROJECT_ID &&
+      process.env.GOOGLE_CLOUD_CLIENT_EMAIL &&
+      process.env.GOOGLE_CLOUD_PRIVATE_KEY
     );
-    
-    res.json(user);
+
+    res.json({
+      status: hasCredentials ? 'ok' : 'missing_credentials',
+      credentials: {
+        hasProjectId: !!process.env.GOOGLE_CLOUD_PROJECT_ID,
+        hasClientEmail: !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
+        hasPrivateKey: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY
+      },
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
-    next(error);
+    logger.error('Vision API health check failed:', error);
+    res.status(500).json({ 
+      error: 'Vision API configuration error',
+      details: error.message
+    });
   }
 });
 
-// Get user's dress statistics
-router.get('/stats', async (req, res, next) => {
+router.post('/analyze', authMiddleware, async (req, res) => {
   try {
-    const totalDresses = await Dress.countDocuments({ userId: req.user.uid });
-    const totalEvents = await Event.countDocuments({
-      participants: req.user.uid
-    });
+    const { imageUrl } = req.body;
+
+    if (!imageUrl) {
+      logger.warn('Missing image URL in request');
+      return res.status(400).json({ 
+        error: 'Image URL is required' 
+      });
+    }
+
+    logger.debug('Vision analysis request received');
+
+    const analysis = await analyzeGarmentImage(imageUrl);
+    
+    logger.debug('Vision analysis completed successfully:', analysis);
     
     res.json({
-      totalDresses,
-      totalEvents
+      success: true,
+      data: analysis
     });
   } catch (error) {
-    next(error);
+    logger.error('Vision analysis endpoint error:', {
+      error: error.message,
+      stack: error.stack
+    });
+
+    res.status(500).json({ 
+      error: 'Failed to analyze image',
+      details: error.message 
+    });
   }
 });
 

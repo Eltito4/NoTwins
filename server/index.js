@@ -15,7 +15,10 @@ app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   credentials: true
 }));
-app.use(express.json());
+
+// Increase payload size limit to 10MB
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Import routes
 import eventRoutes from './routes/events.js';
@@ -47,7 +50,22 @@ app.use('/api/messages', messageRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  logger.error('Server error:', err);
+  logger.error('Server error:', {
+    error: err.message,
+    stack: err.stack,
+    type: err.type,
+    expected: err.expected,
+    length: err.length,
+    limit: err.limit
+  });
+
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({
+      error: 'Request entity too large',
+      details: 'The uploaded file exceeds the size limit'
+    });
+  }
+
   res.status(500).json({ 
     error: 'Something went wrong!',
     details: process.env.NODE_ENV === 'development' ? err.message : undefined
