@@ -12,23 +12,24 @@ router.post('/analyze', async (req, res) => {
     const { imageUrl } = req.body;
 
     if (!imageUrl) {
+      logger.warn('Missing image URL in request');
       return res.status(400).json({ 
         error: 'Image URL is required' 
       });
     }
 
-    logger.info('Starting image analysis for URL:', imageUrl);
+    logger.debug('Vision analysis request received:', { imageUrl });
 
     const analysis = await analyzeGarmentImage(imageUrl);
     
-    logger.info('Analysis completed successfully:', analysis);
+    logger.success('Vision analysis completed successfully:', analysis);
     
     res.json({
       success: true,
       data: analysis
     });
   } catch (error) {
-    logger.error('Vision analysis error:', {
+    logger.error('Vision analysis endpoint error:', {
       error: error.message,
       stack: error.stack,
       imageUrl: req.body.imageUrl
@@ -44,16 +45,23 @@ router.post('/analyze', async (req, res) => {
 // Add a test endpoint to verify credentials
 router.get('/test-credentials', async (req, res) => {
   try {
-    logger.info('Testing Vision API credentials...');
+    logger.debug('Testing Vision API credentials...');
     const testImageUrl = 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f';
     const analysis = await analyzeGarmentImage(testImageUrl);
+    
+    logger.success('Vision API credentials test passed:', analysis);
+    
     res.json({
       success: true,
       message: 'Vision API credentials are working',
       testAnalysis: analysis
     });
   } catch (error) {
-    logger.error('Vision credentials test failed:', error);
+    logger.error('Vision credentials test failed:', {
+      error: error.message,
+      stack: error.stack
+    });
+    
     res.status(500).json({
       error: 'Vision API credentials test failed',
       details: error.message

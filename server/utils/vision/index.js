@@ -8,7 +8,8 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const credentialsPath = path.resolve(__dirname, '../../config/google-credentials.json');
 
-logger.info('Vision API credentials path:', credentialsPath);
+logger.debug('Vision API initialization starting...');
+logger.debug('Credentials path:', credentialsPath);
 
 // Initialize Google Cloud Vision client
 let googleVisionClient;
@@ -16,17 +17,22 @@ try {
   googleVisionClient = new vision.ImageAnnotatorClient({
     keyFilename: credentialsPath
   });
-  logger.info('Vision API client initialized successfully');
+  logger.success('Vision API client initialized successfully');
 } catch (error) {
-  logger.error('Failed to initialize Vision API client:', error);
+  logger.error('Failed to initialize Vision API client:', {
+    error: error.message,
+    stack: error.stack,
+    credentialsPath
+  });
   throw error;
 }
 
 export async function analyzeGarmentImage(imageUrl) {
   try {
-    logger.info('Starting image analysis for URL:', imageUrl);
+    logger.debug('Starting image analysis for URL:', imageUrl);
 
     // Analyze the image
+    logger.debug('Making Vision API request...');
     const [result] = await googleVisionClient.annotateImage({
       image: { source: { imageUri: imageUrl } },
       features: [
@@ -37,14 +43,14 @@ export async function analyzeGarmentImage(imageUrl) {
       ]
     });
 
-    logger.info('Raw Vision API response:', JSON.stringify(result, null, 2));
+    logger.debug('Raw Vision API response:', JSON.stringify(result, null, 2));
 
     if (!result) {
       throw new Error('No analysis results received');
     }
 
     const processedResults = processVisionResponse(result);
-    logger.info('Processed analysis results:', processedResults);
+    logger.success('Analysis completed successfully:', processedResults);
 
     return processedResults;
   } catch (error) {
@@ -58,13 +64,15 @@ export async function analyzeGarmentImage(imageUrl) {
 }
 
 function processVisionResponse(result) {
+  logger.debug('Processing Vision API response...');
+
   // Extract labels
   const labels = result.labelAnnotations || [];
   const garmentLabels = labels
     .filter(label => label.score > 0.7)
     .map(label => label.description);
 
-  logger.info('Extracted labels:', garmentLabels);
+  logger.debug('Extracted labels:', garmentLabels);
 
   // Extract dominant color
   const colors = result.imagePropertiesAnnotation?.dominantColors?.colors || [];
@@ -75,18 +83,18 @@ function processVisionResponse(result) {
       return findClosestNamedColor(`rgb(${rgb.red}, ${rgb.green}, ${rgb.blue})`);
     })[0];
 
-  logger.info('Extracted dominant color:', dominantColor);
+  logger.debug('Extracted dominant color:', dominantColor);
 
   // Extract brand from logo detection
   const logos = result.logoAnnotations || [];
   const brand = logos.length > 0 ? logos[0].description : null;
 
-  logger.info('Extracted brand:', brand);
+  logger.debug('Extracted brand:', brand);
 
   // Detect product type
   const type = detectProductType(garmentLabels.join(' '));
 
-  logger.info('Detected product type:', type);
+  logger.debug('Detected product type:', type);
 
   return {
     labels: garmentLabels,
