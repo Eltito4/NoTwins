@@ -1,5 +1,5 @@
 import express from 'express';
-import { analyzeGarmentImage } from '../utils/vision/index.js';
+import { analyzeGarmentImage, checkVisionApiStatus } from '../utils/vision/index.js';
 import { logger } from '../utils/logger.js';
 import { authMiddleware } from '../middleware/auth.js';
 
@@ -7,27 +7,13 @@ const router = express.Router();
 
 router.get('/health', async (req, res) => {
   try {
-    logger.debug('Vision API health check');
-    
-    const hasCredentials = !!(
-      process.env.GOOGLE_CLOUD_PROJECT_ID &&
-      process.env.GOOGLE_CLOUD_CLIENT_EMAIL &&
-      process.env.GOOGLE_CLOUD_PRIVATE_KEY
-    );
-
-    res.json({
-      status: hasCredentials ? 'ok' : 'missing_credentials',
-      credentials: {
-        hasProjectId: !!process.env.GOOGLE_CLOUD_PROJECT_ID,
-        hasClientEmail: !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
-        hasPrivateKey: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY
-      }
-    });
+    const status = await checkVisionApiStatus();
+    res.json(status);
   } catch (error) {
     logger.error('Vision API health check failed:', error);
     res.status(500).json({ 
-      error: 'Vision API configuration error',
-      details: error.message
+      status: 'error',
+      error: error.message
     });
   }
 });
@@ -37,31 +23,28 @@ router.post('/analyze', authMiddleware, async (req, res) => {
     const { imageUrl } = req.body;
 
     if (!imageUrl) {
-      logger.warn('Missing image URL in request');
       return res.status(400).json({ 
         error: 'Image URL is required' 
       });
     }
 
-    logger.debug('Vision analysis request received:', { imageUrl });
+    // Validate URL or base64 format
+    if (!imageUrl.startsWith('data:image') && !imageUrl.startsWith('http')) {
+      return res.status(400).json({
+        error: 'Invalid image format. Must be URL or base64 data URL.'
+      });
+    }
 
     const analysis = await analyzeGarmentImage(imageUrl);
     
-    logger.debug('Vision analysis completed successfully:', analysis);
-    
     res.json({
       success: true,
-      data: {
-        ...analysis,
-        similarProducts: analysis.similarProducts?.slice(0, 5), // Limit to top 5 similar products
-        webEntities: analysis.webEntities?.slice(0, 10) // Limit to top 10 entities
-      }
+      data: analysis
     });
   } catch (error) {
     logger.error('Vision analysis endpoint error:', {
       error: error.message,
-      stack: error.stack,
-      imageUrl: req.body.imageUrl
+      stack: error.stack
     });
 
     res.status(500).json({ 
