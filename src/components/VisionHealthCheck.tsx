@@ -54,7 +54,6 @@ export function VisionHealthCheck() {
 
   useEffect(() => {
     checkHealth();
-    // Check health status every 5 minutes
     const interval = setInterval(checkHealth, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
@@ -62,11 +61,11 @@ export function VisionHealthCheck() {
   if (!status && !loading) return null;
 
   return (
-    <div className="fixed bottom-4 left-4">
+    <div className="bg-white p-3 rounded-lg shadow-lg flex items-center gap-3">
       <button
         onClick={checkHealth}
         disabled={loading}
-        className="bg-white p-3 rounded-lg shadow-lg flex items-center gap-3 hover:bg-gray-50 transition-colors"
+        className="flex items-center gap-3 hover:bg-gray-50 transition-colors"
       >
         {loading ? (
           <Activity className="w-5 h-5 text-blue-500 animate-spin" />
@@ -105,5 +104,3 @@ export function VisionHealthCheck() {
     </div>
   );
 }
-
-export { VisionHealthCheck }

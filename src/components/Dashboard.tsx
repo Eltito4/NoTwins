@@ -26,7 +26,6 @@ export function Dashboard() {
       const userEvents = await getEventsByUser();
       setEvents(userEvents);
 
-      // Load participants for all events
       const participantsMap: Record<string, User> = {};
       await Promise.all(
         userEvents.map(async (event) => {
@@ -80,7 +79,7 @@ export function Dashboard() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div>
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900">My Events</h1>
         <div className="flex gap-4">

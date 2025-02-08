@@ -9,13 +9,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-16 flex justify-end">
-        <div className="w-full max-w-4xl">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {currentUser && <VisionHealthCheck />}
+        <div className="mt-4">
           {currentUser ? <Dashboard /> : <AuthForm />}
         </div>
       </div>
       <Toaster position="bottom-right" />
-      {currentUser && <VisionHealthCheck />}
     </div>
   );
 }
