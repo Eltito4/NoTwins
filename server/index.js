@@ -3,12 +3,19 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { logger } from './utils/logger.js';
+import { initializeVisionClient } from './config/vision.js';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001;
+
+// Initialize Vision API client
+const visionClient = initializeVisionClient();
+if (!visionClient) {
+  logger.warn('Vision API client initialization failed - some features may be unavailable');
+}
 
 // Middleware
 app.use(cors({
@@ -36,7 +43,8 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     vision: {
       projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-      hasCredentials: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY
+      hasCredentials: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY && 
+                     !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL
     }
   });
 });
@@ -79,11 +87,7 @@ mongoose.connect(process.env.MONGODB_URI)
     app.listen(port, () => {
       logger.success(`Server running on port ${port}`);
       logger.info('Environment:', process.env.NODE_ENV);
-      logger.debug('Vision API credentials:', {
-        projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-        hasClientEmail: !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
-        hasPrivateKey: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY?.length
-      });
+      logger.info('Vision API status:', visionClient ? 'initialized' : 'not available');
     });
   })
   .catch(err => {

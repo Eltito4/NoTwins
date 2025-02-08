@@ -13,7 +13,8 @@ router.get('/health', async (req, res) => {
     logger.error('Vision API health check failed:', error);
     res.status(500).json({ 
       status: 'error',
-      error: error.message
+      error: error.message,
+      details: error.details || error.stack
     });
   }
 });
@@ -25,13 +26,6 @@ router.post('/analyze', authMiddleware, async (req, res) => {
     if (!imageUrl) {
       return res.status(400).json({ 
         error: 'Image URL is required' 
-      });
-    }
-
-    // Validate URL or base64 format
-    if (!imageUrl.startsWith('data:image') && !imageUrl.startsWith('http')) {
-      return res.status(400).json({
-        error: 'Invalid image format. Must be URL or base64 data URL.'
       });
     }
 

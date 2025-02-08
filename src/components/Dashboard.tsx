@@ -80,24 +80,21 @@ export function Dashboard() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">My Events</h1>
-        <div className="flex gap-4">
-          <button
-            onClick={() => setShowJoinModal(true)}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
-          >
-            <UserPlus size={20} />
-            <span>Join Event</span>
-          </button>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors"
-          >
-            <PlusCircle size={20} />
-            <span>Create Event</span>
-          </button>
-        </div>
+      <div className="flex justify-end gap-4 mb-8">
+        <button
+          onClick={() => setShowJoinModal(true)}
+          className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+        >
+          <UserPlus size={20} />
+          <span>Join Event</span>
+        </button>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors"
+        >
+          <PlusCircle size={20} />
+          <span>Create Event</span>
+        </button>
       </div>
 
       {events.length === 0 ? (

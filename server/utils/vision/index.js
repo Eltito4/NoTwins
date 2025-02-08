@@ -4,26 +4,6 @@ import { detectProductType } from '../categorization/detector.js';
 import { findClosestNamedColor } from '../colors/utils.js';
 import axios from 'axios';
 
-// Initialize Google Cloud Vision client with credentials from env vars
-const createVisionClient = () => {
-  try {
-    if (!process.env.GOOGLE_CLOUD_CLIENT_EMAIL || !process.env.GOOGLE_CLOUD_PRIVATE_KEY || !process.env.GOOGLE_CLOUD_PROJECT_ID) {
-      throw new Error('Missing required Google Cloud credentials');
-    }
-
-    return new vision.ImageAnnotatorClient({
-      credentials: {
-        client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
-        private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY.replace(/\\n/g, '\n'),
-        project_id: process.env.GOOGLE_CLOUD_PROJECT_ID
-      }
-    });
-  } catch (error) {
-    logger.error('Failed to initialize Vision client:', error);
-    throw new Error('Vision API configuration error: ' + error.message);
-  }
-};
-
 let visionClient;
 
 export async function checkVisionApiStatus() {
@@ -44,19 +24,38 @@ export async function checkVisionApiStatus() {
       };
     }
 
-    // Try to initialize client and make a test call
+    // Try to initialize client
     if (!visionClient) {
-      visionClient = createVisionClient();
+      visionClient = new vision.ImageAnnotatorClient({
+        credentials: {
+          client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
+          private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY.replace(/\\n/g, '\n'),
+          project_id: process.env.GOOGLE_CLOUD_PROJECT_ID
+        }
+      });
     }
 
     // Use a minimal 1x1 transparent PNG for testing
-    const testImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
-    await visionClient.labelDetection(testImage);
+    const testImage = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 
-    return {
-      status: 'ok',
-      credentials
-    };
+    // Try to make a simple API call
+    try {
+      await visionClient.labelDetection(testImage);
+      return {
+        status: 'ok',
+        credentials,
+        message: 'Successfully connected to Vision API'
+      };
+    } catch (apiError) {
+      logger.error('Vision API test request failed:', apiError);
+      return {
+        status: 'error',
+        error: 'API request failed: ' + apiError.message,
+        credentials,
+        details: apiError.details || apiError.message
+      };
+    }
+
   } catch (error) {
     logger.error('Vision API health check failed:', error);
     return {
@@ -93,7 +92,13 @@ export async function analyzeGarmentImage(imageUrl) {
     logger.debug('Starting image analysis for URL:', { imageUrl });
 
     if (!visionClient) {
-      visionClient = createVisionClient();
+      visionClient = new vision.ImageAnnotatorClient({
+        credentials: {
+          client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
+          private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY.replace(/\\n/g, '\n'),
+          project_id: process.env.GOOGLE_CLOUD_PROJECT_ID
+        }
+      });
     }
 
     // Handle base64 images
