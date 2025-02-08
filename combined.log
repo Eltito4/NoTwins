@@ -1,7 +1,7 @@
-2025-02-08T19:23:42.183Z [32minfo[39m: ✓
-2025-02-08T19:23:42.187Z [32minfo[39m: ✓
-2025-02-08T19:23:42.188Z [32minfo[39m: Environment:
-2025-02-08T19:23:42.188Z [34mdebug[39m: Vision API credentials:
+2025-02-08T19:49:59.168Z [32minfo[39m: ✓
+2025-02-08T19:49:59.172Z [32minfo[39m: ✓
+2025-02-08T19:49:59.172Z [32minfo[39m: Environment:
+2025-02-08T19:49:59.173Z [34mdebug[39m: Vision API credentials:
 Metadata: {
   "hasClientEmail": false,
   "hasPrivateKey": false

@@ -22,12 +22,31 @@ export function VisionHealthCheck() {
     try {
       const { data } = await api.get('/vision/health');
       setStatus(data);
+      
       if (data.status === 'error') {
-        toast.error('Vision API health check failed');
+        const missingCredentials = Object.entries(data.credentials)
+          .filter(([_, value]) => !value)
+          .map(([key]) => key.replace('has', ''))
+          .join(', ');
+
+        if (missingCredentials) {
+          toast.error(`Missing credentials: ${missingCredentials}`);
+        } else {
+          toast.error(data.error || 'Vision API health check failed');
+        }
       }
     } catch (error) {
       console.error('Health check failed:', error);
       toast.error('Failed to check Vision API status');
+      setStatus({
+        status: 'error',
+        error: 'Connection failed',
+        credentials: {
+          hasProjectId: false,
+          hasClientEmail: false,
+          hasPrivateKey: false
+        }
+      });
     } finally {
       setLoading(false);
     }
@@ -35,12 +54,15 @@ export function VisionHealthCheck() {
 
   useEffect(() => {
     checkHealth();
+    // Check health status every 5 minutes
+    const interval = setInterval(checkHealth, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   if (!status && !loading) return null;
 
   return (
-    <div className="fixed bottom-4 right-4">
+    <div className="fixed bottom-4 left-4">
       <button
         onClick={checkHealth}
         disabled={loading}
@@ -83,3 +105,5 @@ export function VisionHealthCheck() {
     </div>
   );
 }
+
+export { VisionHealthCheck }

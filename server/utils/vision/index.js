@@ -7,16 +7,20 @@ import axios from 'axios';
 // Initialize Google Cloud Vision client with credentials from env vars
 const createVisionClient = () => {
   try {
+    if (!process.env.GOOGLE_CLOUD_CLIENT_EMAIL || !process.env.GOOGLE_CLOUD_PRIVATE_KEY || !process.env.GOOGLE_CLOUD_PROJECT_ID) {
+      throw new Error('Missing required Google Cloud credentials');
+    }
+
     return new vision.ImageAnnotatorClient({
       credentials: {
         client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
-        private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY.replace(/\\n/g, '\n'),
         project_id: process.env.GOOGLE_CLOUD_PROJECT_ID
       }
     });
   } catch (error) {
     logger.error('Failed to initialize Vision client:', error);
-    throw new Error('Vision API configuration error');
+    throw new Error('Vision API configuration error: ' + error.message);
   }
 };
 
@@ -24,20 +28,34 @@ let visionClient;
 
 export async function checkVisionApiStatus() {
   try {
+    // Check if all required environment variables are present
+    const credentials = {
+      hasProjectId: !!process.env.GOOGLE_CLOUD_PROJECT_ID,
+      hasClientEmail: !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
+      hasPrivateKey: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY
+    };
+
+    // If any credential is missing, return error status
+    if (!credentials.hasProjectId || !credentials.hasClientEmail || !credentials.hasPrivateKey) {
+      return {
+        status: 'error',
+        error: 'Missing required Google Cloud credentials',
+        credentials
+      };
+    }
+
+    // Try to initialize client and make a test call
     if (!visionClient) {
       visionClient = createVisionClient();
     }
-    
-    // Test credentials by making a minimal API call
-    await visionClient.labelDetection('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
-    
+
+    // Use a minimal 1x1 transparent PNG for testing
+    const testImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    await visionClient.labelDetection(testImage);
+
     return {
       status: 'ok',
-      credentials: {
-        hasProjectId: !!process.env.GOOGLE_CLOUD_PROJECT_ID,
-        hasClientEmail: !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
-        hasPrivateKey: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY
-      }
+      credentials
     };
   } catch (error) {
     logger.error('Vision API health check failed:', error);

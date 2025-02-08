@@ -1,108 +1,47 @@
-import { FC, useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState, useEffect } from 'react';
 import { PlusCircle, UserPlus } from 'lucide-react';
-import { CreateEventModal } from './CreateEventModal';
+import { Event, User } from '../types';
 import { EventCard } from './EventCard';
-import { EventDetailsModal } from './EventDetailsModal';
+import { CreateEventModal } from './CreateEventModal';
 import { JoinEventModal } from './JoinEventModal';
-import { UserMenu } from './UserMenu';
-import type { Event, Dress, DuplicateInfo } from '../types';
-import type { User as UserType } from '../types';
-import { createEvent, getEventsByUser, joinEvent, deleteEvent, getEventDresses, getEventParticipants } from '../services/eventService';
+import { EventDetailsModal } from './EventDetailsModal';
+import { useAuth } from '../contexts/AuthContext';
+import { createEvent, getEventsByUser, joinEvent, getEventParticipants } from '../services/eventService';
 import toast from 'react-hot-toast';
 
-export const Dashboard: FC = () => {
-  const { currentUser } = useAuth();
-  const [showCreateEvent, setShowCreateEvent] = useState(false);
-  const [showJoinEvent, setShowJoinEvent] = useState(false);
+export function Dashboard() {
   const [events, setEvents] = useState<Event[]>([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [duplicateItems, setDuplicateItems] = useState<Record<string, DuplicateInfo[]>>({});
-  const [participants, setParticipants] = useState<Record<string, Record<string, UserType>>>({});
+  const [participants, setParticipants] = useState<Record<string, User>>({});
+  const { currentUser } = useAuth();
+
+  useEffect(() => {
+    loadEvents();
+  }, []);
 
   const loadEvents = async () => {
     try {
       const userEvents = await getEventsByUser();
       setEvents(userEvents);
+
+      // Load participants for all events
+      const participantsMap: Record<string, User> = {};
+      await Promise.all(
+        userEvents.map(async (event) => {
+          const eventParticipants = await getEventParticipants(event.id);
+          eventParticipants.forEach((participant) => {
+            participantsMap[participant.id] = participant;
+          });
+        })
+      );
+      setParticipants(participantsMap);
     } catch (error) {
       console.error('Error loading events:', error);
       toast.error('Failed to load events');
-    } finally {
-      setLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (currentUser) {
-      loadEvents();
-    }
-  }, [currentUser]);
-
-  const loadParticipants = async (eventId: string) => {
-    try {
-      const eventParticipants = await getEventParticipants(eventId);
-      setParticipants(prev => ({
-        ...prev,
-        [eventId]: Object.fromEntries(
-          eventParticipants.map(p => [p.id, p])
-        )
-      }));
-    } catch (error) {
-      console.error('Error loading participants:', error);
-    }
-  };
-
-  const checkDuplicateItems = async (eventId: string) => {
-    try {
-      const dresses = await getEventDresses(eventId, true);
-      const duplicates: DuplicateInfo[] = [];
-      
-      dresses.forEach(dress => {
-        const matches = dresses.filter(d => 
-          d._id !== dress._id && 
-          d.name.toLowerCase() === dress.name.toLowerCase()
-        );
-
-        if (matches.length > 0) {
-          duplicates.push({
-            name: dress.name,
-            items: [
-              {
-                id: dress._id,
-                userId: dress.userId,
-                userName: participants[eventId]?.[dress.userId]?.name || 'Unknown User',
-                color: dress.color
-              },
-              ...matches.map(match => ({
-                id: match._id,
-                userId: match.userId,
-                userName: participants[eventId]?.[match.userId]?.name || 'Unknown User',
-                color: match.color
-              }))
-            ],
-            type: matches.some(m => m.color?.toLowerCase() === dress.color?.toLowerCase())
-              ? 'exact'
-              : 'partial'
-          });
-        }
-      });
-
-      setDuplicateItems(prev => ({
-        ...prev,
-        [eventId]: duplicates
-      }));
-    } catch (error) {
-      console.error('Error checking duplicates:', error);
-    }
-  };
-
-  useEffect(() => {
-    events.forEach(event => {
-      loadParticipants(event.id);
-      checkDuplicateItems(event.id);
-    });
-  }, [events]);
 
   const handleCreateEvent = async (eventData: {
     name: string;
@@ -111,13 +50,16 @@ export const Dashboard: FC = () => {
     description: string;
   }) => {
     try {
+      if (!currentUser) return;
+
       const newEvent = await createEvent({
         ...eventData,
-        creatorId: currentUser!.id,
-        participants: [currentUser!.id]
+        creatorId: currentUser.id,
+        participants: [currentUser.id]
       });
+
       setEvents(prev => [...prev, newEvent]);
-      setShowCreateEvent(false);
+      setShowCreateModal(false);
       toast.success('Event created successfully!');
     } catch (error) {
       console.error('Error creating event:', error);
@@ -129,7 +71,7 @@ export const Dashboard: FC = () => {
     try {
       const event = await joinEvent(shareId);
       setEvents(prev => [...prev, event]);
-      setShowJoinEvent(false);
+      setShowJoinModal(false);
       toast.success('Successfully joined the event!');
     } catch (error) {
       console.error('Error joining event:', error);
@@ -137,104 +79,70 @@ export const Dashboard: FC = () => {
     }
   };
 
-  const handleDeleteEvent = async (eventId: string) => {
-    try {
-      await deleteEvent(eventId);
-      setEvents(prev => prev.filter(e => e.id !== eventId));
-      toast.success('Event deleted successfully');
-    } catch (error) {
-      console.error('Error deleting event:', error);
-      toast.error('Failed to delete event');
-    }
-  };
-
-  const handleDressAdded = async (eventId: string, dress: Dress) => {
-    await checkDuplicateItems(eventId);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
-        <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold text-gray-800">Your Events</h1>
-        </div>
-        <div className="flex items-center gap-4">
-          {/* Join Event Button */}
+        <h1 className="text-3xl font-bold text-gray-900">My Events</h1>
+        <div className="flex gap-4">
           <button
-            onClick={() => setShowJoinEvent(true)}
-            className="flex items-center gap-2 bg-background border border-primary text-primary py-2 px-4 rounded-lg hover:bg-background/80 transition-colors"
+            onClick={() => setShowJoinModal(true)}
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
           >
             <UserPlus size={20} />
             <span>Join Event</span>
           </button>
-
-          {/* Create Event Button */}
           <button
-            onClick={() => setShowCreateEvent(true)}
-            className="flex items-center gap-2 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary-600 transition-colors"
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors"
           >
             <PlusCircle size={20} />
             <span>Create Event</span>
           </button>
-
-          <div className="pl-4 border-l border-gray-200">
-            <UserMenu />
-          </div>
         </div>
       </div>
 
       {events.length === 0 ? (
-        <div className="text-center text-gray-600 mt-12">
-          <p className="mb-4">No events yet.</p>
+        <div className="text-center py-12">
+          <p className="text-gray-600 mb-4">No events yet</p>
           <div className="flex justify-center gap-4">
             <button
-              onClick={() => setShowJoinEvent(true)}
+              onClick={() => setShowJoinModal(true)}
               className="text-primary hover:text-primary-600"
             >
               Join an event
             </button>
             <span className="text-gray-400">or</span>
             <button
-              onClick={() => setShowCreateEvent(true)}
+              onClick={() => setShowCreateModal(true)}
               className="text-primary hover:text-primary-600"
             >
-              create your first event
+              Create your first event
             </button>
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {events.map(event => (
+        <div className="grid gap-6">
+          {events.map((event) => (
             <EventCard
               key={event.id}
               event={event}
               onClick={() => setSelectedEvent(event)}
-              onDelete={() => handleDeleteEvent(event.id)}
-              duplicates={duplicateItems[event.id]}
-              participants={participants[event.id] || {}}
+              participants={participants}
             />
           ))}
         </div>
       )}
 
-      {showCreateEvent && (
+      {showCreateModal && (
         <CreateEventModal
-          onClose={() => setShowCreateEvent(false)}
+          onClose={() => setShowCreateModal(false)}
           onSubmit={handleCreateEvent}
         />
       )}
 
-      {showJoinEvent && (
+      {showJoinModal && (
         <JoinEventModal
-          onClose={() => setShowJoinEvent(false)}
+          onClose={() => setShowJoinModal(false)}
           onJoin={handleJoinEvent}
         />
       )}
@@ -243,10 +151,10 @@ export const Dashboard: FC = () => {
         <EventDetailsModal
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
-          onDressAdded={(dress) => handleDressAdded(selectedEvent.id, dress)}
-          participants={participants[selectedEvent.id] || {}}
+          onDressAdded={() => loadEvents()}
+          participants={participants}
         />
       )}
     </div>
   );
-};
+}
