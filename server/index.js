@@ -4,9 +4,12 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { logger } from './utils/logger.js';
 import { initializeVisionClient } from './config/vision.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Load environment variables
-dotenv.config();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 const port = process.env.PORT || 3001;

@@ -1,9 +1,11 @@
-2025-02-08T20:45:23.701Z [31merror[39m: Failed to initialize Vision client: Missing required environment variables: GOOGLE_CLOUD_PROJECT_ID, GOOGLE_CLOUD_CLIENT_EMAIL, GOOGLE_CLOUD_PRIVATE_KEY
+2025-02-08T21:03:54.548Z [34mdebug[39m: Initializing Vision client with:
 Metadata: {
-  "stack": "Error: Missing required environment variables: GOOGLE_CLOUD_PROJECT_ID, GOOGLE_CLOUD_CLIENT_EMAIL, GOOGLE_CLOUD_PRIVATE_KEY\n    at initializeVisionClient (file:///C:/Users/Usuario/OneDrive/Escritorio/NoTwins/project/server/config/vision.js:18:13)\n    at file:///C:/Users/Usuario/OneDrive/Escritorio/NoTwins/project/server/index.js:15:22\n    at ModuleJob.run (node:internal/modules/esm/module_job:268:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:543:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:116:5)"
+  "projectId": "promising-haiku-449317-e0",
+  "clientEmail": "theom-748@promising-haiku-449317-e0.iam.gserviceaccount.com",
+  "hasPrivateKey": true
 }
-2025-02-08T20:45:23.704Z [33mwarn[39m: Vision API client initialization failed - some features may be unavailable
-2025-02-08T20:45:24.158Z [32minfo[39m: ✓
-2025-02-08T20:45:24.161Z [32minfo[39m: ✓
-2025-02-08T20:45:24.161Z [32minfo[39m: Environment:
-2025-02-08T20:45:24.162Z [32minfo[39m: Vision API status:
+2025-02-08T21:03:54.970Z [32minfo[39m: Vision API client test successful
+2025-02-08T21:03:55.037Z [32minfo[39m: ✓
+2025-02-08T21:03:55.039Z [32minfo[39m: ✓
+2025-02-08T21:03:55.040Z [32minfo[39m: Environment:
+2025-02-08T21:03:55.040Z [32minfo[39m: Vision API status:
