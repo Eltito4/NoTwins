@@ -7,9 +7,17 @@ import { initializeVisionClient } from './config/vision.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Load environment variables
+// Load environment variables based on NODE_ENV
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.join(__dirname, '.env') });
+const envFile = process.env.NODE_ENV === 'production' ? '.env' : '.env.development';
+dotenv.config({ path: path.join(__dirname, envFile) });
+
+// Log environment status
+logger.info('Environment:', {
+  NODE_ENV: process.env.NODE_ENV,
+  hasGeminiKey: !!process.env.GOOGLE_AI_API_KEY,
+  hasVisionKey: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY
+});
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -48,6 +56,9 @@ app.get('/api/health', (req, res) => {
       projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
       hasCredentials: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY && 
                      !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL
+    },
+    gemini: {
+      hasApiKey: !!process.env.GOOGLE_AI_API_KEY
     }
   });
 });

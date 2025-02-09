@@ -1,11 +1,9 @@
-import vision from '@google-cloud/vision';
+import { interpretProductDetails } from './gemini.js';
 import { logger } from '../logger.js';
+import vision from '@google-cloud/vision';
 import { detectProductType } from '../categorization/detector.js';
 import { findClosestNamedColor } from '../colors/utils.js';
 import axios from 'axios';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
 
 let visionClient = null;
 
@@ -63,39 +61,6 @@ async function testVisionClient(client) {
   } catch (error) {
     logger.error('Vision API test failed:', error);
     throw error;
-  }
-}
-
-async function interpretWithGemini(visionResults) {
-  try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-
-    const prompt = `
-      Analyze these Vision API results and extract structured product information:
-      ${JSON.stringify(visionResults, null, 2)}
-
-      Please provide:
-      1. A natural product name
-      2. Brand name (if detected)
-      3. Product type/category
-      4. Color(s)
-      5. Any patterns or distinctive features
-      6. Price (if detected)
-      7. Confidence score for the analysis
-
-      Format as JSON with these fields: name, brand, type, color, pattern, price, confidence
-    `;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const interpretation = JSON.parse(response.text());
-
-    logger.debug('Gemini interpretation:', interpretation);
-
-    return interpretation;
-  } catch (error) {
-    logger.error('Gemini interpretation error:', error);
-    return null;
   }
 }
 
@@ -274,8 +239,8 @@ export async function analyzeGarmentImage(imageUrl) {
       }
     }
 
-    // Get Gemini's interpretation
-    const geminiResults = await interpretWithGemini({
+    // After getting Vision API results, interpret with Gemini
+    const productInfo = await interpretProductDetails({
       webDetection: result.webDetection,
       labelAnnotations: result.labelAnnotations,
       localizedObjectAnnotations: result.localizedObjectAnnotations,
@@ -284,25 +249,25 @@ export async function analyzeGarmentImage(imageUrl) {
 
     // Combine Vision API and Gemini results
     const analysis = {
-      name: geminiResults?.name || productName,
-      brand: geminiResults?.brand || brandName,
-      color: geminiResults?.color || dominantColor,
-      type: geminiResults?.type ? {
-        category: 'clothes',
-        subcategory: geminiResults.type.toLowerCase(),
-        name: geminiResults.type
+      name: productInfo?.name || productName,
+      brand: productInfo?.brand || brandName,
+      color: productInfo?.color || dominantColor,
+      type: productInfo?.type ? {
+        category: productInfo.category.toLowerCase(),
+        subcategory: productInfo.type.toLowerCase(),
+        name: productInfo.type
       } : type,
-      price: geminiResults?.price || price,
-      productUrl,
+      price: productInfo?.price || price,
+      description: productInfo?.description || productUrl,
       confidence: {
         labels: result.labelAnnotations?.[0]?.score || 0,
         color: color?.score || 0,
-        overall: geminiResults?.confidence || result.labelAnnotations?.[0]?.score || 0
+        overall: result.labelAnnotations?.[0]?.score || 0
       }
     };
 
     logger.info('Analysis completed with Gemini enhancement:', {
-      hasGeminiResults: !!geminiResults,
+      hasGeminiResults: !!productInfo,
       hasBrand: !!analysis.brand,
       hasColor: !!analysis.color,
       hasType: !!analysis.type,

@@ -1,5 +1,6 @@
 import express from 'express';
 import { analyzeGarmentImage, checkVisionApiStatus } from '../utils/vision/index.js';
+import { checkGeminiStatus } from '../utils/vision/gemini.js';
 import { logger } from '../utils/logger.js';
 import { authMiddleware } from '../middleware/auth.js';
 
@@ -7,8 +8,13 @@ const router = express.Router();
 
 router.get('/health', async (req, res) => {
   try {
-    const status = await checkVisionApiStatus();
-    res.json(status);
+    const visionStatus = await checkVisionApiStatus();
+    const geminiStatus = checkGeminiStatus();
+
+    res.json({
+      ...visionStatus,
+      gemini: geminiStatus
+    });
   } catch (error) {
     logger.error('Vision API health check failed:', error);
     res.status(500).json({ 
