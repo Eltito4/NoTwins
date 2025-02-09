@@ -31,19 +31,20 @@ export function initializeVisionClient() {
       project_id: process.env.GOOGLE_CLOUD_PROJECT_ID
     };
 
-    // Create the client
+    // Create the client with enhanced features
     visionClient = new ImageAnnotatorClient({
       credentials,
-      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID
+      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+      apiEndpoint: 'vision.googleapis.com',
+      fallback: true // Enable fallback for better reliability
     });
 
     // Test the client immediately
     return testVisionClient(visionClient);
   } catch (error) {
-    logger.error('Failed to initialize Vision client:', {
+    logger.error('Vision client initialization failed:', {
       error: error.message,
-      stack: error.stack,
-      details: error.details || error
+      stack: error.stack
     });
     return null;
   }
@@ -51,18 +52,15 @@ export function initializeVisionClient() {
 
 async function testVisionClient(client) {
   try {
-    // Create a 1x1 black pixel image for testing
-    const testImage = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
-    
+    const testImage = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64'
+    );
     await client.labelDetection(testImage);
     logger.info('Vision API client test successful');
-    return client;
+    return true;
   } catch (error) {
-    logger.error('Vision API test failed:', {
-      error: error.message,
-      details: error.details || error,
-      stack: error.stack
-    });
+    logger.error('Vision API test failed:', error);
     throw error;
   }
 }

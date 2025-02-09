@@ -4,125 +4,170 @@ import { detectProductType } from '../categorization/detector.js';
 import { findClosestNamedColor } from '../colors/utils.js';
 import axios from 'axios';
 
-let visionClient;
+let visionClient = null;
 
-export async function checkVisionApiStatus() {
+async function initializeVisionClient() {
   try {
-    // Check if all required environment variables are present
-    const credentials = {
-      hasProjectId: !!process.env.GOOGLE_CLOUD_PROJECT_ID,
-      hasClientEmail: !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
+    // Check for required credentials
+    const requiredEnvVars = [
+      'GOOGLE_CLOUD_PROJECT_ID',
+      'GOOGLE_CLOUD_CLIENT_EMAIL',
+      'GOOGLE_CLOUD_PRIVATE_KEY'
+    ];
+
+    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+    
+    if (missingVars.length > 0) {
+      throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+    }
+
+    // Log credential info (without sensitive data)
+    logger.debug('Initializing Vision client with:', {
+      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+      clientEmail: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
       hasPrivateKey: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY
+    });
+
+    const credentials = {
+      client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
+      private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      project_id: process.env.GOOGLE_CLOUD_PROJECT_ID
     };
 
-    // If any credential is missing, return error status
-    if (!credentials.hasProjectId || !credentials.hasClientEmail || !credentials.hasPrivateKey) {
-      return {
-        status: 'error',
-        error: 'Missing required Google Cloud credentials',
-        credentials
-      };
-    }
+    // Create the client with enhanced features
+    const client = new vision.ImageAnnotatorClient({
+      credentials,
+      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID
+    });
 
-    // Try to initialize client
-    if (!visionClient) {
-      visionClient = new vision.ImageAnnotatorClient({
-        credentials: {
-          client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
-          private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY.replace(/\\n/g, '\n'),
-          project_id: process.env.GOOGLE_CLOUD_PROJECT_ID
-        }
-      });
-    }
-
-    // Use a minimal 1x1 transparent PNG for testing
-    const testImage = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
-
-    // Try to make a simple API call
-    try {
-      await visionClient.labelDetection(testImage);
-      return {
-        status: 'ok',
-        credentials,
-        message: 'Successfully connected to Vision API'
-      };
-    } catch (apiError) {
-      logger.error('Vision API test request failed:', apiError);
-      return {
-        status: 'error',
-        error: 'API request failed: ' + apiError.message,
-        credentials,
-        details: apiError.details || apiError.message
-      };
-    }
-
+    // Test the client immediately
+    await testVisionClient(client);
+    return client;
   } catch (error) {
-    logger.error('Vision API health check failed:', error);
-    return {
-      status: 'error',
+    logger.error('Vision client initialization failed:', {
       error: error.message,
-      credentials: {
-        hasProjectId: !!process.env.GOOGLE_CLOUD_PROJECT_ID,
-        hasClientEmail: !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
-        hasPrivateKey: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY
-      }
-    };
+      stack: error.stack
+    });
+    return null;
   }
 }
 
-async function downloadImage(url) {
+async function testVisionClient(client) {
   try {
-    const response = await axios.get(url, {
-      responseType: 'arraybuffer',
-      headers: {
-        'Accept': 'image/*, application/octet-stream',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/91.0.4472.124 Safari/537.36'
-      },
-      timeout: 5000 // 5 second timeout
-    });
-    return Buffer.from(response.data);
+    const testImage = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64'
+    );
+    await client.labelDetection(testImage);
+    logger.info('Vision API client test successful');
+    return true;
   } catch (error) {
-    logger.error('Failed to download image:', error);
-    throw new Error('Failed to download image: ' + (error.response?.status ? `HTTP ${error.response.status}` : error.message));
+    logger.error('Vision API test failed:', error);
+    throw error;
   }
 }
 
 export async function analyzeGarmentImage(imageUrl) {
   try {
-    logger.debug('Starting image analysis for URL:', { imageUrl });
-
     if (!visionClient) {
-      visionClient = new vision.ImageAnnotatorClient({
-        credentials: {
-          client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
-          private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY.replace(/\\n/g, '\n'),
-          project_id: process.env.GOOGLE_CLOUD_PROJECT_ID
-        }
-      });
+      visionClient = await initializeVisionClient();
+      if (!visionClient) {
+        throw new Error('Failed to initialize Vision client');
+      }
     }
 
-    // Handle base64 images
-    let imageBuffer;
-    if (imageUrl.startsWith('data:image')) {
-      const base64Data = imageUrl.split(',')[1];
-      imageBuffer = Buffer.from(base64Data, 'base64');
-    } else {
-      imageBuffer = await downloadImage(imageUrl);
-    }
+    // Download image
+    const response = await axios.get(imageUrl, {
+      responseType: 'arraybuffer',
+      timeout: 5000
+    });
+    const imageBuffer = Buffer.from(response.data);
 
-    // Analyze the image with multiple feature types
+    // Analyze image with multiple features including Google Lens capabilities
     const [result] = await visionClient.annotateImage({
       image: { content: imageBuffer },
       features: [
-        { type: 'LABEL_DETECTION', maxResults: 15 },
-        { type: 'IMAGE_PROPERTIES', maxResults: 5 },
+        { type: 'LABEL_DETECTION', maxResults: 20 },
+        { type: 'LOGO_DETECTION', maxResults: 5 },
+        { type: 'WEB_DETECTION', maxResults: 10 },
         { type: 'OBJECT_LOCALIZATION', maxResults: 5 },
-        { type: 'WEB_DETECTION', maxResults: 5 }
+        { type: 'IMAGE_PROPERTIES', maxResults: 5 },
+        { type: 'PRODUCT_SEARCH', maxResults: 5 },
+        { type: 'TEXT_DETECTION' }, // For reading any text/labels on clothing
+        { type: 'SAFE_SEARCH_DETECTION' } // Ensure image appropriateness
       ]
     });
 
     if (!result) {
       throw new Error('No analysis results received');
+    }
+
+    // Extract brand from logo detection, web entities, and product search
+    let brand = null;
+    let productUrl = null;
+    let productDetails = null;
+
+    // Check logo detection first
+    if (result.logoAnnotations?.length > 0) {
+      brand = result.logoAnnotations[0].description;
+    }
+
+    // Check web detection for brand and product URL
+    if (result.webDetection) {
+      // Known fashion brands
+      const fashionBrands = [
+        'Zara', 'H&M', 'Mango', 'Nike', 'Adidas', 'Gucci', 'Prada', 
+        'Louis Vuitton', 'Balenciaga', 'Dior', 'Chanel', 'Hermès',
+        'Saint Laurent', 'Fendi', 'Valentino', 'Versace', 'Burberry'
+      ];
+
+      // Look for brand in web entities if not found in logo
+      if (!brand && result.webDetection.webEntities) {
+        const brandEntity = result.webDetection.webEntities.find(entity => 
+          fashionBrands.some(brand => 
+            entity.description.toLowerCase().includes(brand.toLowerCase())
+          )
+        );
+        if (brandEntity) {
+          brand = brandEntity.description;
+        }
+      }
+
+      // Look for product URL and details in matching pages
+      if (result.webDetection.pagesWithMatchingImages) {
+        const shoppingDomains = [
+          'zara.com', 'hm.com', 'mango.com', 'asos.com', 'net-a-porter.com',
+          'farfetch.com', 'matchesfashion.com', 'mytheresa.com', 'shopbop.com',
+          'nordstrom.com', 'ssense.com', 'revolve.com'
+        ];
+
+        const shoppingPage = result.webDetection.pagesWithMatchingImages.find(page => 
+          shoppingDomains.some(domain => page.url.includes(domain))
+        );
+        if (shoppingPage) {
+          productUrl = shoppingPage.url;
+          productDetails = {
+            url: shoppingPage.url,
+            title: shoppingPage.pageTitle,
+            partialMatchingImages: result.webDetection.partialMatchingImages?.length || 0,
+            visuallySimilarImages: result.webDetection.visuallySimilarImages?.length || 0
+          };
+        }
+      }
+    }
+
+    // Extract product search information if available
+    if (result.productSearchResults?.results) {
+      const productResults = result.productSearchResults.results;
+      if (productResults.length > 0) {
+        const bestMatch = productResults[0];
+        productDetails = {
+          ...productDetails,
+          productCategory: bestMatch.product.productCategory,
+          productLabels: bestMatch.product.productLabels,
+          score: bestMatch.score
+        };
+      }
     }
 
     // Extract labels and detect type
@@ -131,100 +176,90 @@ export async function analyzeGarmentImage(imageUrl) {
       score: label.score
     })) || [];
 
-    // Filter labels with high confidence
+    // Filter high confidence labels
     const highConfidenceLabels = labels
       .filter(label => label.score > 0.7)
       .map(label => label.description);
 
-    // Detect product type from labels
-    const type = detectProductType(highConfidenceLabels.join(' '));
+    // Check for patterns and prints
+    const patterns = [
+      'leopard', 'animal print', 'tiger', 'zebra', 'snake', 'cheetah',
+      'giraffe', 'cow print', 'crocodile', 'alligator', 'floral',
+      'striped', 'checked', 'plaid', 'polka dot', 'geometric'
+    ];
+
+    const detectedPatterns = highConfidenceLabels
+      .filter(label => patterns.some(pattern => 
+        label.toLowerCase().includes(pattern.toLowerCase())
+      ));
 
     // Extract dominant color
-    const color = extractDominantColor(result.imagePropertiesAnnotation);
+    const color = result.imagePropertiesAnnotation?.dominantColors?.colors?.[0];
+    let dominantColor = null;
 
-    // Extract brand from web entities
-    const webDetection = result.webDetection || {};
-    const webEntities = webDetection.webEntities?.map(entity => ({
-      description: entity.description,
-      score: entity.score
-    })) || [];
+    if (detectedPatterns.length > 0) {
+      dominantColor = `${detectedPatterns[0]} pattern`;
+    } else if (color) {
+      dominantColor = findClosestNamedColor(
+        `rgb(${Math.round(color.color.red)}, ${Math.round(color.color.green)}, ${Math.round(color.color.blue)})`
+      );
+    }
 
-    const brand = extractBrandFromEntities(webEntities);
+    // Extract any text found on the garment
+    const textAnnotations = result.textAnnotations?.[0]?.description || '';
 
-    // Process results
-    const processedResults = {
+    // Detect product type
+    const type = detectProductType(highConfidenceLabels.join(' '));
+
+    return {
       labels: highConfidenceLabels,
-      color,
+      color: dominantColor,
       type,
       brand,
+      productUrl,
+      productDetails,
+      patterns: detectedPatterns,
+      textFound: textAnnotations,
       confidence: {
         labels: labels[0]?.score || 0,
-        color: result.imagePropertiesAnnotation?.dominantColors?.colors?.[0]?.score || 0,
+        color: color?.score || 0,
         overall: labels[0]?.score || 0
       }
     };
-
-    logger.debug('Analysis completed successfully:', processedResults);
-    return processedResults;
-
   } catch (error) {
     logger.error('Vision analysis error:', {
       error: error.message,
       stack: error.stack,
-      imageUrl
+      details: error.details || error
     });
     throw new Error('Vision analysis failed: ' + error.message);
   }
 }
 
-function extractDominantColor(properties) {
-  if (!properties?.dominantColors?.colors?.length) {
-    return null;
+export async function checkVisionApiStatus() {
+  try {
+    if (!visionClient) {
+      visionClient = await initializeVisionClient();
+    }
+
+    return {
+      status: 'ok',
+      credentials: {
+        hasProjectId: !!process.env.GOOGLE_CLOUD_PROJECT_ID,
+        hasClientEmail: !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
+        hasPrivateKey: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY
+      }
+    };
+  } catch (error) {
+    return {
+      status: 'error',
+      error: error.message,
+      details: error.details || error.stack,
+      credentials: {
+        hasProjectId: !!process.env.GOOGLE_CLOUD_PROJECT_ID,
+        hasClientEmail: !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
+        hasPrivateKey: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY
+      }
+    };
   }
-
-  // Get top 3 colors by score
-  const topColors = properties.dominantColors.colors
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3)
-    .map(color => ({
-      rgb: `rgb(${Math.round(color.color.red)}, ${Math.round(color.color.green)}, ${Math.round(color.color.blue)})`,
-      score: color.score
-    }));
-
-  // Find closest named color for each
-  const namedColors = topColors.map(color => ({
-    name: findClosestNamedColor(color.rgb),
-    score: color.score
-  })).filter(color => color.name);
-
-  // Return the highest scoring named color
-  return namedColors[0]?.name || null;
-}
-
-function extractBrandFromEntities(entities) {
-  const commonBrands = [
-    'zara', 'h&m', 'mango', 'nike', 'adidas', 'gucci', 'prada', 
-    'louis vuitton', 'chanel', 'hermes', 'uniqlo', 'cos', 
-    'massimo dutti', 'calvin klein', 'ralph lauren', 'tommy hilfiger'
-  ];
-
-  // Find brand mentions in web entities with high confidence
-  const brandEntity = entities
-    .filter(entity => entity.score > 0.7)
-    .find(entity => 
-      commonBrands.some(brand => 
-        entity.description?.toLowerCase().includes(brand)
-      )
-    );
-
-  if (brandEntity) {
-    const brand = commonBrands.find(b => 
-      brandEntity.description.toLowerCase().includes(b)
-    );
-    return brand.split(' ').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-  }
-
-  return null;
 }
