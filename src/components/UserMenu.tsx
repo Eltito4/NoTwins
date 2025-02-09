@@ -17,7 +17,7 @@ export function UserMenu() {
     return status.status === 'ok' ? 'text-green-500' : 'text-red-500';
   };
 
-  const getStatusTitle = () => {
+  const getStatusTooltip = () => {
     if (loading) return 'Connecting...';
     if (!status) return 'Connection Error';
     return status.status === 'ok' ? 'Connected' : 'Connection Error';
@@ -29,12 +29,12 @@ export function UserMenu() {
         <Activity 
           size={18} 
           className={`${getStatusColor()} ${loading ? 'animate-spin' : ''}`}
-          title={getStatusTitle()}
+          aria-label={getStatusTooltip()}
         />
         <button
           onClick={() => setShowInbox(true)}
           className="relative p-1.5 text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-100"
-          title="Messages"
+          aria-label="Messages"
         >
           <Bell size={18} />
           {hasUnreadMessages && (
