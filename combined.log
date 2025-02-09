@@ -23,3 +23,41 @@ Metadata: {
 }
 2025-02-09T15:39:00.712Z [32minfo[39m: Vision API client test successful
 2025-02-09T15:39:00.736Z [32minfo[39m: Vision API client test successful
+2025-02-09T15:39:10.505Z [32minfo[39m: Starting product scraping:
+Metadata: {
+  "url": "https://www.zara.com/es/es/conjunto-chaleco-y-jeans-z1975-bootcut-cinturon-pT0822802400.html?v1=438116809&v2=2419517"
+}
+2025-02-09T15:39:10.506Z [34mdebug[39m: URL validated and cleaned:
+Metadata: {
+  "original": "https://www.zara.com/es/es/conjunto-chaleco-y-jeans-z1975-bootcut-cinturon-pT0822802400.html?v1=438116809&v2=2419517",
+  "cleaned": "https://www.zara.com/es/es/conjunto-chaleco-y-jeans-z1975-bootcut-cinturon-pT0822802400.html?v1=438116809&v2=2419517"
+}
+2025-02-09T15:39:10.506Z [32minfo[39m: Generating retailer config for:
+2025-02-09T15:39:13.484Z [34mdebug[39m: Generated retailer config:
+Metadata: {
+  "name": "Zara",
+  "defaultCurrency": "EUR",
+  "selectors": {
+    "name": [
+      "meta[property='og:title']",
+      ".product-detail__title"
+    ],
+    "price": [
+      "meta[property='product:price:amount']",
+      ".product-detail__price-value"
+    ],
+    "color": [],
+    "image": [
+      "meta[property='og:image']",
+      ".product-detail__image main img"
+    ],
+    "brand": [
+      "meta[property='og:site_name']",
+      "header a"
+    ]
+  },
+  "brand": {
+    "defaultValue": "Zara"
+  }
+}
+2025-02-09T15:39:13.485Z [34mdebug[39m: Fetching page:
