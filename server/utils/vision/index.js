@@ -91,174 +91,112 @@ export async function analyzeGarmentImage(imageUrl) {
       features: [
         { type: 'LABEL_DETECTION', maxResults: 20 },
         { type: 'LOGO_DETECTION', maxResults: 5 },
-        { type: 'WEB_DETECTION', maxResults: 10 },
+        { type: 'WEB_DETECTION', maxResults: 20 }, // Increased for better URL coverage
         { type: 'OBJECT_LOCALIZATION', maxResults: 5 },
-        { type: 'IMAGE_PROPERTIES', maxResults: 5 },
-        { type: 'PRODUCT_SEARCH', maxResults: 5 },
-        { type: 'TEXT_DETECTION' },
-        { type: 'SAFE_SEARCH_DETECTION' }
+        { type: 'IMAGE_PROPERTIES', maxResults: 5 }
       ]
     });
 
-    // Log raw Vision API response without image data
+    if (!result) {
+      throw new Error('No analysis results received from Vision API');
+    }
+
+    // Log detailed Vision API response
     logger.debug('Raw Vision API response:', {
-      hasImageProperties: !!result.imagePropertiesAnnotation,
-      hasLabelAnnotations: !!result.labelAnnotations,
-      hasLogoAnnotations: !!result.logoAnnotations,
-      hasObjectAnnotations: !!result.localizedObjectAnnotations,
-      hasProductSearch: !!result.productSearchResults,
-      hasWebSearch: !!result.webDetection,
-      hasTextDetection: !!result.textAnnotations
-    });
-
-    // Log detailed analysis results
-    if (result.webDetection?.pagesWithMatchingImages) {
-      logger.debug('Product details found:', {
-        productDetails: result.webDetection.pagesWithMatchingImages.map(page => ({
-          title: page.pageTitle,
-          url: page.url
-        }))
-      });
-    }
-
-    if (result.labelAnnotations) {
-      logger.debug('Detected labels:', {
-        highConfidence: result.labelAnnotations
-          .filter(label => label.score > 0.8)
-          .map(label => label.description)
-      });
-    }
-
-    if (result.localizedObjectAnnotations) {
-      logger.debug('Detected objects:', {
-        objects: result.localizedObjectAnnotations.map(obj => ({
+      hasImageProperties: true,
+      hasLabelAnnotations: true,
+      hasLogoAnnotations: true,
+      hasObjectAnnotations: true,
+      hasWebSearch: true,
+      response: {
+        labelAnnotations: result.labelAnnotations?.map(label => ({
+          description: label.description,
+          score: label.score
+        })),
+        logoAnnotations: result.logoAnnotations?.map(logo => ({
+          description: logo.description,
+          score: logo.score
+        })),
+        webDetection: {
+          webEntities: result.webDetection?.webEntities?.map(entity => ({
+            description: entity.description,
+            score: entity.score
+          })),
+          fullMatchingImages: result.webDetection?.fullMatchingImages?.length,
+          pagesWithMatchingImages: result.webDetection?.pagesWithMatchingImages?.map(page => ({
+            url: page.url,
+            score: page.score
+          }))
+        },
+        objects: result.localizedObjectAnnotations?.map(obj => ({
           name: obj.name,
           confidence: obj.score
         }))
-      });
-    }
-
-    if (result.imagePropertiesAnnotation?.dominantColors) {
-      logger.debug('Color analysis:', {
-        dominantColor: result.imagePropertiesAnnotation.dominantColors.colors[0]
-      });
-    }
-
-    // Construct product name
-    let productName = '';
-    let brandName = '';
-    let itemType = '';
-    let pattern = '';
-
-    // Extract brand from web detection or logo
-    if (result.webDetection?.pagesWithMatchingImages?.[0]?.pageTitle) {
-      const pageTitle = result.webDetection.pagesWithMatchingImages[0].pageTitle;
-      // Extract brand name from title
-      const brandMatch = pageTitle.match(/^(.*?)\s+(?:[-|]|leopard-print|animal-print)/i);
-      if (brandMatch) {
-        brandName = brandMatch[1].trim();
       }
-    }
+    });
 
-    // Detect item type from object annotations
-    if (result.localizedObjectAnnotations) {
-      const footwearTypes = ['Shoe', 'Boot', 'Sandal', 'Sneaker', 'Heels', 'Footwear'];
-      const clothingTypes = ['Dress', 'Shirt', 'Pants', 'Skirt', 'Jacket'];
-      
-      for (const obj of result.localizedObjectAnnotations) {
-        if (footwearTypes.includes(obj.name)) {
-          itemType = obj.name.toLowerCase();
-          break;
-        } else if (clothingTypes.includes(obj.name)) {
-          itemType = obj.name.toLowerCase();
-          break;
+    // Extract product URLs from web detection
+    const productUrls = result.webDetection?.pagesWithMatchingImages
+      ?.map(page => page.url)
+      .filter(url => {
+        try {
+          const urlObj = new URL(url);
+          // Filter for e-commerce and brand domains
+          return (
+            !urlObj.hostname.includes('pinterest') &&
+            !urlObj.hostname.includes('instagram') &&
+            !urlObj.hostname.includes('facebook') &&
+            !urlObj.hostname.includes('twitter') &&
+            !urlObj.hostname.includes('youtube') &&
+            !urlObj.hostname.includes('google') &&
+            !urlObj.hostname.includes('bing') &&
+            (urlObj.hostname.includes('shop') ||
+             urlObj.hostname.includes('store') ||
+             /\.(com|net|org)$/.test(urlObj.hostname))
+          );
+        } catch {
+          return false;
         }
-      }
+      }) || [];
+
+    // Extract basic information
+    const visionResults = {
+      webDetection: result.webDetection || {},
+      labelAnnotations: result.labelAnnotations || [],
+      localizedObjectAnnotations: result.localizedObjectAnnotations || [],
+      imageProperties: result.imagePropertiesAnnotation || {},
+      productUrls
+    };
+
+    // After getting Vision API results, interpret with Gemini
+    const productInfo = await interpretProductDetails(visionResults);
+
+    if (!productInfo) {
+      logger.warn('No product information returned from Gemini');
     }
 
-    // Detect patterns
-    const patterns = [
-      'leopard print', 'animal print', 'tiger print', 'zebra print', 
-      'snake print', 'floral print', 'polka dot', 'striped', 'plaid'
-    ];
-
-    if (result.labelAnnotations) {
-      for (const label of result.labelAnnotations) {
-        for (const p of patterns) {
-          if (label.description.toLowerCase().includes(p)) {
-            pattern = p;
-            break;
-          }
-        }
-        if (pattern) break;
-      }
-    }
-
-    // Construct full name
-    productName = [
-      brandName,
-      pattern,
-      itemType
-    ].filter(Boolean).join(' ');
-
-    // If we couldn't construct a good name, use the page title
-    if (!productName && result.webDetection?.pagesWithMatchingImages?.[0]?.pageTitle) {
-      productName = result.webDetection.pagesWithMatchingImages[0].pageTitle
-        .split('|')[0]
-        .trim();
-    }
-
-    // Extract product URL
-    let productUrl = null;
-    if (result.webDetection?.pagesWithMatchingImages) {
-      const shoppingPage = result.webDetection.pagesWithMatchingImages[0];
-      if (shoppingPage) {
-        productUrl = shoppingPage.url;
-      }
-    }
-
-    // Extract color
+    // Extract color information
     const color = result.imagePropertiesAnnotation?.dominantColors?.colors?.[0];
-    let dominantColor = pattern ? pattern : null;
+    let dominantColor = null;
     
-    if (!dominantColor && color) {
+    if (color) {
       dominantColor = findClosestNamedColor(
         `rgb(${Math.round(color.color.red)}, ${Math.round(color.color.green)}, ${Math.round(color.color.blue)})`
       );
     }
 
-    // Detect type for categorization
-    const type = detectProductType([itemType, ...result.labelAnnotations.map(l => l.description)].join(' '));
-
-    // Extract price if available in text
-    let price = null;
-    if (result.textAnnotations) {
-      const priceMatch = result.textAnnotations[0]?.description.match(/[\$€£](\d+(?:\.\d{2})?)/);
-      if (priceMatch) {
-        price = parseFloat(priceMatch[1]);
-      }
-    }
-
-    // After getting Vision API results, interpret with Gemini
-    const productInfo = await interpretProductDetails({
-      webDetection: result.webDetection,
-      labelAnnotations: result.labelAnnotations,
-      localizedObjectAnnotations: result.localizedObjectAnnotations,
-      imageProperties: result.imagePropertiesAnnotation
-    });
+    // Detect type from label annotations
+    const labels = result.labelAnnotations?.map(label => label.description) || [];
+    const type = detectProductType(labels.join(' '));
 
     // Combine Vision API and Gemini results
     const analysis = {
-      name: productInfo?.name || productName,
-      brand: productInfo?.brand || brandName,
+      name: productInfo?.name || '',
+      brand: productInfo?.brand || '',
       color: productInfo?.color || dominantColor,
-      type: productInfo?.type ? {
-        category: productInfo.category.toLowerCase(),
-        subcategory: productInfo.type.toLowerCase(),
-        name: productInfo.type
-      } : type,
-      price: productInfo?.price || price,
-      description: productInfo?.description || productUrl,
+      type: productInfo?.type || type,
+      price: productInfo?.price || null,
+      description: productInfo?.description || productUrls[0] || '',
       confidence: {
         labels: result.labelAnnotations?.[0]?.score || 0,
         color: color?.score || 0,
@@ -266,21 +204,24 @@ export async function analyzeGarmentImage(imageUrl) {
       }
     };
 
-    logger.info('Analysis completed with Gemini enhancement:', {
-      hasGeminiResults: !!productInfo,
+    logger.info('Analysis completed successfully:', {
+      hasName: !!analysis.name,
       hasBrand: !!analysis.brand,
       hasColor: !!analysis.color,
       hasType: !!analysis.type,
-      confidence: analysis.confidence.overall
+      hasUrl: !!analysis.description,
+      confidence: analysis.confidence.overall,
+      productUrls: productUrls.slice(0, 3) // Log top 3 URLs
     });
 
     return analysis;
   } catch (error) {
     logger.error('Vision analysis error:', {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
+      details: error.details || error
     });
-    throw error;
+    throw new Error('Vision analysis failed: ' + error.message);
   }
 }
 

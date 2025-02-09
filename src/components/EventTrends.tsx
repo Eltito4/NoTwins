@@ -73,7 +73,22 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
     labels: Object.keys(colorData).map(color => color.charAt(0).toUpperCase() + color.slice(1)),
     datasets: [{
       data: Object.values(colorData),
-      backgroundColor: Object.keys(colorData),
+      backgroundColor: Object.keys(colorData).map(color => {
+        // Use the actual color value for the chart segments
+        if (color.toLowerCase().includes('black')) return '#000000';
+        if (color.toLowerCase().includes('white')) return '#FFFFFF';
+        if (color.toLowerCase().includes('red')) return '#FF0000';
+        if (color.toLowerCase().includes('blue')) return '#0000FF';
+        if (color.toLowerCase().includes('green')) return '#008000';
+        if (color.toLowerCase().includes('yellow')) return '#FFD700';
+        if (color.toLowerCase().includes('purple')) return '#800080';
+        if (color.toLowerCase().includes('pink')) return '#FFC0CB';
+        if (color.toLowerCase().includes('orange')) return '#FFA500';
+        if (color.toLowerCase().includes('brown')) return '#8B4513';
+        if (color.toLowerCase().includes('gray')) return '#808080';
+        if (color.toLowerCase().includes('leopard')) return '#D2691E';
+        return '#CCCCCC'; // Default color
+      }),
       borderColor: '#ffffff',
       borderWidth: 2
     }]
@@ -106,7 +121,7 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
     }]
   };
 
-  const pieOptions = {
+  const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -116,7 +131,30 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
           padding: 20,
           usePointStyle: true,
           font: {
-            size: 12
+            size: 14 // Increased font size
+          },
+          generateLabels: function(chart: any) {
+            const data = chart.data;
+            if (data.labels.length && data.datasets.length) {
+              return data.labels.map((label: string, i: number) => ({
+                text: `${label} (${data.datasets[0].data[i]})`,
+                fillStyle: data.datasets[0].backgroundColor[i],
+                strokeStyle: data.datasets[0].borderColor,
+                lineWidth: data.datasets[0].borderWidth,
+                hidden: false,
+                index: i
+              }));
+            }
+            return [];
+          }
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context: any) {
+            const label = context.label || '';
+            const value = context.raw || 0;
+            return `${label}: ${value} items`;
           }
         }
       }
@@ -124,9 +162,9 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
   };
 
   const barOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
+    ...chartOptions,
     plugins: {
+      ...chartOptions.plugins,
       legend: {
         display: false
       }
@@ -135,36 +173,46 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
       y: {
         beginAtZero: true,
         ticks: {
-          stepSize: 1
+          stepSize: 1,
+          font: {
+            size: 14 // Increased font size
+          }
+        }
+      },
+      x: {
+        ticks: {
+          font: {
+            size: 14 // Increased font size
+          }
         }
       }
     }
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-12 p-6">
       {Object.keys(typeData).length > 0 && (
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">Article Types</h3>
-          <div className="h-[300px] relative">
-            <Pie data={typeChartData} options={pieOptions} />
+        <div className="bg-white p-8 rounded-lg shadow-sm">
+          <h3 className="text-xl font-semibold mb-6">Article Types</h3>
+          <div className="h-[400px] relative">
+            <Pie data={typeChartData} options={chartOptions} />
           </div>
         </div>
       )}
 
       {Object.keys(colorData).length > 0 && (
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">Color Distribution</h3>
-          <div className="h-[300px] relative">
-            <Pie data={colorChartData} options={pieOptions} />
+        <div className="bg-white p-8 rounded-lg shadow-sm">
+          <h3 className="text-xl font-semibold mb-6">Color Distribution</h3>
+          <div className="h-[400px] relative">
+            <Pie data={colorChartData} options={chartOptions} />
           </div>
         </div>
       )}
 
       {Object.keys(brandData).length > 0 && (
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">Popular Brands</h3>
-          <div className="h-[300px] relative">
+        <div className="bg-white p-8 rounded-lg shadow-sm">
+          <h3 className="text-xl font-semibold mb-6">Popular Brands</h3>
+          <div className="h-[400px] relative">
             <Bar data={brandChartData} options={barOptions} />
           </div>
         </div>

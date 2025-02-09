@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, ArrowLeft, Loader2, Eye, EyeOff, Camera } from 'lucide-react';
-import { CheckCircle, AlertTriangle, HelpCircle } from 'lucide-react';
+import { Upload, ArrowLeft, Loader2, Eye, EyeOff, Camera, CheckCircle, AlertTriangle, HelpCircle } from 'lucide-react';
 import { analyzeGarmentImage } from '../services/visionService';
 import { AVAILABLE_COLORS } from '../utils/colorUtils';
 import { getAllCategories, getSubcategoryName } from '../utils/categorization';
@@ -57,7 +56,6 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
 
     setLoading(true);
     try {
-      // Convert file to base64
       const base64Image = await convertBlobToBase64(file);
       setImageUrl(base64Image);
       await analyzeImage(base64Image);
@@ -74,14 +72,22 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
     try {
       const analysis = await analyzeGarmentImage(url);
       
+      // Update form data with Gemini analysis results
       setFormData(prev => ({
         ...prev,
-        name: analysis.labels?.[0] || '',
-        color: analysis.color || '',
+        name: analysis.name || '',
         brand: analysis.brand || '',
+        color: analysis.color || '',
+        description: analysis.description || '',
         category: analysis.type?.category || '',
-        subcategory: analysis.type?.subcategory || ''
+        subcategory: analysis.type?.subcategory || '',
+        price: analysis.price ? analysis.price.toString() : ''
       }));
+
+      // Set confidence score
+      if (analysis.confidence?.overall) {
+        setConfidence(analysis.confidence.overall);
+      }
 
       toast.success('Image analyzed successfully!');
     } catch (error) {
