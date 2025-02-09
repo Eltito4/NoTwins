@@ -1,8 +1,9 @@
 import React from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { ExternalLink, X } from 'lucide-react';
+import { ExternalLink, X, Trash2 } from 'lucide-react';
 import { useMessages } from '../../contexts/MessageContext';
 import { deleteMessage } from '../../services/messageService';
+import toast from 'react-hot-toast';
 
 interface MessageInboxProps {
   onClose: () => void;
@@ -11,9 +12,17 @@ interface MessageInboxProps {
 export function MessageInbox({ onClose }: MessageInboxProps) {
   const { messages, markAsRead, loadMessages } = useMessages();
 
-  const handleDelete = async (messageId: string) => {
-    await deleteMessage(messageId);
-    loadMessages();
+  const handleDelete = async (messageId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the message read action
+    
+    try {
+      await deleteMessage(messageId);
+      await loadMessages(); // Reload messages after deletion
+      toast.success('Message deleted');
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      toast.error('Failed to delete message');
+    }
   };
 
   return (
@@ -36,32 +45,30 @@ export function MessageInbox({ onClose }: MessageInboxProps) {
               {messages.map(message => (
                 <div
                   key={message.id}
-                  className={`p-4 ${!message.readAt ? 'bg-primary/5' : ''}`}
+                  className={`p-4 ${!message.readAt ? 'bg-primary/5' : ''} hover:bg-gray-50 transition-colors`}
                   onClick={() => markAsRead(message.id)}
                 >
                   <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-medium">{message.title}</h3>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium truncate">{message.title}</h3>
                       <p className="text-sm text-gray-500">
                         From: {message.from?.name}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-500">
+                    <div className="flex items-center gap-2 ml-4">
+                      <span className="text-sm text-gray-500 whitespace-nowrap">
                         {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
                       </span>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(message.id);
-                        }}
-                        className="text-red-500 hover:text-red-600"
+                        onClick={(e) => handleDelete(message.id, e)}
+                        className="p-1 text-red-500 hover:text-red-600 rounded hover:bg-red-50"
+                        title="Delete message"
                       >
-                        <X size={18} />
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </div>
-                  <p className="mt-2 text-gray-600">{message.body}</p>
+                  <p className="mt-2 text-gray-600 line-clamp-2">{message.body}</p>
                   {message.suggestedItemUrl && (
                     <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                       <div className="flex justify-between items-center mb-2">
@@ -71,6 +78,7 @@ export function MessageInbox({ onClose }: MessageInboxProps) {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-primary hover:text-primary-600 flex items-center gap-1"
+                          onClick={(e) => e.stopPropagation()}
                         >
                           <span>View Item</span>
                           <ExternalLink size={16} />

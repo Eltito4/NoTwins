@@ -32,11 +32,14 @@ export async function markMessageAsRead(messageId: string): Promise<void> {
 }
 
 export async function deleteMessage(messageId: string): Promise<void> {
+  if (!messageId) {
+    throw new Error('Message ID is required');
+  }
+  
   try {
     await api.delete(`/messages/${messageId}`);
-    toast.success('Message deleted');
   } catch (error) {
-    toast.error('Failed to delete message');
+    console.error('Failed to delete message:', error);
     throw error;
   }
 }

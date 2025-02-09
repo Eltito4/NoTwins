@@ -7,10 +7,8 @@ import { scrapeProduct } from '../utils/scraping/index.js';
 
 const router = express.Router();
 
-// Apply auth middleware to all routes
 router.use(authMiddleware);
 
-// Get all messages for current user
 router.get('/', async (req, res) => {
   try {
     const messages = await Message.find({
@@ -20,12 +18,10 @@ router.get('/', async (req, res) => {
       ]
     }).sort({ createdAt: -1 });
 
-    // Get user info for senders/receivers
     const userIds = [...new Set(messages.flatMap(m => [m.fromUserId, m.toUserId]))];
     const users = await User.find({ _id: { $in: userIds } });
     const userMap = Object.fromEntries(users.map(u => [u._id.toString(), u]));
 
-    // Add user info to messages
     const messagesWithUsers = messages.map(msg => ({
       ...msg.toObject(),
       from: userMap[msg.fromUserId],
@@ -39,17 +35,14 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Send a new message
 router.post('/', async (req, res) => {
   try {
     const { toUserId, title, body, suggestedItemUrl, relatedDressId } = req.body;
 
-    // Validate required fields
     if (!toUserId || !title || !body) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Create message data
     const messageData = {
       fromUserId: req.user.id,
       toUserId,
@@ -58,7 +51,6 @@ router.post('/', async (req, res) => {
       relatedDressId
     };
 
-    // If there's a suggested item URL, fetch its details
     if (suggestedItemUrl) {
       try {
         const itemDetails = await scrapeProduct(suggestedItemUrl);
@@ -77,7 +69,6 @@ router.post('/', async (req, res) => {
     const message = new Message(messageData);
     await message.save();
 
-    // Get user info for response
     const [fromUser, toUser] = await Promise.all([
       User.findById(req.user.id),
       User.findById(toUserId)
@@ -96,7 +87,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Mark message as read
 router.put('/:messageId/read', async (req, res) => {
   try {
     const message = await Message.findById(req.params.messageId);
@@ -119,7 +109,6 @@ router.put('/:messageId/read', async (req, res) => {
   }
 });
 
-// Delete a message
 router.delete('/:messageId', async (req, res) => {
   try {
     const message = await Message.findById(req.params.messageId);
@@ -132,7 +121,7 @@ router.delete('/:messageId', async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to delete this message' });
     }
 
-    await message.deleteOne();
+    await Message.findByIdAndDelete(req.params.messageId);
     res.json({ message: 'Message deleted successfully' });
   } catch (error) {
     logger.error('Error deleting message:', error);

@@ -1,7 +1,6 @@
 import { useAuth } from './contexts/AuthContext';
 import { AuthForm } from './components/AuthForm';
 import { Dashboard } from './components/Dashboard';
-import { VisionHealthCheck } from './components/VisionHealthCheck';
 import { UserMenu } from './components/UserMenu';
 import { Toaster } from 'react-hot-toast';
 
@@ -10,7 +9,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background">
-      {currentUser && <VisionHealthCheck />}
       <div className="max-w-7xl mx-auto px-4 py-8">
         {currentUser && (
           <div className="flex justify-between items-center mb-8">
