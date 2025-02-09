@@ -1,57 +1,15 @@
+import { logger } from '../logger.js';
+
 const ALLOWED_PROTOCOLS = ['http:', 'https:'];
 
 const BLOCKED_DOMAINS = [
   'localhost',
   '127.0.0.1',
-  'example.com'
-];
-
-const SUPPORTED_DOMAINS = [
-  'ladypipa.com',
-  'cos.com',
-  'zara.com',
-  'massimodutti.com',
-  'bershka.com',
-  'stradivarius.com',
-  'sfera.com',
-  'cortefiel.com',
-  'asos.com',
-  'springfield.com',
-  'dolorespromesas.com',
-  'hossintropia.com',
-  'bimbaylola.com',
-  'carolinaherrera.com',
-  'hugoboss.com',
-  'violetabymango.com',
-  'tedbaker.com',
-  'farfetch.com',
-  'net-a-porter.com',
-  'matchesfashion.com',
-  'selfridges.com',
-  'mytheresa.com',
-  'elcorteingles.es',
-  'scalperscompany.com',
-  'pronovias.com',
-  'massimodutti.com',
-  'apparentia.com',
-  'meryfor.com',
-  'bgoandme.com',
-  'aliciarueda.com',
-  'seeiou.com',
-  'bruna.es',
-  'redondobrand.com',
-  'polinetmoi.com',
-  'carlaruiz.com',
-  'chcarolinaherrera.com',
-  'carolinaherrera.com',
-  'shop.mango.com',
-  'mango.com',
-  'hm.com',
-  'www2.hm.com',
-  'rosaclara.es',
-  'louisvuitton.com',
-  'es.louisvuitton.com',
-  'matildecano.es'
+  'example.com',
+  'pinterest.com',
+  'facebook.com',
+  'instagram.com',
+  'twitter.com'
 ];
 
 export function validateUrl(url) {
@@ -71,16 +29,6 @@ export function validateUrl(url) {
     // Check for blocked domains
     if (BLOCKED_DOMAINS.some(domain => parsedUrl.hostname.includes(domain))) {
       throw new Error('This domain is not allowed.');
-    }
-
-    // Verify supported domains
-    const hostname = parsedUrl.hostname.toLowerCase().replace(/^www\d*\./, '');
-    const isSupported = SUPPORTED_DOMAINS.some(domain => 
-      hostname === domain || hostname.endsWith('.' + domain)
-    );
-
-    if (!isSupported) {
-      throw new Error('This retailer is not supported. Please use one of our supported stores.');
     }
 
     // Clean up URL
@@ -109,8 +57,17 @@ export function validateUrl(url) {
                       .replace(/\&$/, '')
                       .replace(/\/$/, '');
 
+    logger.debug('URL validated and cleaned:', {
+      original: url,
+      cleaned: cleanUrl
+    });
+
     return cleanUrl;
   } catch (error) {
+    logger.error('URL validation error:', {
+      url,
+      error: error.message
+    });
     throw new Error(`Invalid URL format: ${error.message}`);
   }
 }

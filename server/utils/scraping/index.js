@@ -1,18 +1,23 @@
-import { extractProductDetails } from './productExtractor.js';
-import { validateUrl } from './urlValidator.js';
-import { getRetailerConfig } from './retailers/index.js';
 import { load } from 'cheerio';
+import { logger } from '../logger.js';
+import { validateUrl } from './urlValidator.js';
+import { getRetailerConfig } from '../retailers/index.js';
+import { extractProductDetails } from './productExtractor.js';
 
 export async function scrapeProduct(url) {
   try {
     // Validate URL
+    if (!url) {
+      throw new Error('URL is required');
+    }
+
     const validatedUrl = validateUrl(url);
     if (!validatedUrl) {
       throw new Error('Invalid URL format');
     }
 
     // Get retailer config
-    const retailerConfig = getRetailerConfig(validatedUrl);
+    const retailerConfig = await getRetailerConfig(validatedUrl);
     if (!retailerConfig) {
       throw new Error('This retailer is not supported. Please try a different store.');
     }
@@ -23,6 +28,7 @@ export async function scrapeProduct(url) {
       validatedUrl;
 
     // Fetch page content
+    logger.debug('Fetching page:', transformedUrl);
     const response = await fetch(transformedUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/91.0.4472.124 Safari/537.36',
@@ -48,7 +54,11 @@ export async function scrapeProduct(url) {
 
     return details;
   } catch (error) {
-    console.error('Scraping error:', error);
+    logger.error('Scraping error:', {
+      url,
+      error: error.message,
+      stack: error.stack
+    });
     throw error;
   }
 }

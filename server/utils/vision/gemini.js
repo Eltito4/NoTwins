@@ -20,6 +20,7 @@ function initializeGemini() {
   }
 }
 
+// Original function for interpreting Vision API results
 export async function interpretProductDetails(visionResults) {
   try {
     if (!genAI) {
@@ -37,7 +38,6 @@ export async function interpretProductDetails(visionResults) {
 
     const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
 
-    // Create a more detailed prompt with available colors and categories
     const prompt = `
       You are a fashion product data interpreter. Given these Vision API results, extract and structure the information following these STRICT rules:
 
@@ -94,47 +94,13 @@ export async function interpretProductDetails(visionResults) {
     const response = await result.response;
     
     try {
-      const interpretation = JSON.parse(response.text());
-      logger.debug('Gemini interpretation successful:', interpretation);
-
-      // Validate color against available colors
-      if (interpretation.color) {
-        const validColor = AVAILABLE_COLORS.find(c => 
-          c.name.toLowerCase() === interpretation.color.toLowerCase()
-        );
-        if (!validColor) {
-          interpretation.color = findClosestColor(interpretation.color);
-        }
+      const text = response.text();
+      // Extract JSON from potential markdown code block
+      const jsonMatch = text.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/) || text.match(/(\{[\s\S]*\})/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[1]);
       }
-
-      // Validate and structure type information
-      if (interpretation.type) {
-        const category = CATEGORIES.find(c => c.id === interpretation.type.category);
-        const subcategory = category?.subcategories.find(s => s.id === interpretation.type.subcategory);
-        
-        if (!category || !subcategory) {
-          // Default to first matching category/subcategory based on name
-          const matchedCategory = CATEGORIES.find(c => 
-            c.subcategories.some(s => 
-              interpretation.type.name.toLowerCase().includes(s.name.toLowerCase())
-            )
-          );
-          
-          if (matchedCategory) {
-            const matchedSubcategory = matchedCategory.subcategories.find(s =>
-              interpretation.type.name.toLowerCase().includes(s.name.toLowerCase())
-            );
-            
-            interpretation.type = {
-              category: matchedCategory.id,
-              subcategory: matchedSubcategory?.id || 'other',
-              name: matchedSubcategory?.name || interpretation.type.name
-            };
-          }
-        }
-      }
-
-      return interpretation;
+      throw new Error('No valid JSON found in response');
     } catch (parseError) {
       logger.error('Failed to parse Gemini response:', {
         error: parseError.message,
@@ -143,41 +109,82 @@ export async function interpretProductDetails(visionResults) {
       return null;
     }
   } catch (error) {
-    logger.error('Gemini interpretation error:', {
-      error: error.message,
-      stack: error.stack
-    });
+    logger.error('Gemini interpretation error:', error);
     return null;
   }
 }
 
-function findClosestColor(color) {
-  if (!color) return null;
-  
-  const normalizedInput = color.toLowerCase();
-  
-  // Check for patterns first
-  const patterns = ['leopard', 'zebra', 'snake', 'animal', 'floral'];
-  for (const pattern of patterns) {
-    if (normalizedInput.includes(pattern)) {
-      return `${pattern.charAt(0).toUpperCase() + pattern.slice(1)} Print`;
+// New function for generating retailer configs
+export async function interpretRetailerConfig(url) {
+  try {
+    if (!genAI) {
+      genAI = initializeGemini();
+      if (!genAI) {
+        throw new Error('Gemini initialization failed');
+      }
     }
+
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+
+    const prompt = `
+      You are a retail website expert. Given this URL: ${url}
+      
+      Create a configuration for scraping product details from this retailer's website.
+      Follow these rules:
+      
+      1. Analyze the domain to determine the retailer name
+      2. Consider common e-commerce website structures
+      3. Include multiple selector options for each field
+      4. Focus on reliable selectors that are less likely to change
+      5. Include meta tags as fallback options
+      
+      Return ONLY a JSON object with this exact structure (no markdown, no code block):
+      {
+        "name": "Retailer Name",
+        "defaultCurrency": "EUR",
+        "selectors": {
+          "name": ["array of CSS selectors for product name"],
+          "price": ["array of CSS selectors for price"],
+          "color": ["array of CSS selectors for color"],
+          "image": ["array of CSS selectors for main product image"],
+          "brand": ["array of CSS selectors for brand name"]
+        },
+        "brand": {
+          "defaultValue": "Default Brand Name"
+        }
+      }
+
+      Include these common selectors for each field:
+      - Meta tags (og:title, og:image, etc.)
+      - Standard product page elements
+      - Common class names and IDs
+      - Schema.org markup selectors
+    `;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    
+    try {
+      const text = response.text();
+      // Extract JSON from potential markdown code block
+      const jsonMatch = text.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/) || text.match(/(\{[\s\S]*\})/);
+      if (jsonMatch) {
+        const config = JSON.parse(jsonMatch[1]);
+        logger.debug('Generated retailer config:', config);
+        return config;
+      }
+      throw new Error('No valid JSON found in response');
+    } catch (parseError) {
+      logger.error('Failed to parse Gemini response:', {
+        error: parseError.message,
+        response: response.text()
+      });
+      throw new Error('Failed to generate retailer configuration');
+    }
+  } catch (error) {
+    logger.error('Gemini interpretation error:', error);
+    throw error;
   }
-  
-  // Find exact match
-  const exactMatch = AVAILABLE_COLORS.find(c => 
-    c.name.toLowerCase() === normalizedInput
-  );
-  if (exactMatch) return exactMatch.name;
-  
-  // Find partial match
-  const partialMatch = AVAILABLE_COLORS.find(c => 
-    normalizedInput.includes(c.name.toLowerCase())
-  );
-  if (partialMatch) return partialMatch.name;
-  
-  // Default to most similar color
-  return 'Black'; // Default fallback
 }
 
 export function checkGeminiStatus() {

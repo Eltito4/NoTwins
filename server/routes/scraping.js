@@ -15,7 +15,13 @@ router.post('/scrape', async (req, res) => {
   }
 
   try {
+    logger.info('Starting product scraping:', { url });
     const productDetails = await scrapeProduct(url);
+    
+    if (!productDetails) {
+      throw new Error('Failed to extract product details');
+    }
+
     res.json(productDetails);
   } catch (error) {
     logger.error('Scraping endpoint error:', {
@@ -25,9 +31,11 @@ router.post('/scrape', async (req, res) => {
       timestamp: new Date().toISOString()
     });
 
-    res.status(400).json({
+    // Send appropriate error response
+    const status = error.status || 400;
+    res.status(status).json({
       error: error.message || 'Failed to scrape product details',
-      details: error.message
+      details: error.details || error.message
     });
   }
 });

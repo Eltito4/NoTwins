@@ -14,7 +14,7 @@ import toast from 'react-hot-toast';
 interface EventDetailsModalProps {
   event: Event;
   onClose: () => void;
-  onDressAdded: (dress: Dress) => void;
+  onDressAdded: () => void;
   participants: Record<string, User>;
 }
 
@@ -47,7 +47,7 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
     try {
       const newDress = await addDressToEvent(event.id, dressData);
       setDresses(prevDresses => [...prevDresses, newDress]);
-      onDressAdded(newDress);
+      onDressAdded();
       setShowAddItemModal(false);
       toast.success('Item added successfully!');
     } catch (error) {
@@ -160,4 +160,4 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
       )}
     </div>
   );
-};
+}

@@ -1,17 +1,16 @@
-import { RetailerConfig } from './types';
-import { interpretRetailerConfig } from '../vision/gemini.js';
 import { logger } from '../logger.js';
+import { interpretRetailerConfig } from '../vision/gemini.js';
 
 // In-memory cache for retailer configs
-const retailerConfigCache = new Map<string, RetailerConfig>();
+const retailerConfigCache = new Map();
 
-export async function getRetailerConfig(url: string): Promise<RetailerConfig> {
+export async function getRetailerConfig(url) {
   try {
     const hostname = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
     
     // Check cache first
     if (retailerConfigCache.has(hostname)) {
-      return retailerConfigCache.get(hostname)!;
+      return retailerConfigCache.get(hostname);
     }
 
     // Use Gemini to interpret the retailer
@@ -28,7 +27,7 @@ export async function getRetailerConfig(url: string): Promise<RetailerConfig> {
   }
 }
 
-export function getRetailerHeaders(retailerConfig: RetailerConfig) {
+export function getRetailerHeaders(retailerConfig) {
   return {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36',
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',

@@ -6,7 +6,7 @@ import { CreateEventModal } from './CreateEventModal';
 import { JoinEventModal } from './JoinEventModal';
 import { EventDetailsModal } from './EventDetailsModal';
 import { useAuth } from '../contexts/AuthContext';
-import { createEvent, getEventsByUser, joinEvent, getEventParticipants } from '../services/eventService';
+import { createEvent, getEventsByUser, joinEvent, getEventParticipants, deleteEvent } from '../services/eventService';
 import toast from 'react-hot-toast';
 
 export function Dashboard() {
@@ -16,10 +16,6 @@ export function Dashboard() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [participants, setParticipants] = useState<Record<string, User>>({});
   const { currentUser } = useAuth();
-
-  useEffect(() => {
-    loadEvents();
-  }, []);
 
   const loadEvents = async () => {
     try {
@@ -42,6 +38,10 @@ export function Dashboard() {
     }
   };
 
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
   const handleCreateEvent = async (eventData: {
     name: string;
     date: string;
@@ -63,6 +63,18 @@ export function Dashboard() {
     } catch (error) {
       console.error('Error creating event:', error);
       toast.error('Failed to create event');
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      await deleteEvent(eventId);
+      setEvents(prev => prev.filter(e => e.id !== eventId));
+      toast.success('Event deleted successfully');
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      toast.error('Failed to delete event');
+      throw error;
     }
   };
 
@@ -123,6 +135,7 @@ export function Dashboard() {
               key={event.id}
               event={event}
               onClick={() => setSelectedEvent(event)}
+              onDelete={handleDeleteEvent}
               participants={participants}
             />
           ))}

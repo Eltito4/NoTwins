@@ -1,24 +1,25 @@
-2025-02-09T14:44:09.435Z [32minfo[39m: Environment:
-Metadata: {
-  "NODE_ENV": "development",
-  "hasGeminiKey": true,
-  "hasVisionKey": true
-}
-2025-02-09T14:44:09.439Z [34mdebug[39m: Initializing Vision client with:
+2025-02-09T15:38:59.440Z [34mdebug[39m: Initializing Vision client with:
 Metadata: {
   "projectId": "promising-haiku-449317-e0",
   "clientEmail": "vision-api-user-441@promising-haiku-449317-e0.iam.gserviceaccount.com",
   "hasPrivateKey": true
 }
-2025-02-09T14:44:09.809Z [32minfo[39m: Vision API client test successful
-2025-02-09T14:44:09.980Z [32minfo[39m: ✓
-2025-02-09T14:44:09.983Z [32minfo[39m: ✓
-2025-02-09T14:44:09.983Z [32minfo[39m: Environment:
-2025-02-09T14:44:09.984Z [32minfo[39m: Vision API status:
-2025-02-09T14:44:10.855Z [34mdebug[39m: Initializing Vision client with:
+2025-02-09T15:38:59.779Z [32minfo[39m: Vision API client test successful
+2025-02-09T15:38:59.990Z [32minfo[39m: ✓
+2025-02-09T15:38:59.993Z [32minfo[39m: ✓
+2025-02-09T15:38:59.994Z [32minfo[39m: Environment:
+2025-02-09T15:38:59.994Z [32minfo[39m: Vision API status:
+2025-02-09T15:39:00.393Z [34mdebug[39m: Initializing Vision client with:
 Metadata: {
   "projectId": "promising-haiku-449317-e0",
   "clientEmail": "vision-api-user-441@promising-haiku-449317-e0.iam.gserviceaccount.com",
   "hasPrivateKey": true
 }
-2025-02-09T14:44:11.191Z [32minfo[39m: Vision API client test successful
+2025-02-09T15:39:00.502Z [34mdebug[39m: Initializing Vision client with:
+Metadata: {
+  "projectId": "promising-haiku-449317-e0",
+  "clientEmail": "vision-api-user-441@promising-haiku-449317-e0.iam.gserviceaccount.com",
+  "hasPrivateKey": true
+}
+2025-02-09T15:39:00.712Z [32minfo[39m: Vision API client test successful
+2025-02-09T15:39:00.736Z [32minfo[39m: Vision API client test successful

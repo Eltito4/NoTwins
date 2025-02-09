@@ -12,13 +12,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const envFile = process.env.NODE_ENV === 'production' ? '.env' : '.env.development';
 dotenv.config({ path: path.join(__dirname, envFile) });
 
-// Log environment status
-logger.info('Environment:', {
-  NODE_ENV: process.env.NODE_ENV,
-  hasGeminiKey: !!process.env.GOOGLE_AI_API_KEY,
-  hasVisionKey: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY
-});
-
 const app = express();
 const port = process.env.PORT || 3001;
 
@@ -28,10 +21,13 @@ if (!visionClient) {
   logger.warn('Vision API client initialization failed - some features may be unavailable');
 }
 
-// Middleware
+// Configure CORS with specific options
 app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-  credentials: true
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  maxAge: 86400 // 24 hours
 }));
 
 // Increase payload size limit to 10MB
@@ -44,6 +40,7 @@ import dressRoutes from './routes/dresses.js';
 import visionRoutes from './routes/vision.js';
 import authRoutes from './routes/auth.js';
 import messageRoutes from './routes/messages.js';
+import scrapingRoutes from './routes/scraping.js';
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -69,6 +66,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/dresses', dressRoutes);
 app.use('/api/vision', visionRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/scraping', scrapingRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
