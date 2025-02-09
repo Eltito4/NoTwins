@@ -4,6 +4,7 @@ import { scrapeDressDetails } from '../services/scrapingService';
 import { AVAILABLE_COLORS } from '../utils/colorUtils';
 import { getAllCategories, getSubcategoryName } from '../utils/categorization';
 import { formatPrice } from '../utils/currency';
+import { ScrapedProduct } from '../types';
 import toast from 'react-hot-toast';
 
 interface DressScrapingModalProps {
