@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, ArrowLeft, Loader2, Eye, EyeOff, Camera } from 'lucide-react';
+import { CheckCircle, AlertTriangle, HelpCircle } from 'lucide-react';
 import { analyzeGarmentImage } from '../services/visionService';
 import { AVAILABLE_COLORS } from '../utils/colorUtils';
 import { getAllCategories, getSubcategoryName } from '../utils/categorization';
@@ -36,6 +37,7 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [confidence, setConfidence] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -113,6 +115,18 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
     });
   };
 
+  const getConfidenceColor = (score: number) => {
+    if (score >= 0.8) return 'bg-green-100 text-green-700 border-green-200';
+    if (score >= 0.6) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    return 'bg-red-100 text-red-700 border-red-200';
+  };
+
+  const getConfidenceIcon = (score: number) => {
+    if (score >= 0.8) return <CheckCircle className="w-4 h-4" />;
+    if (score >= 0.6) return <HelpCircle className="w-4 h-4" />;
+    return <AlertTriangle className="w-4 h-4" />;
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-6 border-b">
@@ -155,6 +169,14 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
                 alt="Preview"
                 className="w-full h-full object-cover"
               />
+              {confidence !== null && (
+                <div className={`absolute -top-2 -right-2 px-2 py-1 rounded-lg border ${getConfidenceColor(confidence)} flex items-center gap-1.5 shadow-lg`}>
+                  {getConfidenceIcon(confidence)}
+                  <span className="text-sm font-medium">
+                    {Math.round(confidence * 100)}%
+                  </span>
+                </div>
+              )}
               {(loading || analyzing) && (
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                   <div className="text-white text-center">

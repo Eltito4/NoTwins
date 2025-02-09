@@ -3,12 +3,14 @@ import { logger } from '../logger.js';
 import { detectProductType } from '../categorization/detector.js';
 import { findClosestNamedColor } from '../colors/utils.js';
 import axios from 'axios';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
 
 let visionClient = null;
 
 async function initializeVisionClient() {
   try {
-    // Check for required credentials
     const requiredEnvVars = [
       'GOOGLE_CLOUD_PROJECT_ID',
       'GOOGLE_CLOUD_CLIENT_EMAIL',
@@ -21,7 +23,6 @@ async function initializeVisionClient() {
       throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
     }
 
-    // Log credential info (without sensitive data)
     logger.debug('Initializing Vision client with:', {
       projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
       clientEmail: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
@@ -34,13 +35,11 @@ async function initializeVisionClient() {
       project_id: process.env.GOOGLE_CLOUD_PROJECT_ID
     };
 
-    // Create the client with enhanced features
     const client = new vision.ImageAnnotatorClient({
       credentials,
       projectId: process.env.GOOGLE_CLOUD_PROJECT_ID
     });
 
-    // Test the client immediately
     await testVisionClient(client);
     return client;
   } catch (error) {
@@ -67,9 +66,45 @@ async function testVisionClient(client) {
   }
 }
 
+async function interpretWithGemini(visionResults) {
+  try {
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+
+    const prompt = `
+      Analyze these Vision API results and extract structured product information:
+      ${JSON.stringify(visionResults, null, 2)}
+
+      Please provide:
+      1. A natural product name
+      2. Brand name (if detected)
+      3. Product type/category
+      4. Color(s)
+      5. Any patterns or distinctive features
+      6. Price (if detected)
+      7. Confidence score for the analysis
+
+      Format as JSON with these fields: name, brand, type, color, pattern, price, confidence
+    `;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const interpretation = JSON.parse(response.text());
+
+    logger.debug('Gemini interpretation:', interpretation);
+
+    return interpretation;
+  } catch (error) {
+    logger.error('Gemini interpretation error:', error);
+    return null;
+  }
+}
+
 export async function analyzeGarmentImage(imageUrl) {
   try {
+    logger.info('Starting garment image analysis:', { imageUrl });
+
     if (!visionClient) {
+      logger.debug('Initializing Vision client...');
       visionClient = await initializeVisionClient();
       if (!visionClient) {
         throw new Error('Failed to initialize Vision client');
@@ -77,15 +112,17 @@ export async function analyzeGarmentImage(imageUrl) {
     }
 
     // Download image
+    logger.debug('Downloading image...');
     const response = await axios.get(imageUrl, {
       responseType: 'arraybuffer',
       timeout: 5000
     });
-    const imageBuffer = Buffer.from(response.data);
+    logger.debug('Image downloaded successfully');
 
-    // Analyze image with multiple features including Google Lens capabilities
+    // Analyze image with multiple features
+    logger.debug('Sending image to Vision API...');
     const [result] = await visionClient.annotateImage({
-      image: { content: imageBuffer },
+      image: { content: Buffer.from(response.data) },
       features: [
         { type: 'LABEL_DETECTION', maxResults: 20 },
         { type: 'LOGO_DETECTION', maxResults: 5 },
@@ -93,146 +130,192 @@ export async function analyzeGarmentImage(imageUrl) {
         { type: 'OBJECT_LOCALIZATION', maxResults: 5 },
         { type: 'IMAGE_PROPERTIES', maxResults: 5 },
         { type: 'PRODUCT_SEARCH', maxResults: 5 },
-        { type: 'TEXT_DETECTION' }, // For reading any text/labels on clothing
-        { type: 'SAFE_SEARCH_DETECTION' } // Ensure image appropriateness
+        { type: 'TEXT_DETECTION' },
+        { type: 'SAFE_SEARCH_DETECTION' }
       ]
     });
 
-    if (!result) {
-      throw new Error('No analysis results received');
+    // Log raw Vision API response without image data
+    logger.debug('Raw Vision API response:', {
+      hasImageProperties: !!result.imagePropertiesAnnotation,
+      hasLabelAnnotations: !!result.labelAnnotations,
+      hasLogoAnnotations: !!result.logoAnnotations,
+      hasObjectAnnotations: !!result.localizedObjectAnnotations,
+      hasProductSearch: !!result.productSearchResults,
+      hasWebSearch: !!result.webDetection,
+      hasTextDetection: !!result.textAnnotations
+    });
+
+    // Log detailed analysis results
+    if (result.webDetection?.pagesWithMatchingImages) {
+      logger.debug('Product details found:', {
+        productDetails: result.webDetection.pagesWithMatchingImages.map(page => ({
+          title: page.pageTitle,
+          url: page.url
+        }))
+      });
     }
 
-    // Extract brand from logo detection, web entities, and product search
-    let brand = null;
-    let productUrl = null;
-    let productDetails = null;
-
-    // Check logo detection first
-    if (result.logoAnnotations?.length > 0) {
-      brand = result.logoAnnotations[0].description;
+    if (result.labelAnnotations) {
+      logger.debug('Detected labels:', {
+        highConfidence: result.labelAnnotations
+          .filter(label => label.score > 0.8)
+          .map(label => label.description)
+      });
     }
 
-    // Check web detection for brand and product URL
-    if (result.webDetection) {
-      // Known fashion brands
-      const fashionBrands = [
-        'Zara', 'H&M', 'Mango', 'Nike', 'Adidas', 'Gucci', 'Prada', 
-        'Louis Vuitton', 'Balenciaga', 'Dior', 'Chanel', 'Hermès',
-        'Saint Laurent', 'Fendi', 'Valentino', 'Versace', 'Burberry'
-      ];
+    if (result.localizedObjectAnnotations) {
+      logger.debug('Detected objects:', {
+        objects: result.localizedObjectAnnotations.map(obj => ({
+          name: obj.name,
+          confidence: obj.score
+        }))
+      });
+    }
 
-      // Look for brand in web entities if not found in logo
-      if (!brand && result.webDetection.webEntities) {
-        const brandEntity = result.webDetection.webEntities.find(entity => 
-          fashionBrands.some(brand => 
-            entity.description.toLowerCase().includes(brand.toLowerCase())
-          )
-        );
-        if (brandEntity) {
-          brand = brandEntity.description;
+    if (result.imagePropertiesAnnotation?.dominantColors) {
+      logger.debug('Color analysis:', {
+        dominantColor: result.imagePropertiesAnnotation.dominantColors.colors[0]
+      });
+    }
+
+    // Construct product name
+    let productName = '';
+    let brandName = '';
+    let itemType = '';
+    let pattern = '';
+
+    // Extract brand from web detection or logo
+    if (result.webDetection?.pagesWithMatchingImages?.[0]?.pageTitle) {
+      const pageTitle = result.webDetection.pagesWithMatchingImages[0].pageTitle;
+      // Extract brand name from title
+      const brandMatch = pageTitle.match(/^(.*?)\s+(?:[-|]|leopard-print|animal-print)/i);
+      if (brandMatch) {
+        brandName = brandMatch[1].trim();
+      }
+    }
+
+    // Detect item type from object annotations
+    if (result.localizedObjectAnnotations) {
+      const footwearTypes = ['Shoe', 'Boot', 'Sandal', 'Sneaker', 'Heels', 'Footwear'];
+      const clothingTypes = ['Dress', 'Shirt', 'Pants', 'Skirt', 'Jacket'];
+      
+      for (const obj of result.localizedObjectAnnotations) {
+        if (footwearTypes.includes(obj.name)) {
+          itemType = obj.name.toLowerCase();
+          break;
+        } else if (clothingTypes.includes(obj.name)) {
+          itemType = obj.name.toLowerCase();
+          break;
         }
       }
-
-      // Look for product URL and details in matching pages
-      if (result.webDetection.pagesWithMatchingImages) {
-        const shoppingDomains = [
-          'zara.com', 'hm.com', 'mango.com', 'asos.com', 'net-a-porter.com',
-          'farfetch.com', 'matchesfashion.com', 'mytheresa.com', 'shopbop.com',
-          'nordstrom.com', 'ssense.com', 'revolve.com'
-        ];
-
-        const shoppingPage = result.webDetection.pagesWithMatchingImages.find(page => 
-          shoppingDomains.some(domain => page.url.includes(domain))
-        );
-        if (shoppingPage) {
-          productUrl = shoppingPage.url;
-          productDetails = {
-            url: shoppingPage.url,
-            title: shoppingPage.pageTitle,
-            partialMatchingImages: result.webDetection.partialMatchingImages?.length || 0,
-            visuallySimilarImages: result.webDetection.visuallySimilarImages?.length || 0
-          };
-        }
-      }
     }
 
-    // Extract product search information if available
-    if (result.productSearchResults?.results) {
-      const productResults = result.productSearchResults.results;
-      if (productResults.length > 0) {
-        const bestMatch = productResults[0];
-        productDetails = {
-          ...productDetails,
-          productCategory: bestMatch.product.productCategory,
-          productLabels: bestMatch.product.productLabels,
-          score: bestMatch.score
-        };
-      }
-    }
-
-    // Extract labels and detect type
-    const labels = result.labelAnnotations?.map(label => ({
-      description: label.description,
-      score: label.score
-    })) || [];
-
-    // Filter high confidence labels
-    const highConfidenceLabels = labels
-      .filter(label => label.score > 0.7)
-      .map(label => label.description);
-
-    // Check for patterns and prints
+    // Detect patterns
     const patterns = [
-      'leopard', 'animal print', 'tiger', 'zebra', 'snake', 'cheetah',
-      'giraffe', 'cow print', 'crocodile', 'alligator', 'floral',
-      'striped', 'checked', 'plaid', 'polka dot', 'geometric'
+      'leopard print', 'animal print', 'tiger print', 'zebra print', 
+      'snake print', 'floral print', 'polka dot', 'striped', 'plaid'
     ];
 
-    const detectedPatterns = highConfidenceLabels
-      .filter(label => patterns.some(pattern => 
-        label.toLowerCase().includes(pattern.toLowerCase())
-      ));
+    if (result.labelAnnotations) {
+      for (const label of result.labelAnnotations) {
+        for (const p of patterns) {
+          if (label.description.toLowerCase().includes(p)) {
+            pattern = p;
+            break;
+          }
+        }
+        if (pattern) break;
+      }
+    }
 
-    // Extract dominant color
+    // Construct full name
+    productName = [
+      brandName,
+      pattern,
+      itemType
+    ].filter(Boolean).join(' ');
+
+    // If we couldn't construct a good name, use the page title
+    if (!productName && result.webDetection?.pagesWithMatchingImages?.[0]?.pageTitle) {
+      productName = result.webDetection.pagesWithMatchingImages[0].pageTitle
+        .split('|')[0]
+        .trim();
+    }
+
+    // Extract product URL
+    let productUrl = null;
+    if (result.webDetection?.pagesWithMatchingImages) {
+      const shoppingPage = result.webDetection.pagesWithMatchingImages[0];
+      if (shoppingPage) {
+        productUrl = shoppingPage.url;
+      }
+    }
+
+    // Extract color
     const color = result.imagePropertiesAnnotation?.dominantColors?.colors?.[0];
-    let dominantColor = null;
-
-    if (detectedPatterns.length > 0) {
-      dominantColor = `${detectedPatterns[0]} pattern`;
-    } else if (color) {
+    let dominantColor = pattern ? pattern : null;
+    
+    if (!dominantColor && color) {
       dominantColor = findClosestNamedColor(
         `rgb(${Math.round(color.color.red)}, ${Math.round(color.color.green)}, ${Math.round(color.color.blue)})`
       );
     }
 
-    // Extract any text found on the garment
-    const textAnnotations = result.textAnnotations?.[0]?.description || '';
+    // Detect type for categorization
+    const type = detectProductType([itemType, ...result.labelAnnotations.map(l => l.description)].join(' '));
 
-    // Detect product type
-    const type = detectProductType(highConfidenceLabels.join(' '));
+    // Extract price if available in text
+    let price = null;
+    if (result.textAnnotations) {
+      const priceMatch = result.textAnnotations[0]?.description.match(/[\$€£](\d+(?:\.\d{2})?)/);
+      if (priceMatch) {
+        price = parseFloat(priceMatch[1]);
+      }
+    }
 
-    return {
-      labels: highConfidenceLabels,
-      color: dominantColor,
-      type,
-      brand,
+    // Get Gemini's interpretation
+    const geminiResults = await interpretWithGemini({
+      webDetection: result.webDetection,
+      labelAnnotations: result.labelAnnotations,
+      localizedObjectAnnotations: result.localizedObjectAnnotations,
+      imageProperties: result.imagePropertiesAnnotation
+    });
+
+    // Combine Vision API and Gemini results
+    const analysis = {
+      name: geminiResults?.name || productName,
+      brand: geminiResults?.brand || brandName,
+      color: geminiResults?.color || dominantColor,
+      type: geminiResults?.type ? {
+        category: 'clothes',
+        subcategory: geminiResults.type.toLowerCase(),
+        name: geminiResults.type
+      } : type,
+      price: geminiResults?.price || price,
       productUrl,
-      productDetails,
-      patterns: detectedPatterns,
-      textFound: textAnnotations,
       confidence: {
-        labels: labels[0]?.score || 0,
+        labels: result.labelAnnotations?.[0]?.score || 0,
         color: color?.score || 0,
-        overall: labels[0]?.score || 0
+        overall: geminiResults?.confidence || result.labelAnnotations?.[0]?.score || 0
       }
     };
+
+    logger.info('Analysis completed with Gemini enhancement:', {
+      hasGeminiResults: !!geminiResults,
+      hasBrand: !!analysis.brand,
+      hasColor: !!analysis.color,
+      hasType: !!analysis.type,
+      confidence: analysis.confidence.overall
+    });
+
+    return analysis;
   } catch (error) {
     logger.error('Vision analysis error:', {
       error: error.message,
-      stack: error.stack,
-      details: error.details || error
+      stack: error.stack
     });
-    throw new Error('Vision analysis failed: ' + error.message);
+    throw error;
   }
 }
 
