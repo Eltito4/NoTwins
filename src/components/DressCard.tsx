@@ -82,9 +82,9 @@ export function DressCard({
   if (compact) {
     return (
       <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-        <div className="flex h-24">
+        <div className="flex h-32">
           {/* Image Section */}
-          <div className="w-24 h-24 flex-shrink-0 relative bg-gray-50">
+          <div className="w-32 h-32 flex-shrink-0 relative bg-gray-50">
             {imageLoading && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
@@ -111,7 +111,7 @@ export function DressCard({
           </div>
 
           {/* Content Section */}
-          <div className="flex-1 p-3 min-w-0">
+          <div className="flex-1 p-4 min-w-0">
             <div className="flex justify-between items-start">
               <div className="min-w-0">
                 <h3 className="font-medium text-gray-900 truncate">{dress.name}</h3>
@@ -142,25 +142,29 @@ export function DressCard({
               </div>
             </div>
 
-            <div className="mt-1 flex items-center gap-3 text-sm">
+            <div className="mt-2 space-y-1.5">
               {dress.brand && (
-                <span className="text-gray-600 truncate">{dress.brand}</span>
+                <p className="text-sm text-gray-600 truncate">Brand: {dress.brand}</p>
               )}
               {dress.price && (
-                <span className="text-gray-600">{formatPrice(dress.price)}</span>
+                <p className="text-sm text-gray-600">Price: {formatPrice(dress.price)}</p>
+              )}
+              {dress.type && (
+                <p className="text-sm text-gray-600 truncate">
+                  Type: {dress.type.name}
+                </p>
+              )}
+              {dress.color && (
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-4 h-4 rounded-full border border-gray-200 flex-shrink-0"
+                    style={{ backgroundColor: dress.color }}
+                    title={dress.color}
+                  />
+                  <span className="text-sm text-gray-600 truncate">{dress.color}</span>
+                </div>
               )}
             </div>
-
-            {dress.color && (
-              <div className="mt-2 flex items-center gap-2">
-                <div
-                  className="w-4 h-4 rounded-full border border-gray-200 flex-shrink-0"
-                  style={{ backgroundColor: dress.color }}
-                  title={dress.color}
-                />
-                <span className="text-sm text-gray-600 truncate">{dress.color}</span>
-              </div>
-            )}
           </div>
 
           {/* Duplicate Alert */}

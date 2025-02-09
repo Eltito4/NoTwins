@@ -28,6 +28,9 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
   const exactDuplicates = userDuplicates.filter(d => d.type === 'exact');
   const partialDuplicates = userDuplicates.filter(d => d.type === 'partial');
 
+  const hasExactDuplicates = duplicates.some(d => d.type === 'exact');
+  const hasPartialDuplicates = duplicates.some(d => d.type === 'partial');
+
   const formatUserInfo = (item: { userId: string; color?: string }) => {
     const user = participants[item.userId];
     const userName = user?.name || 'Unknown User';
@@ -111,9 +114,20 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
   return (
     <div
       onClick={onClick}
-      className="bg-eventCard border border-gray-200 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 p-6 cursor-pointer transform hover:scale-[1.02]"
+      className="bg-eventCard border border-gray-200 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 p-6 cursor-pointer transform hover:scale-[1.02] relative"
     >
-      {/* Event title */}
+      {(hasExactDuplicates || hasPartialDuplicates) && (
+        <div className="absolute -top-2 -right-2">
+          <div className={`p-2 rounded-full shadow-lg ${
+            hasExactDuplicates 
+              ? 'bg-[#FFEBE8] text-[#D84315] animate-[ring_4s_ease-in-out_infinite]'
+              : 'bg-[#FFEDC2] text-[#8D6E63]'
+          } transform hover:scale-110 transition-transform`}>
+            <Bell size={20} />
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="text-xl font-bold text-gray-800">{event.name}</h3>
@@ -147,11 +161,10 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
         </div>
       </div>
 
-      {/* Alerts section */}
       {userDuplicates.length > 0 && (
-        <div className="mb-4 bg-[#E4EDE1] rounded-lg p-4 border border-primary/20">
+        <div className="mb-4 bg-eventCard/50 rounded-lg p-4 border border-primary/20">
           {exactDuplicates.length > 0 && (
-            <div className="flex items-start gap-2 bg-[#E4EDE1] text-[#ED583F]">
+            <div className="flex items-start gap-2 text-red-600">
               <Bell size={18} className="flex-shrink-0 mt-0.5 animate-[ring_4s_ease-in-out_infinite]" />
               <div>
                 <p className="font-medium">Exact duplicates found:</p>
@@ -172,7 +185,7 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
           )}
           
           {partialDuplicates.length > 0 && (
-            <div className="flex items-start gap-2 bg-[#E4EDE1] text-[#F8CE47] mt-3">
+            <div className="flex items-start gap-2 text-amber-600 mt-3">
               <Bell size={18} className="flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-medium">Similar items found:</p>
