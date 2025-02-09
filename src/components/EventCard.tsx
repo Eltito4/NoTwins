@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { Event, DuplicateInfo, User } from '../types';
 import { Calendar, MapPin, Users, Share2, Check, Copy, Trash2, Bell, Eye, Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { Event, DuplicateInfo, User } from '../types';
 import toast from 'react-hot-toast';
 
 interface EventCardProps {
   event: Event;
   onClick: () => void;
-  onDelete?: () => void;
+  onDelete?: (eventId: string) => Promise<void>;
   duplicates?: DuplicateInfo[];
   participants: Record<string, User>;
 }
@@ -90,10 +90,12 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
     if (confirmed) {
       setIsDeleting(true);
       try {
-        await onDelete();
+        await onDelete(event.id);
         toast.success('Event deleted successfully');
       } catch (error) {
+        console.error('Error deleting event:', error);
         toast.error('Failed to delete event');
+      } finally {
         setIsDeleting(false);
       }
     }

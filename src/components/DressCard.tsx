@@ -142,26 +142,36 @@ export function DressCard({
               </div>
             </div>
 
-            <div className="mt-2 space-y-1.5">
+            <div className="mt-2 space-y-1.5 flex flex-col">
               {dress.brand && (
-                <p className="text-sm text-gray-600 truncate">Brand: {dress.brand}</p>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-600">Brand:</span>
+                  <span className="text-sm text-gray-600 ml-2">{dress.brand}</span>
+                </div>
               )}
               {dress.price && (
-                <p className="text-sm text-gray-600">Price: {formatPrice(dress.price)}</p>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-600">Price:</span>
+                  <span className="text-sm text-gray-600 ml-2">{formatPrice(dress.price)}</span>
+                </div>
               )}
               {dress.type && (
-                <p className="text-sm text-gray-600 truncate">
-                  Type: {dress.type.name}
-                </p>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-600">Type:</span>
+                  <span className="text-sm text-gray-600 ml-2">{dress.type.name}</span>
+                </div>
               )}
               {dress.color && (
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-4 h-4 rounded-full border border-gray-200 flex-shrink-0"
-                    style={{ backgroundColor: dress.color }}
-                    title={dress.color}
-                  />
-                  <span className="text-sm text-gray-600 truncate">{dress.color}</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-600">Color:</span>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-4 h-4 rounded-full border border-gray-200 flex-shrink-0"
+                      style={{ backgroundColor: dress.color }}
+                      title={dress.color}
+                    />
+                    <span className="text-sm text-gray-600">{dress.color}</span>
+                  </div>
                 </div>
               )}
             </div>
