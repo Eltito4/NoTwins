@@ -37,3 +37,23 @@ export function detectProductType(text) {
     name: 'Other'
   };
 }
+
+export function getCategoryName(categoryId) {
+  const category = CATEGORIES.find(c => c.id === categoryId);
+  return category?.name || 'Other';
+}
+
+export function getSubcategoryName(categoryId, subcategoryId) {
+  const category = CATEGORIES.find(c => c.id === categoryId);
+  const subcategory = category?.subcategories.find(s => s.id === subcategoryId);
+  return subcategory?.name || 'Other';
+}
+
+export function getAllCategories() {
+  return CATEGORIES;
+}
+
+export function getSubcategories(categoryId) {
+  const category = CATEGORIES.find(c => c.id === categoryId);
+  return category?.subcategories || [];
+}

@@ -2,7 +2,7 @@ import { load } from 'cheerio';
 import { logger } from '../logger.js';
 import axios from 'axios';
 import { detectProductType } from '../categorization/detector.js';
-import { findClosestNamedColor } from '../colors/utils.js';
+import { findClosestNamedColor } from '../colors/index.js';
 
 /**
  * Adaptively extracts product details from a webpage or API response
