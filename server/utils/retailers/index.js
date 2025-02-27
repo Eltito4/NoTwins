@@ -1,8 +1,14 @@
 import { logger } from '../logger.js';
 import { interpretRetailerConfig } from '../vision/gemini.js';
+import { carolinaHerreraConfig } from './configs/carolina-herrera.js';
 
 // In-memory cache for retailer configs
 const retailerConfigCache = new Map();
+
+// Predefined retailer configs
+const predefinedConfigs = {
+  'carolinaherrera.com': carolinaHerreraConfig
+};
 
 export async function getRetailerConfig(url) {
   try {
@@ -13,17 +19,96 @@ export async function getRetailerConfig(url) {
       return retailerConfigCache.get(hostname);
     }
 
+    // Check for predefined config
+    for (const [domain, config] of Object.entries(predefinedConfigs)) {
+      if (hostname.includes(domain)) {
+        logger.info('Using predefined retailer config for:', hostname);
+        retailerConfigCache.set(hostname, config);
+        return config;
+      }
+    }
+
     // Use Gemini to interpret the retailer
-    logger.info('Generating retailer config for:', hostname);
-    const config = await interpretRetailerConfig(url);
-    
-    // Cache the config
-    retailerConfigCache.set(hostname, config);
-    
-    return config;
+    try {
+      logger.info('Generating retailer config for:', hostname);
+      const config = await interpretRetailerConfig(url);
+      
+      // Cache the config
+      retailerConfigCache.set(hostname, config);
+      
+      return config;
+    } catch (error) {
+      logger.error('Error generating retailer config:', error);
+      
+      // Create a default configuration
+      const defaultConfig = {
+        name: extractDomainName(hostname),
+        defaultCurrency: "EUR",
+        selectors: {
+          name: [
+            'h1',
+            '.product-name',
+            '.product-title',
+            'meta[property="og:title"]',
+            '[data-testid="product-name"]',
+            '[itemprop="name"]'
+          ],
+          price: [
+            '.price',
+            '.product-price',
+            'meta[property="product:price:amount"]',
+            '[data-testid="product-price"]',
+            '[itemprop="price"]'
+          ],
+          color: [
+            '.color-selector .selected',
+            '.selected-color',
+            '[data-testid="selected-color"]',
+            '[itemprop="color"]'
+          ],
+          image: [
+            'meta[property="og:image"]',
+            '.product-image img',
+            '.gallery-image img',
+            '[data-testid="product-image"]',
+            '[itemprop="image"]'
+          ],
+          brand: [
+            'meta[property="product:brand"]',
+            '.product-brand',
+            '[itemprop="brand"]'
+          ]
+        },
+        brand: {
+          defaultValue: extractDomainName(hostname)
+        }
+      };
+      
+      retailerConfigCache.set(hostname, defaultConfig);
+      return defaultConfig;
+    }
   } catch (error) {
     logger.error('Error getting retailer config:', error);
     throw error;
+  }
+}
+
+function extractDomainName(hostname) {
+  try {
+    const parts = hostname.split('.');
+    
+    // Handle www prefix
+    if (parts[0] === 'www') {
+      parts.shift();
+    }
+    
+    // Get the main domain name (usually the second-to-last part)
+    const domainName = parts[parts.length - 2];
+    
+    // Capitalize first letter
+    return domainName.charAt(0).toUpperCase() + domainName.slice(1);
+  } catch (error) {
+    return "Unknown Retailer";
   }
 }
 

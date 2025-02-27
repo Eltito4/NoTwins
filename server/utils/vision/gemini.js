@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { logger } from '../logger.js';
 import { AVAILABLE_COLORS } from '../colors/constants.js';
 import { CATEGORIES } from '../categorization/categories.js';
+import { detectProductType } from '../categorization/detector.js';
 
 let genAI = null;
 
@@ -20,7 +21,7 @@ function initializeGemini() {
   }
 }
 
-// Function for interpreting Vision API results without relying on Gemini
+// Function for interpreting Vision API results with fallback mechanisms
 export async function interpretProductDetails(visionResults) {
   try {
     if (!visionResults) {
@@ -32,42 +33,35 @@ export async function interpretProductDetails(visionResults) {
     const labelAnnotations = visionResults.labelAnnotations || [];
     const webEntities = visionResults.webDetection?.webEntities || [];
     const objectAnnotations = visionResults.localizedObjectAnnotations || [];
+    const productUrls = visionResults.productUrls || [];
     
     // Extract product type from labels and objects
     const typeLabels = labelAnnotations.map(label => label.description.toLowerCase());
     const objectLabels = objectAnnotations.map(obj => obj.name.toLowerCase());
     const allLabels = [...typeLabels, ...objectLabels].join(' ');
     
-    // Extract brand information
-    const brandEntities = webEntities.filter(entity => 
-      entity.description && 
-      !entity.description.toLowerCase().includes('shoe') &&
-      !entity.description.toLowerCase().includes('boot') &&
-      !entity.description.toLowerCase().includes('sandal') &&
-      !entity.description.toLowerCase().includes('fashion') &&
-      entity.score > 0.3
-    );
-    
-    // Extract color information from labels
-    const colorLabels = labelAnnotations.filter(label => 
-      AVAILABLE_COLORS.some(color => 
-        label.description.toLowerCase().includes(color.name.toLowerCase())
-      )
-    );
-
     // Try to use Gemini if available
+    if (!genAI) {
+      genAI = initializeGemini();
+    }
+    
     let geminiResult = null;
     if (genAI) {
       try {
-        geminiResult = await tryGeminiAnalysis(visionResults, labelAnnotations, objectAnnotations, webEntities);
+        geminiResult = await tryGeminiAnalysis(visionResults);
+        if (geminiResult) {
+          logger.info('Successfully used Gemini for product analysis');
+          
+          // Add product URL as description if available
+          if (productUrls.length > 0 && !geminiResult.description) {
+            geminiResult.description = productUrls[0];
+          }
+          
+          return geminiResult;
+        }
       } catch (error) {
         logger.error('Gemini analysis failed, using direct extraction:', error);
       }
-    }
-
-    // If Gemini succeeded, use its results
-    if (geminiResult) {
-      return geminiResult;
     }
 
     // Direct extraction as fallback
@@ -81,8 +75,14 @@ export async function interpretProductDetails(visionResults) {
       productName = mainObject.name;
       
       // Add color if available
-      if (colorLabels.length > 0) {
-        const colorName = extractColorName(colorLabels[0].description);
+      const colorLabel = labelAnnotations.find(label => 
+        AVAILABLE_COLORS.some(color => 
+          label.description.toLowerCase().includes(color.name.toLowerCase())
+        )
+      );
+      
+      if (colorLabel) {
+        const colorName = extractColorName(colorLabel.description);
         if (colorName && !productName.toLowerCase().includes(colorName.toLowerCase())) {
           productName = `${colorName} ${productName}`;
         }
@@ -93,8 +93,8 @@ export async function interpretProductDetails(visionResults) {
         !AVAILABLE_COLORS.some(color => 
           label.description.toLowerCase().includes(color.name.toLowerCase())
         ) &&
-        !brandEntities.some(brand => 
-          label.description.toLowerCase().includes(brand.description.toLowerCase())
+        !webEntities.some(entity => 
+          label.description.toLowerCase().includes(entity.description.toLowerCase())
         )
       );
       
@@ -109,23 +109,36 @@ export async function interpretProductDetails(visionResults) {
     
     // Extract brand
     let brand = null;
+    const brandEntities = webEntities.filter(entity => 
+      entity.description && 
+      !entity.description.toLowerCase().includes('shoe') &&
+      !entity.description.toLowerCase().includes('boot') &&
+      !entity.description.toLowerCase().includes('sandal') &&
+      !entity.description.toLowerCase().includes('fashion') &&
+      entity.score > 0.3
+    );
+    
     if (brandEntities.length > 0) {
       brand = brandEntities[0].description;
     }
     
     // Extract color
     let color = null;
-    if (colorLabels.length > 0) {
-      color = extractColorName(colorLabels[0].description);
+    const colorLabel = labelAnnotations.find(label => 
+      AVAILABLE_COLORS.some(color => 
+        label.description.toLowerCase().includes(color.name.toLowerCase())
+      )
+    );
+    
+    if (colorLabel) {
+      color = extractColorName(colorLabel.description);
     }
     
     // Determine product type
-    const type = determineProductType(allLabels, objectAnnotations);
+    const type = detectProductType(allLabels);
     
     // Get product URL
-    const description = visionResults.productUrls && visionResults.productUrls.length > 0 
-      ? visionResults.productUrls[0] 
-      : null;
+    const description = productUrls.length > 0 ? productUrls[0] : null;
     
     return {
       name: productName,
@@ -148,9 +161,20 @@ export async function interpretProductDetails(visionResults) {
 }
 
 // Helper function to try Gemini analysis
-async function tryGeminiAnalysis(visionResults, labelAnnotations, objectAnnotations, webEntities) {
+async function tryGeminiAnalysis(visionResults) {
   try {
+    if (!genAI) {
+      genAI = initializeGemini();
+      if (!genAI) {
+        throw new Error('Gemini not initialized');
+      }
+    }
+    
     const model = genAI.getGenerativeModel({ model: 'gemini-1.0-pro' });
+    
+    const labelAnnotations = visionResults.labelAnnotations || [];
+    const webEntities = visionResults.webDetection?.webEntities || [];
+    const objectAnnotations = visionResults.localizedObjectAnnotations || [];
     
     // Prepare a focused prompt for Gemini
     const prompt = `
@@ -231,74 +255,11 @@ function extractColorName(text) {
   return null;
 }
 
-// Helper function to determine product type
-function determineProductType(allLabels, objectAnnotations) {
-  // Try to detect from object annotations first
-  if (objectAnnotations.length > 0) {
-    const mainObject = objectAnnotations[0].name.toLowerCase();
-    
-    // Check for shoes/boots
-    if (mainObject.includes('shoe') || mainObject.includes('boot') || mainObject.includes('sandal')) {
-      return {
-        category: 'accessories',
-        subcategory: 'shoes',
-        name: 'Shoes'
-      };
-    }
-    
-    // Check for bags
-    if (mainObject.includes('bag') || mainObject.includes('purse') || mainObject.includes('handbag')) {
-      return {
-        category: 'accessories',
-        subcategory: 'bags',
-        name: 'Bags'
-      };
-    }
-    
-    // Check for dresses
-    if (mainObject.includes('dress') || mainObject.includes('gown')) {
-      return {
-        category: 'clothes',
-        subcategory: 'dresses',
-        name: 'Dresses'
-      };
-    }
-    
-    // Check for tops
-    if (mainObject.includes('shirt') || mainObject.includes('blouse') || mainObject.includes('top')) {
-      return {
-        category: 'clothes',
-        subcategory: 'tops',
-        name: 'Tops'
-      };
-    }
-    
-    // Check for bottoms
-    if (mainObject.includes('pants') || mainObject.includes('jeans') || mainObject.includes('skirt')) {
-      return {
-        category: 'clothes',
-        subcategory: 'bottoms',
-        name: 'Bottoms'
-      };
-    }
-  }
-  
-  // Use the categorization detector as fallback
-  return {
-    category: 'clothes',
-    subcategory: 'other',
-    name: 'Other Clothes'
-  };
-}
-
 // New function for generating retailer configs
 export async function interpretRetailerConfig(url) {
   try {
     if (!genAI) {
       genAI = initializeGemini();
-      if (!genAI) {
-        throw new Error('Gemini initialization failed');
-      }
     }
 
     // Create a default configuration based on common selectors
@@ -344,6 +305,12 @@ export async function interpretRetailerConfig(url) {
         defaultValue: extractDomainName(url)
       }
     };
+
+    // If Gemini is not available, return default config
+    if (!genAI) {
+      logger.info('Gemini not available, using default retailer config');
+      return defaultConfig;
+    }
 
     try {
       // Try to use Gemini for a more tailored config

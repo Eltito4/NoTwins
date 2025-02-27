@@ -1,8 +1,9 @@
 import { load } from 'cheerio';
 import { logger } from '../logger.js';
 import { validateUrl } from './urlValidator.js';
-import { getRetailerConfig } from '../retailers/index.js';
+import { getRetailerConfig, getRetailerHeaders } from '../retailers/index.js';
 import { extractProductDetails } from './productExtractor.js';
+import axios from 'axios';
 
 export async function scrapeProduct(url) {
   try {
@@ -29,13 +30,47 @@ export async function scrapeProduct(url) {
 
     // Fetch page content
     logger.debug('Fetching page:', transformedUrl);
-    const response = await fetch(transformedUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        ...retailerConfig.headers
+    
+    // Special handling for API URLs
+    if (transformedUrl.includes('/api/')) {
+      try {
+        const response = await axios.get(transformedUrl, {
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/91.0.4472.124 Safari/537.36',
+            ...retailerConfig.headers
+          }
+        });
+
+        if (!response.data) {
+          throw new Error('No data returned from API');
+        }
+
+        // Extract product details from API response
+        const productData = response.data;
+        
+        return {
+          name: productData.name || productData.title || productData.displayName,
+          imageUrl: productData.images?.[0]?.url || productData.image?.url || productData.imageUrl,
+          color: productData.color?.name || productData.colorName,
+          price: productData.price?.value || productData.price,
+          brand: retailerConfig.brand?.defaultValue || productData.brand,
+          type: {
+            category: 'clothes',
+            subcategory: 'dresses',
+            name: 'Dresses'
+          },
+          description: validatedUrl
+        };
+      } catch (error) {
+        logger.error('API request failed:', error);
+        throw new Error(`Failed to fetch product data: ${error.message}`);
       }
+    }
+
+    // Regular HTML page scraping
+    const response = await fetch(transformedUrl, {
+      headers: getRetailerHeaders(retailerConfig)
     });
 
     if (!response.ok) {
