@@ -1,6 +1,5 @@
 import { logger } from '../logger.js';
 import { interpretRetailerConfig } from '../vision/gemini.js';
-import { getRegisteredRetailerConfig } from './retailerRegistry.js';
 
 // In-memory cache for retailer configs
 const retailerConfigCache = new Map();
@@ -12,14 +11,6 @@ export async function getRetailerConfig(url) {
     // Check cache first
     if (retailerConfigCache.has(hostname)) {
       return retailerConfigCache.get(hostname);
-    }
-
-    // Check for registered config
-    const registeredConfig = getRegisteredRetailerConfig(hostname);
-    if (registeredConfig) {
-      logger.info('Using registered retailer config for:', hostname);
-      retailerConfigCache.set(hostname, registeredConfig);
-      return registeredConfig;
     }
 
     // Use Gemini to interpret the retailer
@@ -123,4 +114,9 @@ export function getRetailerHeaders(retailerConfig) {
     'Referer': 'https://www.google.com',
     ...retailerConfig?.headers
   };
+}
+
+// Get list of cached retailers
+export function getCachedRetailers() {
+  return Array.from(retailerConfigCache.keys());
 }
