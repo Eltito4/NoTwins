@@ -2,7 +2,6 @@ import { load } from 'cheerio';
 import { logger } from '../logger.js';
 import { validateUrl } from './urlValidator.js';
 import { getRetailerConfig, getRetailerHeaders } from '../retailers/index.js';
-import axios from 'axios';
 import { adaptiveExtract } from './adaptiveExtractor.js';
 
 export async function scrapeProduct(url) {

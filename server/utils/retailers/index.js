@@ -1,14 +1,9 @@
 import { logger } from '../logger.js';
 import { interpretRetailerConfig } from '../vision/gemini.js';
-import { carolinaHerreraConfig } from './configs/carolina-herrera.js';
+import { getRegisteredRetailerConfig } from './retailerRegistry.js';
 
 // In-memory cache for retailer configs
 const retailerConfigCache = new Map();
-
-// Predefined retailer configs
-const predefinedConfigs = {
-  'carolinaherrera.com': carolinaHerreraConfig
-};
 
 export async function getRetailerConfig(url) {
   try {
@@ -19,13 +14,12 @@ export async function getRetailerConfig(url) {
       return retailerConfigCache.get(hostname);
     }
 
-    // Check for predefined config
-    for (const [domain, config] of Object.entries(predefinedConfigs)) {
-      if (hostname.includes(domain)) {
-        logger.info('Using predefined retailer config for:', hostname);
-        retailerConfigCache.set(hostname, config);
-        return config;
-      }
+    // Check for registered config
+    const registeredConfig = getRegisteredRetailerConfig(hostname);
+    if (registeredConfig) {
+      logger.info('Using registered retailer config for:', hostname);
+      retailerConfigCache.set(hostname, registeredConfig);
+      return registeredConfig;
     }
 
     // Use Gemini to interpret the retailer
@@ -84,6 +78,7 @@ export async function getRetailerConfig(url) {
         }
       };
       
+      logger.info('Using default retailer config for:', hostname);
       retailerConfigCache.set(hostname, defaultConfig);
       return defaultConfig;
     }
