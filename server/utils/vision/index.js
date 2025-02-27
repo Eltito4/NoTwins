@@ -89,11 +89,11 @@ export async function analyzeGarmentImage(imageUrl) {
     const [result] = await visionClient.annotateImage({
       image: { content: Buffer.from(response.data) },
       features: [
-        { type: 'LABEL_DETECTION', maxResults: 20 },
-        { type: 'LOGO_DETECTION', maxResults: 5 },
-        { type: 'WEB_DETECTION', maxResults: 20 }, // Increased for better URL coverage
-        { type: 'OBJECT_LOCALIZATION', maxResults: 5 },
-        { type: 'IMAGE_PROPERTIES', maxResults: 5 }
+        { type: 'LABEL_DETECTION', maxResults: 30 },
+        { type: 'LOGO_DETECTION', maxResults: 10 },
+        { type: 'WEB_DETECTION', maxResults: 30 }, 
+        { type: 'OBJECT_LOCALIZATION', maxResults: 10 },
+        { type: 'IMAGE_PROPERTIES', maxResults: 10 }
       ]
     });
 
@@ -103,11 +103,11 @@ export async function analyzeGarmentImage(imageUrl) {
 
     // Log detailed Vision API response
     logger.debug('Raw Vision API response:', {
-      hasImageProperties: true,
-      hasLabelAnnotations: true,
-      hasLogoAnnotations: true,
-      hasObjectAnnotations: true,
-      hasWebSearch: true,
+      hasImageProperties: !!result.imagePropertiesAnnotation,
+      hasLabelAnnotations: !!result.labelAnnotations,
+      hasLogoAnnotations: !!result.logoAnnotations,
+      hasObjectAnnotations: !!result.localizedObjectAnnotations,
+      hasWebSearch: !!result.webDetection,
       response: {
         labelAnnotations: result.labelAnnotations?.map(label => ({
           description: label.description,
@@ -168,38 +168,60 @@ export async function analyzeGarmentImage(imageUrl) {
       productUrls
     };
 
-    // After getting Vision API results, interpret with Gemini
+    // Direct extraction of basic information from Vision API
+    const directBrand = result.logoAnnotations?.[0]?.description || 
+                        result.webDetection?.webEntities?.find(e => e.score > 0.7)?.description;
+    
+    const directType = result.localizedObjectAnnotations?.[0]?.name || 
+                      result.labelAnnotations?.[0]?.description;
+    
+    // Extract color information
+    const dominantColors = result.imagePropertiesAnnotation?.dominantColors?.colors || [];
+    dominantColors.sort((a, b) => b.score - a.score);
+    const dominantColor = dominantColors[0];
+    
+    let colorName = null;
+    if (dominantColor) {
+      const rgb = `rgb(${Math.round(dominantColor.color.red)}, ${Math.round(dominantColor.color.green)}, ${Math.round(dominantColor.color.blue)})`;
+      colorName = findClosestNamedColor(rgb);
+      
+      // Also check if any label contains a color name
+      if (!colorName) {
+        const colorLabel = result.labelAnnotations?.find(label => 
+          label.description.toLowerCase().includes('red') ||
+          label.description.toLowerCase().includes('blue') ||
+          label.description.toLowerCase().includes('green') ||
+          label.description.toLowerCase().includes('black') ||
+          label.description.toLowerCase().includes('white') ||
+          label.description.toLowerCase().includes('yellow') ||
+          label.description.toLowerCase().includes('purple') ||
+          label.description.toLowerCase().includes('pink') ||
+          label.description.toLowerCase().includes('orange') ||
+          label.description.toLowerCase().includes('brown') ||
+          label.description.toLowerCase().includes('gray') ||
+          label.description.toLowerCase().includes('grey')
+        );
+        
+        if (colorLabel) {
+          colorName = findClosestNamedColor(colorLabel.description);
+        }
+      }
+    }
+
+    // Process with interpretProductDetails (which now has fallbacks if Gemini fails)
     const productInfo = await interpretProductDetails(visionResults);
 
-    if (!productInfo) {
-      logger.warn('No product information returned from Gemini');
-    }
-
-    // Extract color information
-    const color = result.imagePropertiesAnnotation?.dominantColors?.colors?.[0];
-    let dominantColor = null;
-    
-    if (color) {
-      dominantColor = findClosestNamedColor(
-        `rgb(${Math.round(color.color.red)}, ${Math.round(color.color.green)}, ${Math.round(color.color.blue)})`
-      );
-    }
-
-    // Detect type from label annotations
-    const labels = result.labelAnnotations?.map(label => label.description) || [];
-    const type = detectProductType(labels.join(' '));
-
-    // Combine Vision API and Gemini results
+    // Combine Vision API and Gemini results with fallbacks
     const analysis = {
-      name: productInfo?.name || '',
-      brand: productInfo?.brand || '',
-      color: productInfo?.color || dominantColor,
-      type: productInfo?.type || type,
+      name: productInfo?.name || directType || 'Unknown Item',
+      brand: productInfo?.brand || directBrand || null,
+      color: productInfo?.color || colorName || null,
+      type: productInfo?.type || detectProductType(result.labelAnnotations?.map(l => l.description).join(' ')),
       price: productInfo?.price || null,
       description: productInfo?.description || productUrls[0] || '',
       confidence: {
         labels: result.labelAnnotations?.[0]?.score || 0,
-        color: color?.score || 0,
+        color: dominantColor?.score || 0,
         overall: result.labelAnnotations?.[0]?.score || 0
       }
     };

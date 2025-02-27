@@ -72,7 +72,7 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
     try {
       const analysis = await analyzeGarmentImage(url);
       
-      // Update form data with Gemini analysis results
+      // Update form data with analysis results
       setFormData(prev => ({
         ...prev,
         name: analysis.name || '',
