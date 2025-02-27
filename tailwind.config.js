@@ -1,6 +1,4 @@
 /** @type {import('tailwindcss').Config} */
-import { colors } from './src/utils/theme/colors';
-
 export default {
   content: [
     "./index.html",
@@ -10,69 +8,46 @@ export default {
     extend: {
       colors: {
         // Main colors
-        background: colors.background,
+        background: '#CADFD9',
         primary: {
-          DEFAULT: colors.primary,
-          hover: colors.hover.primary,
+          DEFAULT: '#629FA2',
+          hover: '#548b8e',
         },
         
         // Event card colors
         eventCard: {
-          DEFAULT: colors.eventCard,
-          hover: colors.hover.background,
+          DEFAULT: '#FEFCE9',
+          hover: '#bbd2cc',
         },
         
         // Text colors
-        text: colors.text,
+        text: {
+          primary: '#1F2937',
+          secondary: '#4B5563',
+          muted: '#6B7280',
+        },
         
         // Feedback colors
-        success: colors.success,
-        error: colors.error,
-        warning: colors.warning,
-        info: colors.info,
+        success: '#10B981',
+        error: '#EF4444',
+        warning: '#F59E0B',
+        info: '#3B82F6',
         
         // Utility colors
-        border: colors.border,
-        divider: colors.divider,
-        overlay: colors.overlay,
+        border: '#E5E7EB',
+        divider: '#D1D5DB',
+        overlay: 'rgba(0, 0, 0, 0.5)',
       },
       
       backgroundColor: theme => ({
         ...theme('colors'),
         modal: '#FFFFFF',
         alert: {
-          warning: colors.warning,
-          error: colors.error,
-          info: colors.info,
+          warning: '#F59E0B',
+          error: '#EF4444',
+          info: '#3B82F6',
         }
       }),
-      
-      textColor: theme => ({
-        ...theme('colors'),
-      }),
-      
-      borderColor: theme => ({
-        ...theme('colors'),
-      }),
-      
-      // Opacity configurations
-      opacity: {
-        '0': '0',
-        '5': '0.05', 
-        '10': '0.1',
-        '20': '0.2',
-        '25': '0.25',
-        '30': '0.3',
-        '40': '0.4',
-        '50': '0.5',
-        '60': '0.6',
-        '70': '0.7',
-        '75': '0.75',
-        '80': '0.8',
-        '90': '0.9',
-        '95': '0.95',
-        '100': '1',
-      },
       
       // Shadow configurations  
       boxShadow: {
