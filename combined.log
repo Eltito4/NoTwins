@@ -1,18 +1,18 @@
-2025-02-27T18:42:59.295Z [34mdebug[39m: Initializing Vision client with:
+2025-02-27T18:47:18.202Z [34mdebug[39m: Initializing Vision client with:
 Metadata: {
   "projectId": "promising-haiku-449317-e0",
   "clientEmail": "vision-api-user-441@promising-haiku-449317-e0.iam.gserviceaccount.com",
   "hasPrivateKey": true
 }
-2025-02-27T18:42:59.702Z [32minfo[39m: Vision API client test successful
-2025-02-27T18:42:59.840Z [32minfo[39m: ✓
-2025-02-27T18:42:59.842Z [32minfo[39m: ✓
-2025-02-27T18:42:59.843Z [32minfo[39m: Environment:
-2025-02-27T18:42:59.843Z [32minfo[39m: Vision API status:
-2025-02-27T18:42:59.980Z [34mdebug[39m: Initializing Vision client with:
+2025-02-27T18:47:18.501Z [32minfo[39m: Vision API client test successful
+2025-02-27T18:47:18.656Z [32minfo[39m: ✓
+2025-02-27T18:47:18.658Z [32minfo[39m: ✓
+2025-02-27T18:47:18.658Z [32minfo[39m: Environment:
+2025-02-27T18:47:18.659Z [32minfo[39m: Vision API status:
+2025-02-27T18:47:24.977Z [34mdebug[39m: Initializing Vision client with:
 Metadata: {
   "projectId": "promising-haiku-449317-e0",
   "clientEmail": "vision-api-user-441@promising-haiku-449317-e0.iam.gserviceaccount.com",
   "hasPrivateKey": true
 }
-2025-02-27T18:43:00.373Z [32minfo[39m: Vision API client test successful
+2025-02-27T18:47:25.299Z [32minfo[39m: Vision API client test successful
