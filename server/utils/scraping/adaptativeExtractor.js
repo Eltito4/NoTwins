@@ -99,7 +99,6 @@ async function extractFromApi(url, retailerConfig) {
  * Extract product details from HTML
  * @param {string} url - The product URL
  * @param {object} retailerConfig - The retailer configuration
- * @returns {Promise<object> ```
  * @returns {Promise<object>} - The extracted product details
  */
 async function extractFromHtml(url, retailerConfig) {

@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { logger } from '../logger.js';
-import { AVAILABLE_COLORS } from '../colors/constants.js';
+import { AVAILABLE_COLORS } from '../colors/index.js';
 import { CATEGORIES } from '../categorization/categories.js';
 import { detectProductType } from '../categorization/detector.js';
 

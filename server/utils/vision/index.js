@@ -2,7 +2,7 @@ import { interpretProductDetails } from './gemini.js';
 import { logger } from '../logger.js';
 import vision from '@google-cloud/vision';
 import { detectProductType } from '../categorization/detector.js';
-import { findClosestNamedColor } from '../colors/utils.js';
+import { findClosestNamedColor } from '../colors/index.js';
 import axios from 'axios';
 
 let visionClient = null;
@@ -216,7 +216,7 @@ export async function analyzeGarmentImage(imageUrl) {
       name: productInfo?.name || directType || 'Unknown Item',
       brand: productInfo?.brand || directBrand || null,
       color: productInfo?.color || colorName || null,
-      type: productInfo?.type || detectProductType(result.labelAnnotations?.map(l => l.description).join(' ')),
+      type: productInfo?.type || detectProductType(result.labelAnnotations?.map(l => l.description ).join(' ')),
       price: productInfo?.price || null,
       description: productInfo?.description || productUrls[0] || '',
       confidence: {
