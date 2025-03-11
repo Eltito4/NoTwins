@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, ArrowLeft, Loader2, Eye, EyeOff, Camera, CheckCircle, AlertTriangle, HelpCircle } from 'lucide-react';
 import { analyzeGarmentImage } from '../services/visionService';
-import { AVAILABLE_COLORS } from '../utils/colorUtils';
+import { AVAILABLE_COLORS } from '../utils/colors';
 import { getAllCategories, getSubcategoryName } from '../utils/categorization';
 import { formatPrice } from '../utils/currency';
 import toast from 'react-hot-toast';

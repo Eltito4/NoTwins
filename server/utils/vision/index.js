@@ -76,7 +76,6 @@ export async function analyzeGarmentImage(imageUrl) {
       }
     }
 
-    // Download image
     logger.debug('Downloading image...');
     const response = await axios.get(imageUrl, {
       responseType: 'arraybuffer',
@@ -84,7 +83,6 @@ export async function analyzeGarmentImage(imageUrl) {
     });
     logger.debug('Image downloaded successfully');
 
-    // Analyze image with multiple features
     logger.debug('Sending image to Vision API...');
     const [result] = await visionClient.annotateImage({
       image: { content: Buffer.from(response.data) },
@@ -101,7 +99,6 @@ export async function analyzeGarmentImage(imageUrl) {
       throw new Error('No analysis results received from Vision API');
     }
 
-    // Log detailed Vision API response
     logger.debug('Raw Vision API response:', {
       hasImageProperties: !!result.imagePropertiesAnnotation,
       hasLabelAnnotations: !!result.labelAnnotations,
@@ -135,13 +132,11 @@ export async function analyzeGarmentImage(imageUrl) {
       }
     });
 
-    // Extract product URLs from web detection
     const productUrls = result.webDetection?.pagesWithMatchingImages
       ?.map(page => page.url)
       .filter(url => {
         try {
           const urlObj = new URL(url);
-          // Filter for e-commerce and brand domains
           return (
             !urlObj.hostname.includes('pinterest') &&
             !urlObj.hostname.includes('instagram') &&
@@ -159,23 +154,58 @@ export async function analyzeGarmentImage(imageUrl) {
         }
       }) || [];
 
-    // Extract basic information
     const visionResults = {
       webDetection: result.webDetection || {},
       labelAnnotations: result.labelAnnotations || [],
       localizedObjectAnnotations: result.localizedObjectAnnotations || [],
       imageProperties: result.imagePropertiesAnnotation || {},
+      logoAnnotations: result.logoAnnotations || [],
       productUrls
     };
 
-    // Direct extraction of basic information from Vision API
-    const directBrand = result.logoAnnotations?.[0]?.description || 
-                        result.webDetection?.webEntities?.find(e => e.score > 0.7)?.description;
-    
+    // Extract brand with improved logic
+    let brand = null;
+
+    // First try logo detection
+    if (result.logoAnnotations?.length > 0) {
+      brand = result.logoAnnotations[0].description;
+    }
+
+    // Then try extracting from product URLs
+    if (!brand && productUrls.length > 0) {
+      try {
+        const url = new URL(productUrls[0]);
+        const domain = url.hostname.toLowerCase();
+        const brandMatch = domain.match(/^(?:www\.)?([^.]+)\./);
+        if (brandMatch) {
+          const potentialBrand = brandMatch[1];
+          // Convert to title case and handle special cases
+          brand = potentialBrand
+            .split(/[.-]/)
+            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(' ');
+        }
+      } catch (e) {
+        logger.debug('Failed to extract brand from URL:', e);
+      }
+    }
+
+    // Finally try web entities with high confidence
+    if (!brand && result.webDetection?.webEntities) {
+      const brandEntity = result.webDetection.webEntities.find(entity => 
+        entity.score > 0.7 && 
+        !entity.description.toLowerCase().includes('dress') &&
+        !entity.description.toLowerCase().includes('clothing') &&
+        !entity.description.toLowerCase().includes('fashion')
+      );
+      if (brandEntity) {
+        brand = brandEntity.description;
+      }
+    }
+
     const directType = result.localizedObjectAnnotations?.[0]?.name || 
                       result.labelAnnotations?.[0]?.description;
     
-    // Extract color information
     const dominantColors = result.imagePropertiesAnnotation?.dominantColors?.colors || [];
     dominantColors.sort((a, b) => b.score - a.score);
     const dominantColor = dominantColors[0];
@@ -185,7 +215,6 @@ export async function analyzeGarmentImage(imageUrl) {
       const rgb = `rgb(${Math.round(dominantColor.color.red)}, ${Math.round(dominantColor.color.green)}, ${Math.round(dominantColor.color.blue)})`;
       colorName = findClosestNamedColor(rgb);
       
-      // Also check if any label contains a color name
       if (!colorName) {
         const colorLabel = result.labelAnnotations?.find(label => 
           label.description.toLowerCase().includes('red') ||
@@ -208,15 +237,13 @@ export async function analyzeGarmentImage(imageUrl) {
       }
     }
 
-    // Process with interpretProductDetails (which now has fallbacks if Gemini fails)
     const productInfo = await interpretProductDetails(visionResults);
 
-    // Combine Vision API and Gemini results with fallbacks
     const analysis = {
       name: productInfo?.name || directType || 'Unknown Item',
-      brand: productInfo?.brand || directBrand || null,
+      brand: productInfo?.brand || brand || null,
       color: productInfo?.color || colorName || null,
-      type: productInfo?.type || detectProductType(result.labelAnnotations?.map(l => l.description ).join(' ')),
+      type: productInfo?.type || detectProductType(result.labelAnnotations?.map(l => l.description).join(' ')),
       price: productInfo?.price || null,
       description: productInfo?.description || productUrls[0] || '',
       confidence: {
@@ -233,7 +260,7 @@ export async function analyzeGarmentImage(imageUrl) {
       hasType: !!analysis.type,
       hasUrl: !!analysis.description,
       confidence: analysis.confidence.overall,
-      productUrls: productUrls.slice(0, 3) // Log top 3 URLs
+      productUrls: productUrls.slice(0, 3)
     });
 
     return analysis;
@@ -253,13 +280,16 @@ export async function checkVisionApiStatus() {
       visionClient = await initializeVisionClient();
     }
 
+    const geminiStatus = await import('./gemini.js').then(m => m.checkGeminiStatus());
+
     return {
       status: 'ok',
       credentials: {
         hasProjectId: !!process.env.GOOGLE_CLOUD_PROJECT_ID,
         hasClientEmail: !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
         hasPrivateKey: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY
-      }
+      },
+      gemini: geminiStatus
     };
   } catch (error) {
     return {
@@ -270,7 +300,8 @@ export async function checkVisionApiStatus() {
         hasProjectId: !!process.env.GOOGLE_CLOUD_PROJECT_ID,
         hasClientEmail: !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
         hasPrivateKey: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY
-      }
+      },
+      gemini: await import('./gemini.js').then(m => m.checkGeminiStatus())
     };
   }
 }

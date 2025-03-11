@@ -6,6 +6,8 @@ import { detectProductType } from '../categorization/detector.js';
 
 let genAI = null;
 
+const MODEL_NAME = 'gemini-pro';
+
 function initializeGemini() {
   const API_KEY = process.env.GOOGLE_AI_API_KEY;
   if (!API_KEY) {
@@ -14,14 +16,16 @@ function initializeGemini() {
   }
 
   try {
-    return new GoogleGenerativeAI(API_KEY);
+    logger.info('Initializing Gemini API with key:', { hasKey: !!API_KEY });
+    genAI = new GoogleGenerativeAI(API_KEY);
+    logger.info('Gemini API initialized successfully');
+    return genAI;
   } catch (error) {
     logger.error('Failed to initialize Gemini:', error);
     return null;
   }
 }
 
-// Function for interpreting Vision API results with fallback mechanisms
 export async function interpretProductDetails(visionResults) {
   try {
     if (!visionResults) {
@@ -160,7 +164,6 @@ export async function interpretProductDetails(visionResults) {
   }
 }
 
-// Helper function to try Gemini analysis
 async function tryGeminiAnalysis(visionResults) {
   try {
     if (!genAI) {
@@ -170,13 +173,12 @@ async function tryGeminiAnalysis(visionResults) {
       }
     }
     
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.0-pro' });
+    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
     
     const labelAnnotations = visionResults.labelAnnotations || [];
     const webEntities = visionResults.webDetection?.webEntities || [];
     const objectAnnotations = visionResults.localizedObjectAnnotations || [];
     
-    // Prepare a focused prompt for Gemini
     const prompt = `
       You are a fashion product analyzer. Based on the following Vision API results, extract ONLY the following information:
 
@@ -208,17 +210,14 @@ async function tryGeminiAnalysis(visionResults) {
     const response = await result.response;
     
     const text = response.text();
-    // Extract JSON from potential markdown code block
     const jsonMatch = text.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/) || text.match(/(\{[\s\S]*\})/);
     if (jsonMatch) {
       const parsedResult = JSON.parse(jsonMatch[1]);
       
-      // Fallback values from direct Vision API results if Gemini fails to provide them
       if (!parsedResult.brand && webEntities.length > 0) {
         parsedResult.brand = webEntities[0].description;
       }
       
-      // Add product URL as description
       if (visionResults.productUrls && visionResults.productUrls.length > 0) {
         parsedResult.description = visionResults.productUrls[0];
       }
@@ -232,20 +231,17 @@ async function tryGeminiAnalysis(visionResults) {
   }
 }
 
-// Helper function to extract color name
 function extractColorName(text) {
   if (!text) return null;
   
   const normalizedText = text.toLowerCase();
   
-  // Direct match
   for (const color of AVAILABLE_COLORS) {
     if (normalizedText === color.name.toLowerCase()) {
       return color.name;
     }
   }
   
-  // Partial match
   for (const color of AVAILABLE_COLORS) {
     if (normalizedText.includes(color.name.toLowerCase())) {
       return color.name;
@@ -255,14 +251,12 @@ function extractColorName(text) {
   return null;
 }
 
-// New function for generating retailer configs
 export async function interpretRetailerConfig(url) {
   try {
     if (!genAI) {
       genAI = initializeGemini();
     }
 
-    // Create a default configuration based on common selectors
     const defaultConfig = {
       name: extractDomainName(url),
       defaultCurrency: "EUR",
@@ -306,15 +300,13 @@ export async function interpretRetailerConfig(url) {
       }
     };
 
-    // If Gemini is not available, return default config
     if (!genAI) {
       logger.info('Gemini not available, using default retailer config');
       return defaultConfig;
     }
 
     try {
-      // Try to use Gemini for a more tailored config
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.0-pro' });
+      const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
       const prompt = `
         You are a retail website expert. Given this URL: ${url}
@@ -349,7 +341,6 @@ export async function interpretRetailerConfig(url) {
       const response = await result.response;
       
       const text = response.text();
-      // Extract JSON from potential markdown code block
       const jsonMatch = text.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/) || text.match(/(\{[\s\S]*\})/);
       if (jsonMatch) {
         const config = JSON.parse(jsonMatch[1]);
@@ -360,7 +351,6 @@ export async function interpretRetailerConfig(url) {
       logger.error('Gemini retailer config generation failed:', error);
     }
     
-    // Return default config if Gemini fails
     logger.info('Using default retailer config for:', url);
     return defaultConfig;
   } catch (error) {
@@ -369,21 +359,16 @@ export async function interpretRetailerConfig(url) {
   }
 }
 
-// Helper function to extract domain name
 function extractDomainName(url) {
   try {
     const hostname = new URL(url).hostname;
     const parts = hostname.split('.');
     
-    // Handle www prefix
     if (parts[0] === 'www') {
       parts.shift();
     }
     
-    // Get the main domain name (usually the second-to-last part)
     const domainName = parts[parts.length - 2];
-    
-    // Capitalize first letter
     return domainName.charAt(0).toUpperCase() + domainName.slice(1);
   } catch (error) {
     return "Unknown Retailer";

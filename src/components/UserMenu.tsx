@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogOut, User as UserIcon, Bell, Activity } from 'lucide-react';
+import { LogOut, User as UserIcon, Bell, Activity, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useMessages } from '../contexts/MessageContext';
 import { MessageInbox } from './messages/MessageInbox';
@@ -11,25 +11,45 @@ export function UserMenu() {
   const [showInbox, setShowInbox] = useState(false);
   const { status, loading } = useVisionStatus();
 
-  const getStatusColor = () => {
+  const getVisionStatusColor = () => {
     if (loading) return 'text-yellow-500';
     if (!status) return 'text-red-500';
     return status.status === 'ok' ? 'text-green-500' : 'text-red-500';
   };
 
-  const getStatusTooltip = () => {
-    if (loading) return 'Connecting...';
-    if (!status) return 'Connection Error';
-    return status.status === 'ok' ? 'Connected' : 'Connection Error';
+  const getVisionStatusTooltip = () => {
+    if (loading) return 'Vision API: Connecting...';
+    if (!status) return 'Vision API: Connection Error';
+    return status.status === 'ok' ? 'Vision API: Connected' : 'Vision API: Connection Error';
+  };
+
+  const getGeminiStatusColor = () => {
+    if (loading) return 'text-yellow-500';
+    if (!status?.gemini) return 'text-red-500';
+    return status.gemini.initialized && status.gemini.hasApiKey ? 'text-green-500' : 'text-red-500';
+  };
+
+  const getGeminiStatusTooltip = () => {
+    if (loading) return 'Gemini API: Connecting...';
+    if (!status?.gemini) return 'Gemini API: Connection Error';
+    if (!status.gemini.hasApiKey) return 'Gemini API: Missing API Key';
+    return status.gemini.initialized ? 'Gemini API: Connected' : 'Gemini API: Connection Error';
   };
 
   return (
     <div className="flex items-center gap-4">
       <div className="flex items-center gap-2">
+        <Sparkles
+          size={18}
+          className={`${getGeminiStatusColor()} ${loading ? 'animate-spin' : ''}`}
+          aria-label={getGeminiStatusTooltip()}
+          title={getGeminiStatusTooltip()}
+        />
         <Activity 
           size={18} 
-          className={`${getStatusColor()} ${loading ? 'animate-spin' : ''}`}
-          aria-label={getStatusTooltip()}
+          className={`${getVisionStatusColor()} ${loading ? 'animate-spin' : ''}`}
+          aria-label={getVisionStatusTooltip()}
+          title={getVisionStatusTooltip()}
         />
         <button
           onClick={() => setShowInbox(true)}

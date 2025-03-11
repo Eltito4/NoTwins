@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { X, Link, Loader2, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Link, Loader2, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { scrapeDressDetails } from '../services/scrapingService';
-import { AVAILABLE_COLORS } from '../utils/colorUtils';
+import { AVAILABLE_COLORS } from '../utils/colors';
 import { getAllCategories, getSubcategoryName } from '../utils/categorization';
 import { formatPrice } from '../utils/currency';
 import { ScrapedProduct } from '../types';

@@ -1,100 +1,162 @@
 import { logger } from '../logger.js';
-import { interpretRetailerConfig } from '../vision/gemini.js';
 
-// In-memory cache for retailer configs
+// In-memory cache for retailer configurations
 const retailerConfigCache = new Map();
 
-export async function getRetailerConfig(url) {
+export function getCachedRetailers() {
+  return Array.from(retailerConfigCache.keys());
+}
+
+// Common selectors that work across most e-commerce sites
+const commonSelectors = {
+  name: [
+    // Meta tags
+    'meta[property="og:title"]',
+    'meta[name="twitter:title"]',
+    'meta[property="product:title"]',
+    // Common product title selectors
+    'h1[itemprop="name"]',
+    '.product-name h1',
+    '.product-title h1',
+    '.pdp-title h1',
+    '[data-testid="product-name"]',
+    '[data-testid="product-title"]',
+    '.product-detail-name',
+    '.product-info__name'
+  ],
+  price: [
+    // Meta tags
+    'meta[property="product:price:amount"]',
+    'meta[property="og:price:amount"]',
+    // Common price selectors
+    '[itemprop="price"]',
+    '.product-price',
+    '.price__amount',
+    '.price-value',
+    '[data-testid="product-price"]',
+    '.current-price',
+    '.price-amount'
+  ],
+  color: [
+    // Common color selectors
+    '[itemprop="color"]',
+    '.selected-color',
+    '.color-selector .active',
+    '.product-color',
+    '[data-testid="selected-color"]',
+    '.color-picker__selected',
+    '.variant-color'
+  ],
+  image: [
+    // Meta tags
+    'meta[property="og:image"]',
+    'meta[property="og:image:secure_url"]',
+    'meta[name="twitter:image"]',
+    // Common image selectors
+    '[itemprop="image"]',
+    '.product-image img',
+    '.gallery-image img',
+    '.pdp-image img',
+    '[data-testid="product-image"]',
+    'picture source[srcset]'
+  ],
+  brand: [
+    // Meta tags
+    'meta[property="og:brand"]',
+    'meta[property="product:brand"]',
+    // Common brand selectors
+    '[itemprop="brand"]',
+    '.product-brand',
+    '.brand-name',
+    '[data-testid="product-brand"]'
+  ],
+  description: [
+    // Meta tags
+    'meta[name="description"]',
+    'meta[property="og:description"]',
+    // Common description selectors
+    '[itemprop="description"]',
+    '.product-description',
+    '.pdp-description',
+    '[data-testid="product-description"]'
+  ]
+};
+
+// Retailer-specific overrides and configurations
+const retailers = {
+  'zara.com': {
+    name: 'Zara',
+    selectors: {
+      name: [
+        '[data-qa-id="product-name"]',
+        '[data-qa-id="product-title"]',
+        '.product-detail-info h1',
+        '.product-name-wrapper h1',
+        ...commonSelectors.name
+      ],
+      price: [
+        '[data-qa-id="product-price"]',
+        '.price__amount',
+        '.product-price',
+        ...commonSelectors.price
+      ],
+      color: [
+        '[data-qa-id="selected-color"]',
+        '.product-detail-color-selector__selected',
+        '.product-detail-selected-color',
+        ...commonSelectors.color
+      ],
+      image: [
+        '[data-qa-id="product-image"]',
+        '.media-image img',
+        '.product-detail-image img',
+        ...commonSelectors.image
+      ]
+    },
+    brand: {
+      defaultValue: 'Zara'
+    }
+  }
+};
+
+export function getRetailerConfig(url) {
   try {
     const hostname = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
     
-    // Check cache first
-    if (retailerConfigCache.has(hostname)) {
-      return retailerConfigCache.get(hostname);
-    }
-
-    // Use Gemini to interpret the retailer
-    try {
-      logger.info('Generating retailer config for:', hostname);
-      const config = await interpretRetailerConfig(url);
-      
-      // Cache the config
-      retailerConfigCache.set(hostname, config);
-      
-      return config;
-    } catch (error) {
-      logger.error('Error generating retailer config:', error);
-      
-      // Create a default configuration
-      const defaultConfig = {
-        name: extractDomainName(hostname),
-        defaultCurrency: "EUR",
+    // Try to find exact match first
+    if (retailers[hostname]) {
+      return {
+        ...retailers[hostname],
         selectors: {
-          name: [
-            'h1',
-            '.product-name',
-            '.product-title',
-            'meta[property="og:title"]',
-            '[data-testid="product-name"]',
-            '[itemprop="name"]'
-          ],
-          price: [
-            '.price',
-            '.product-price',
-            'meta[property="product:price:amount"]',
-            '[data-testid="product-price"]',
-            '[itemprop="price"]'
-          ],
-          color: [
-            '.color-selector .selected',
-            '.selected-color',
-            '[data-testid="selected-color"]',
-            '[itemprop="color"]'
-          ],
-          image: [
-            'meta[property="og:image"]',
-            '.product-image img',
-            '.gallery-image img',
-            '[data-testid="product-image"]',
-            '[itemprop="image"]'
-          ],
-          brand: [
-            'meta[property="product:brand"]',
-            '.product-brand',
-            '[itemprop="brand"]'
-          ]
-        },
-        brand: {
-          defaultValue: extractDomainName(hostname)
+          ...commonSelectors,
+          ...retailers[hostname].selectors
         }
       };
-      
-      logger.info('Using default retailer config for:', hostname);
-      retailerConfigCache.set(hostname, defaultConfig);
-      return defaultConfig;
     }
-  } catch (error) {
-    logger.error('Error getting retailer config:', error);
-    throw error;
-  }
-}
 
-function extractDomainName(hostname) {
-  try {
-    const parts = hostname.split('.');
-    
-    // Handle www prefix
-    if (parts[0] === 'www') {
-      parts.shift();
+    // If no exact match, try partial match
+    const partialMatch = Object.entries(retailers).find(([key]) => hostname.includes(key));
+    if (partialMatch) {
+      return {
+        ...partialMatch[1],
+        selectors: {
+          ...commonSelectors,
+          ...partialMatch[1].selectors
+        }
+      };
     }
-    
-    // Get the main domain name (usually the second-to-last part)
-    const domainName = parts[parts.length - 2];
-    
-    // Capitalize first letter
-    return domainName.charAt(0).toUpperCase() + domainName.slice(1);
-  } catch (error) {
-    return "Unknown Retailer";
+
+    // If no match, return common selectors
+    return {
+      name: 'Unknown Retailer',
+      selectors: commonSelectors
+    };
+  } catch {
+    // On any error, return common selectors as fallback
+    return {
+      name: 'Unknown Retailer',
+      selectors: commonSelectors
+    };
   }
 }
 
@@ -114,9 +176,4 @@ export function getRetailerHeaders(retailerConfig) {
     'Referer': 'https://www.google.com',
     ...retailerConfig?.headers
   };
-}
-
-// Get list of cached retailers
-export function getCachedRetailers() {
-  return Array.from(retailerConfigCache.keys());
 }

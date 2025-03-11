@@ -3,17 +3,22 @@ import { logger } from '../logger.js';
 import axios from 'axios';
 import { detectProductType } from '../categorization/detector.js';
 import { findClosestNamedColor } from '../colors/index.js';
+import https from 'https';
+import { getRetailerHeaders } from '../retailers/index.js';
 
-/**
- * Adaptively extracts product details from a webpage or API response
- * @param {string} url - The product URL
- * @param {object} retailerConfig - The retailer configuration
- * @returns {Promise<object>} - The extracted product details
- */
+// Create a custom axios instance with proper SSL configuration
+const client = axios.create({
+  httpsAgent: new https.Agent({  
+    rejectUnauthorized: false
+  }),
+  timeout: 10000,
+  maxRedirects: 5
+});
+
 export async function adaptiveExtract(url, retailerConfig) {
   try {
     // Special handling for Carolina Herrera API URLs
-    if (url.includes('carolinaherrera.com') && url.includes('/p-ready-to-wear/') && url.includes('sku=')) {
+    if (url.includes('carolinaherrera.com') && url.includes('/p-ready-to-wear/')) {
       return await extractCarolinaHerreraDetails(url);
     }
     
@@ -25,110 +30,93 @@ export async function adaptiveExtract(url, retailerConfig) {
     // Otherwise, extract from HTML
     return await extractFromHtml(url, retailerConfig);
   } catch (error) {
-    logger.error('Adaptive extraction error:', error);
+    const errorDetails = {
+      message: error.message,
+      url,
+      code: error.code,
+      status: error.response?.status
+    };
+    logger.error('Adaptive extraction error:', errorDetails);
     throw new Error(`Failed to extract product details: ${error.message}`);
   }
 }
 
-/**
- * Extract product details from Carolina Herrera API
- * @param {string} url - The product URL
- * @returns {Promise<object>} - The extracted product details
- */
 async function extractCarolinaHerreraDetails(url) {
   try {
-    logger.info('Using Carolina Herrera API extraction method');
+    logger.info('Using Carolina Herrera extraction method');
     
-    // Extract SKU from URL
-    const skuMatch = url.match(/sku=(\d+)/);
-    if (!skuMatch) {
-      throw new Error('Could not extract SKU from URL');
-    }
-    
-    const sku = skuMatch[1];
-    const apiUrl = `https://www.carolinaherrera.com/api/products/${sku}`;
-    
-    logger.debug('Fetching Carolina Herrera API data:', { apiUrl });
-    
-    const response = await axios.get(apiUrl, {
+    const response = await client.get(url, {
       headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/91.0.4472.124 Safari/537.36'
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36'
       }
     });
+
+    const $ = load(response.data);
     
-    if (!response.data) {
-      throw new Error('No data returned from Carolina Herrera API');
-    }
-    
-    const productData = response.data;
-    
-    // Extract product details from API response
-    const name = productData.name || productData.title || productData.displayName;
+    // Extract product name
+    const name = $('h1.product-name').text().trim() || 
+                $('meta[property="og:title"]').attr('content') ||
+                $('h1').first().text().trim();
+                
     if (!name) {
-      throw new Error('Could not find product name in API response');
+      throw new Error('Could not find product name');
     }
-    
+
     // Extract image URL
-    let imageUrl = null;
-    if (productData.images && productData.images.length > 0) {
-      imageUrl = productData.images[0].url || productData.images[0].src;
-    } else if (productData.image) {
-      imageUrl = productData.image.url || productData.image.src;
-    }
-    
+    const imageUrl = $('meta[property="og:image"]').attr('content') ||
+                    $('.product-image img').attr('src') ||
+                    $('.gallery-image img').first().attr('src');
+                    
     if (!imageUrl) {
-      throw new Error('Could not find product image in API response');
+      throw new Error('Could not find product image');
     }
-    
-    // Make image URL absolute if needed
-    if (!imageUrl.startsWith('http')) {
-      imageUrl = `https://www.carolinaherrera.com${imageUrl}`;
-    }
-    
-    // Extract other details
-    const price = productData.price?.value || productData.price;
-    const color = productData.color?.name || productData.colorName;
-    const brand = "Carolina Herrera";
-    const description = productData.description || productData.shortDescription;
-    
+
+    // Extract price
+    const priceText = $('.product-price').text().trim() ||
+                     $('meta[property="product:price:amount"]').attr('content');
+    const price = priceText ? parseFloat(priceText.replace(/[^\d.,]/g, '').replace(',', '.')) : null;
+
+    // Extract color
+    const colorText = $('.selected-color').text().trim() ||
+                     $('.color-selector .active').text().trim();
+    const color = colorText ? findClosestNamedColor(colorText) : null;
+
+    // Extract description
+    const description = $('.product-description').text().trim() ||
+                       $('meta[property="og:description"]').attr('content') ||
+                       url;
+
     // Detect product type
-    const type = detectProductType(name + ' ' + (description || ''));
-    
+    const type = detectProductType(name + ' ' + description);
+
     return {
       name,
       imageUrl,
       color,
       price,
-      brand,
+      brand: 'Carolina Herrera',
       type,
-      description: url // Use original URL as description
+      description
     };
   } catch (error) {
-    logger.error('Error extracting Carolina Herrera details:', error);
-    throw new Error(`Failed to extract Carolina Herrera product details: ${error.message}`);
+    const errorDetails = {
+      message: error.message,
+      url,
+      code: error.code,
+      status: error.response?.status
+    };
+    logger.error('Carolina Herrera extraction error:', errorDetails);
+    throw new Error(`Failed to extract Carolina Herrera details: ${error.message}`);
   }
 }
 
-/**
- * Extract product details from an API endpoint
- * @param {string} url - The API URL
- * @param {object} retailerConfig - The retailer configuration
- * @returns {Promise<object>} - The extracted product details
- */
 async function extractFromApi(url, retailerConfig) {
   try {
-    const response = await axios.get(url, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/91.0.4472.124 Safari/537.36',
-        ...retailerConfig.headers
-      }
+    const response = await client.get(url, {
+      headers: getRetailerHeaders(retailerConfig)
     });
-
-    if (!response.data) {
-      throw new Error('No data returned from API');
-    }
 
     const data = response.data;
     
@@ -160,10 +148,10 @@ async function extractFromApi(url, retailerConfig) {
     const price = data.price?.value || data.price;
     const color = data.color?.name || data.colorName;
     const brand = retailerConfig.brand?.defaultValue || data.brand;
-    const description = data.description || data.shortDescription;
+    const description = data.description || data.shortDescription || url;
     
     // Detect product type
-    const type = detectProductType(name + ' ' + (description || ''));
+    const type = detectProductType(name + ' ' + description);
     
     return {
       name,
@@ -172,40 +160,38 @@ async function extractFromApi(url, retailerConfig) {
       price,
       brand,
       type,
-      description: url // Use original URL as description
+      description
     };
   } catch (error) {
-    logger.error('API extraction error:', error);
+    const errorDetails = {
+      message: error.message,
+      url,
+      code: error.code,
+      status: error.response?.status
+    };
+    logger.error('API extraction error:', errorDetails);
     throw error;
   }
 }
 
-/**
- * Extract product details from HTML
- * @param {string} url - The product URL
- * @param {object} retailerConfig - The retailer configuration
- * @returns {Promise<object>} - The extracted product details
- */
 async function extractFromHtml(url, retailerConfig) {
   try {
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        ...retailerConfig.headers
-      }
+    logger.debug('Extracting from HTML with config:', {
+      retailer: retailerConfig.name,
+      selectors: retailerConfig.selectors
     });
 
-    if (!response.data) {
-      throw new Error('No HTML content returned');
-    }
+    const response = await client.get(url, {
+      headers: getRetailerHeaders(retailerConfig)
+    });
 
     const $ = load(response.data);
     
     // Extract product name
     const name = extractText($, retailerConfig.selectors.name);
     if (!name) {
+      // Log HTML content for debugging
+      logger.debug('HTML content:', $.html());
       throw new Error('Could not find product name');
     }
     
@@ -241,10 +227,10 @@ async function extractFromHtml(url, retailerConfig) {
     const price = extractPrice($, retailerConfig.selectors.price);
     const color = extractColor($, retailerConfig.selectors.color);
     const brand = retailerConfig.brand?.defaultValue || extractText($, retailerConfig.selectors.brand);
-    const description = extractText($, retailerConfig.selectors.description);
+    const description = extractText($, retailerConfig.selectors.description) || url;
     
     // Detect product type
-    const type = detectProductType(name + ' ' + (description || ''));
+    const type = detectProductType(name + ' ' + description);
     
     return {
       name,
@@ -253,20 +239,20 @@ async function extractFromHtml(url, retailerConfig) {
       price,
       brand,
       type,
-      description: description || url
+      description
     };
   } catch (error) {
-    logger.error('HTML extraction error:', error);
+    const errorDetails = {
+      message: error.message,
+      url,
+      code: error.code,
+      status: error.response?.status
+    };
+    logger.error('HTML extraction error:', errorDetails);
     throw error;
   }
 }
 
-/**
- * Extract text from HTML using selectors
- * @param {object} $ - Cheerio instance
- * @param {string[]} selectors - Array of CSS selectors
- * @returns {string|null} - Extracted text or null
- */
 function extractText($, selectors) {
   if (!selectors) return null;
 
@@ -284,12 +270,6 @@ function extractText($, selectors) {
   return null;
 }
 
-/**
- * Extract price from HTML
- * @param {object} $ - Cheerio instance
- * @param {string[]} selectors - Array of CSS selectors
- * @returns {number|null} - Extracted price or null
- */
 function extractPrice($, selectors) {
   const priceText = extractText($, selectors);
   if (!priceText) return null;
@@ -304,12 +284,6 @@ function extractPrice($, selectors) {
   return isNaN(price) ? null : price;
 }
 
-/**
- * Extract color from HTML
- * @param {object} $ - Cheerio instance
- * @param {string[]} selectors - Array of CSS selectors
- * @returns {string|null} - Extracted color or null
- */
 function extractColor($, selectors) {
   const colorText = extractText($, selectors);
   if (!colorText) return null;
