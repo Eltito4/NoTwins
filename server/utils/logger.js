@@ -8,30 +8,43 @@ const logger = winston.createLogger({
     winston.format.printf(({ level, message, timestamp, ...meta }) => {
       let logMessage = `${timestamp} ${level}: ${message}`;
       
-      // Handle metadata objects
       if (Object.keys(meta).length > 0) {
         try {
-          // Custom replacer function to handle circular references
-          const seen = new WeakSet();
-          const safeMetadata = JSON.parse(JSON.stringify(meta, (key, value) => {
-            // Skip internal axios and http objects
-            if (['socket', 'agent', 'request', 'response', 'config'].includes(key)) {
-              return undefined;
+          // Custom replacer function to handle sensitive data
+          const safeMetadata = JSON.stringify(meta, (key, value) => {
+            // Redact sensitive information
+            if (
+              key === 'Authorization' || 
+              key.toLowerCase().includes('key') ||
+              key.toLowerCase().includes('token') ||
+              key.toLowerCase().includes('secret')
+            ) {
+              return '[REDACTED]';
             }
             
             // Handle circular references
             if (typeof value === 'object' && value !== null) {
+              const seen = new WeakSet();
               if (seen.has(value)) {
                 return '[Circular]';
               }
               seen.add(value);
             }
+
+            // Handle Error objects
+            if (value instanceof Error) {
+              return {
+                message: value.message,
+                stack: value.stack,
+                ...value
+              };
+            }
+
             return value;
-          }));
+          }, 2);
           
-          logMessage += `\nMetadata: ${JSON.stringify(safeMetadata, null, 2)}`;
+          logMessage += `\nMetadata: ${safeMetadata}`;
         } catch (error) {
-          // Fallback for any stringification errors
           logMessage += '\nMetadata: [Complex Object]';
         }
       }
@@ -50,13 +63,20 @@ const logger = winston.createLogger({
       filename: 'error.log', 
       level: 'error',
       maxsize: 5242880, // 5MB
-      maxFiles: 5
+      maxFiles: 5,
+      format: winston.format.combine(
+        winston.format.uncolorize(),
+        winston.format.json()
+      )
     }),
     new winston.transports.File({ 
       filename: 'combined.log',
       maxsize: 5242880, // 5MB
       maxFiles: 5,
-      options: { flags: 'w' }
+      format: winston.format.combine(
+        winston.format.uncolorize(),
+        winston.format.json()
+      )
     })
   ]
 });

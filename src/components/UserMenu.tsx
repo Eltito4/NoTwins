@@ -23,17 +23,17 @@ export function UserMenu() {
     return status.status === 'ok' ? 'Vision API: Connected' : 'Vision API: Connection Error';
   };
 
-  const getGeminiStatusColor = () => {
+  const getGrokStatusColor = () => {
     if (loading) return 'text-yellow-500';
-    if (!status?.gemini) return 'text-red-500';
-    return status.gemini.initialized && status.gemini.hasApiKey ? 'text-green-500' : 'text-red-500';
+    if (!status?.grok) return 'text-red-500';
+    return status.grok.initialized && status.grok.hasApiKey ? 'text-green-500' : 'text-red-500';
   };
 
-  const getGeminiStatusTooltip = () => {
-    if (loading) return 'Gemini API: Connecting...';
-    if (!status?.gemini) return 'Gemini API: Connection Error';
-    if (!status.gemini.hasApiKey) return 'Gemini API: Missing API Key';
-    return status.gemini.initialized ? 'Gemini API: Connected' : 'Gemini API: Connection Error';
+  const getGrokStatusTooltip = () => {
+    if (loading) return 'Grok API: Connecting...';
+    if (!status?.grok) return 'Grok API: Connection Error';
+    if (!status.grok.hasApiKey) return 'Grok API: Missing API Key';
+    return status.grok.initialized ? 'Grok API: Connected' : 'Grok API: Connection Error';
   };
 
   return (
@@ -41,9 +41,9 @@ export function UserMenu() {
       <div className="flex items-center gap-2">
         <Sparkles
           size={18}
-          className={`${getGeminiStatusColor()} ${loading ? 'animate-spin' : ''}`}
-          aria-label={getGeminiStatusTooltip()}
-          title={getGeminiStatusTooltip()}
+          className={`${getGrokStatusColor()} ${loading ? 'animate-spin' : ''}`}
+          aria-label={getGrokStatusTooltip()}
+          title={getGrokStatusTooltip()}
         />
         <Activity 
           size={18} 

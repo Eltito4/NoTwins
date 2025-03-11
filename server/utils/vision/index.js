@@ -1,5 +1,5 @@
-import { interpretProductDetails } from './gemini.js';
-import { logger } from '../logger.js';
+import { interpretProductDetails } from './grok.js';
+import { logger } from '../../utils/logger.js';
 import vision from '@google-cloud/vision';
 import { detectProductType } from '../categorization/detector.js';
 import { findClosestNamedColor } from '../colors/index.js';
@@ -104,32 +104,7 @@ export async function analyzeGarmentImage(imageUrl) {
       hasLabelAnnotations: !!result.labelAnnotations,
       hasLogoAnnotations: !!result.logoAnnotations,
       hasObjectAnnotations: !!result.localizedObjectAnnotations,
-      hasWebSearch: !!result.webDetection,
-      response: {
-        labelAnnotations: result.labelAnnotations?.map(label => ({
-          description: label.description,
-          score: label.score
-        })),
-        logoAnnotations: result.logoAnnotations?.map(logo => ({
-          description: logo.description,
-          score: logo.score
-        })),
-        webDetection: {
-          webEntities: result.webDetection?.webEntities?.map(entity => ({
-            description: entity.description,
-            score: entity.score
-          })),
-          fullMatchingImages: result.webDetection?.fullMatchingImages?.length,
-          pagesWithMatchingImages: result.webDetection?.pagesWithMatchingImages?.map(page => ({
-            url: page.url,
-            score: page.score
-          }))
-        },
-        objects: result.localizedObjectAnnotations?.map(obj => ({
-          name: obj.name,
-          confidence: obj.score
-        }))
-      }
+      hasWebSearch: !!result.webDetection
     });
 
     const productUrls = result.webDetection?.pagesWithMatchingImages
@@ -155,57 +130,17 @@ export async function analyzeGarmentImage(imageUrl) {
       }) || [];
 
     const visionResults = {
-      webDetection: result.webDetection || {},
       labelAnnotations: result.labelAnnotations || [],
       localizedObjectAnnotations: result.localizedObjectAnnotations || [],
       imageProperties: result.imagePropertiesAnnotation || {},
       logoAnnotations: result.logoAnnotations || [],
+      webDetection: result.webDetection || {},
       productUrls
     };
 
-    // Extract brand with improved logic
-    let brand = null;
-
-    // First try logo detection
-    if (result.logoAnnotations?.length > 0) {
-      brand = result.logoAnnotations[0].description;
-    }
-
-    // Then try extracting from product URLs
-    if (!brand && productUrls.length > 0) {
-      try {
-        const url = new URL(productUrls[0]);
-        const domain = url.hostname.toLowerCase();
-        const brandMatch = domain.match(/^(?:www\.)?([^.]+)\./);
-        if (brandMatch) {
-          const potentialBrand = brandMatch[1];
-          // Convert to title case and handle special cases
-          brand = potentialBrand
-            .split(/[.-]/)
-            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-            .join(' ');
-        }
-      } catch (e) {
-        logger.debug('Failed to extract brand from URL:', e);
-      }
-    }
-
-    // Finally try web entities with high confidence
-    if (!brand && result.webDetection?.webEntities) {
-      const brandEntity = result.webDetection.webEntities.find(entity => 
-        entity.score > 0.7 && 
-        !entity.description.toLowerCase().includes('dress') &&
-        !entity.description.toLowerCase().includes('clothing') &&
-        !entity.description.toLowerCase().includes('fashion')
-      );
-      if (brandEntity) {
-        brand = brandEntity.description;
-      }
-    }
-
     const directType = result.localizedObjectAnnotations?.[0]?.name || 
                       result.labelAnnotations?.[0]?.description;
-    
+
     const dominantColors = result.imagePropertiesAnnotation?.dominantColors?.colors || [];
     dominantColors.sort((a, b) => b.score - a.score);
     const dominantColor = dominantColors[0];
@@ -241,7 +176,7 @@ export async function analyzeGarmentImage(imageUrl) {
 
     const analysis = {
       name: productInfo?.name || directType || 'Unknown Item',
-      brand: productInfo?.brand || brand || null,
+      brand: productInfo?.brand || null,
       color: productInfo?.color || colorName || null,
       type: productInfo?.type || detectProductType(result.labelAnnotations?.map(l => l.description).join(' ')),
       price: productInfo?.price || null,
@@ -280,7 +215,7 @@ export async function checkVisionApiStatus() {
       visionClient = await initializeVisionClient();
     }
 
-    const geminiStatus = await import('./gemini.js').then(m => m.checkGeminiStatus());
+    const grokStatus = await import('./grok.js').then(m => m.checkGrokStatus());
 
     return {
       status: 'ok',
@@ -289,7 +224,7 @@ export async function checkVisionApiStatus() {
         hasClientEmail: !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
         hasPrivateKey: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY
       },
-      gemini: geminiStatus
+      grok: grokStatus
     };
   } catch (error) {
     return {
@@ -301,7 +236,7 @@ export async function checkVisionApiStatus() {
         hasClientEmail: !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
         hasPrivateKey: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY
       },
-      gemini: await import('./gemini.js').then(m => m.checkGeminiStatus())
+      grok: await import('./grok.js').then(m => m.checkGrokStatus())
     };
   }
 }

@@ -10,7 +10,18 @@ import { fileURLToPath } from 'url';
 // Load environment variables based on NODE_ENV
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const envFile = process.env.NODE_ENV === 'production' ? '.env' : '.env.development';
-dotenv.config({ path: path.join(__dirname, envFile) });
+dotenv.config({ path: path.join(__dirname, '.env') });
+
+// Log environment variables (without sensitive data)
+logger.debug('Environment variables loaded:', {
+  nodeEnv: process.env.NODE_ENV,
+  hasMongoUri: !!process.env.MONGODB_URI,
+  hasJwtSecret: !!process.env.JWT_SECRET,
+  hasGrokKey: !!process.env.GROK_API_KEY,
+  hasGrokUrl: !!process.env.GROK_API_URL,
+  corsOrigin: process.env.CORS_ORIGIN,
+  grokKeyLength: process.env.GROK_API_KEY?.length || 0
+});
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -54,8 +65,10 @@ app.get('/api/health', (req, res) => {
       hasCredentials: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY && 
                      !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL
     },
-    gemini: {
-      hasApiKey: !!process.env.GOOGLE_AI_API_KEY
+    grok: {
+      hasApiKey: !!process.env.GROK_API_KEY,
+      hasApiUrl: !!process.env.GROK_API_URL,
+      keyLength: process.env.GROK_API_KEY?.length || 0
     }
   });
 });
@@ -100,6 +113,11 @@ mongoose.connect(process.env.MONGODB_URI)
       logger.success(`Server running on port ${port}`);
       logger.info('Environment:', process.env.NODE_ENV);
       logger.info('Vision API status:', visionClient ? 'initialized' : 'not available');
+      logger.info('Grok API status:', {
+        hasKey: !!process.env.GROK_API_KEY,
+        hasUrl: !!process.env.GROK_API_URL,
+        keyLength: process.env.GROK_API_KEY?.length || 0
+      });
     });
   })
   .catch(err => {
