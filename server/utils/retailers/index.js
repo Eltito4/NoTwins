@@ -1,179 +1,117 @@
+import { commonSelectors } from './selectors.js';
 import { logger } from '../logger.js';
+import { interpretRetailerConfig } from '../vision/deepseek.js';
 
 // In-memory cache for retailer configurations
 const retailerConfigCache = new Map();
 
-export function getCachedRetailers() {
-  return Array.from(retailerConfigCache.keys());
-}
-
-// Common selectors that work across most e-commerce sites
-const commonSelectors = {
-  name: [
-    // Meta tags
-    'meta[property="og:title"]',
-    'meta[name="twitter:title"]',
-    'meta[property="product:title"]',
-    // Common product title selectors
-    'h1[itemprop="name"]',
-    '.product-name h1',
-    '.product-title h1',
-    '.pdp-title h1',
-    '[data-testid="product-name"]',
-    '[data-testid="product-title"]',
-    '.product-detail-name',
-    '.product-info__name'
-  ],
-  price: [
-    // Meta tags
-    'meta[property="product:price:amount"]',
-    'meta[property="og:price:amount"]',
-    // Common price selectors
-    '[itemprop="price"]',
-    '.product-price',
-    '.price__amount',
-    '.price-value',
-    '[data-testid="product-price"]',
-    '.current-price',
-    '.price-amount'
-  ],
-  color: [
-    // Common color selectors
-    '[itemprop="color"]',
-    '.selected-color',
-    '.color-selector .active',
-    '.product-color',
-    '[data-testid="selected-color"]',
-    '.color-picker__selected',
-    '.variant-color'
-  ],
-  image: [
-    // Meta tags
-    'meta[property="og:image"]',
-    'meta[property="og:image:secure_url"]',
-    'meta[name="twitter:image"]',
-    // Common image selectors
-    '[itemprop="image"]',
-    '.product-image img',
-    '.gallery-image img',
-    '.pdp-image img',
-    '[data-testid="product-image"]',
-    'picture source[srcset]'
-  ],
-  brand: [
-    // Meta tags
-    'meta[property="og:brand"]',
-    'meta[property="product:brand"]',
-    // Common brand selectors
-    '[itemprop="brand"]',
-    '.product-brand',
-    '.brand-name',
-    '[data-testid="product-brand"]'
-  ],
-  description: [
-    // Meta tags
-    'meta[name="description"]',
-    'meta[property="og:description"]',
-    // Common description selectors
-    '[itemprop="description"]',
-    '.product-description',
-    '.pdp-description',
-    '[data-testid="product-description"]'
-  ]
-};
-
-// Retailer-specific overrides and configurations
-const retailers = {
-  'zara.com': {
-    name: 'Zara',
-    selectors: {
-      name: [
-        '[data-qa-id="product-name"]',
-        '[data-qa-id="product-title"]',
-        '.product-detail-info h1',
-        '.product-name-wrapper h1',
-        ...commonSelectors.name
-      ],
-      price: [
-        '[data-qa-id="product-price"]',
-        '.price__amount',
-        '.product-price',
-        ...commonSelectors.price
-      ],
-      color: [
-        '[data-qa-id="selected-color"]',
-        '.product-detail-color-selector__selected',
-        '.product-detail-selected-color',
-        ...commonSelectors.color
-      ],
-      image: [
-        '[data-qa-id="product-image"]',
-        '.media-image img',
-        '.product-detail-image img',
-        ...commonSelectors.image
-      ]
-    },
-    brand: {
-      defaultValue: 'Zara'
-    }
-  }
-};
-
-export function getRetailerConfig(url) {
+export async function getRetailerConfig(url) {
   try {
     const hostname = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
     
-    // Try to find exact match first
-    if (retailers[hostname]) {
-      return {
-        ...retailers[hostname],
-        selectors: {
-          ...commonSelectors,
-          ...retailers[hostname].selectors
-        }
-      };
+    // Check cache first
+    if (retailerConfigCache.has(hostname)) {
+      logger.debug('Using cached retailer config:', { retailer: hostname });
+      return retailerConfigCache.get(hostname);
     }
 
-    // If no exact match, try partial match
-    const partialMatch = Object.entries(retailers).find(([key]) => hostname.includes(key));
-    if (partialMatch) {
-      return {
-        ...partialMatch[1],
-        selectors: {
-          ...commonSelectors,
-          ...partialMatch[1].selectors
-        }
-      };
+    // Try to get AI-generated config
+    try {
+      const config = await interpretRetailerConfig(url);
+      if (config) {
+        retailerConfigCache.set(hostname, config);
+        return config;
+      }
+    } catch (error) {
+      logger.warn('Failed to generate retailer config:', error);
     }
 
-    // If no match, return common selectors
-    return {
-      name: 'Unknown Retailer',
-      selectors: commonSelectors
+    // Fallback to enhanced common selectors
+    const defaultConfig = {
+      name: getRetailerName(hostname),
+      defaultCurrency: 'EUR',
+      selectors: {
+        ...commonSelectors,
+        ...getRetailerSpecificSelectors(hostname)
+      },
+      brand: {
+        defaultValue: getRetailerName(hostname)
+      }
     };
-  } catch {
-    // On any error, return common selectors as fallback
-    return {
-      name: 'Unknown Retailer',
-      selectors: commonSelectors
-    };
+
+    retailerConfigCache.set(hostname, defaultConfig);
+    return defaultConfig;
+  } catch (error) {
+    logger.error('Error getting retailer config:', error);
+    throw error;
   }
 }
 
-export function getRetailerHeaders(retailerConfig) {
+function getRetailerName(hostname) {
+  const retailers = {
+    'zara.com': 'Zara',
+    'massimodutti.com': 'Massimo Dutti',
+    'hm.com': 'H&M',
+    'mango.com': 'Mango',
+    'cos.com': 'COS',
+    'asos.com': 'ASOS',
+    'pullandbear.com': 'Pull & Bear',
+    'bershka.com': 'Bershka',
+    'stradivarius.com': 'Stradivarius'
+  };
+  
+  for (const [domain, name] of Object.entries(retailers)) {
+    if (hostname.includes(domain)) return name;
+  }
+  
+  return 'Unknown Retailer';
+function getRetailerSpecificSelectors(hostname) {
+  if (hostname.includes('zara.com')) {
+    return {
+      name: [
+        '.product-detail-info__header-name',
+        '.product-detail-info h1',
+        '.product-name',
+        'h1[data-qa-anchor="product-name"]'
+      ],
+      price: [
+        '.price__amount',
+        '.product-detail-info__price',
+        '[data-qa-anchor="product-price"]'
+      ],
+      color: [
+        '.product-detail-color-selector__selected',
+        '.product-detail-selected-color'
+      ]
+    };
+  }
+  
+  if (hostname.includes('massimodutti.com')) {
+    return {
+      name: [
+        '.product-info__name',
+        '.product-detail-name'
+      ],
+      price: [
+        '.product-price span',
+        '.current-price'
+      ],
+      color: [
+        '.product-colors__selected',
+        '.selected-color'
+      ]
+    };
+  }
+  
+  return {};
+}
+}
+export function getRetailerHeaders() {
   return {
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3',
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-    'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Connection': 'keep-alive',
     'Cache-Control': 'no-cache',
-    'Pragma': 'no-cache',
-    'Sec-Fetch-Dest': 'document',
-    'Sec-Fetch-Mode': 'navigate',
-    'Sec-Fetch-Site': 'none',
-    'Sec-Fetch-User': '?1',
-    'Referer': 'https://www.google.com',
-    ...retailerConfig?.headers
+    'Pragma': 'no-cache'
   };
 }

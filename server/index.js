@@ -9,7 +9,6 @@ import { fileURLToPath } from 'url';
 
 // Load environment variables based on NODE_ENV
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const envFile = process.env.NODE_ENV === 'production' ? '.env' : '.env.development';
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 // Log environment variables (without sensitive data)
@@ -17,11 +16,23 @@ logger.debug('Environment variables loaded:', {
   nodeEnv: process.env.NODE_ENV,
   hasMongoUri: !!process.env.MONGODB_URI,
   hasJwtSecret: !!process.env.JWT_SECRET,
-  hasGrokKey: !!process.env.GROK_API_KEY,
-  hasGrokUrl: !!process.env.GROK_API_URL,
-  corsOrigin: process.env.CORS_ORIGIN,
-  grokKeyLength: process.env.GROK_API_KEY?.length || 0
+  hasScraperApiKey: !!process.env.SCRAPER_API_KEY,
+  hasDeepSeekKey: !!process.env.DEEPSEEK_API_KEY,
+  corsOrigin: process.env.CORS_ORIGIN
 });
+
+// Validate required environment variables
+const requiredEnvVars = [
+  'MONGODB_URI',
+  'JWT_SECRET',
+  'SCRAPER_API_KEY'
+];
+
+const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+if (missingVars.length > 0) {
+  logger.error('Missing required environment variables:', missingVars);
+  process.exit(1);
+}
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -60,15 +71,13 @@ app.get('/api/health', (req, res) => {
     mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     environment: process.env.NODE_ENV,
     timestamp: new Date().toISOString(),
+    scraperApi: {
+      hasApiKey: !!process.env.SCRAPER_API_KEY
+    },
     vision: {
       projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
       hasCredentials: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY && 
                      !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL
-    },
-    grok: {
-      hasApiKey: !!process.env.GROK_API_KEY,
-      hasApiUrl: !!process.env.GROK_API_URL,
-      keyLength: process.env.GROK_API_KEY?.length || 0
     }
   });
 });
@@ -112,11 +121,8 @@ mongoose.connect(process.env.MONGODB_URI)
     app.listen(port, () => {
       logger.success(`Server running on port ${port}`);
       logger.info('Environment:', process.env.NODE_ENV);
-      logger.info('Vision API status:', visionClient ? 'initialized' : 'not available');
-      logger.info('Grok API status:', {
-        hasKey: !!process.env.GROK_API_KEY,
-        hasUrl: !!process.env.GROK_API_URL,
-        keyLength: process.env.GROK_API_KEY?.length || 0
+      logger.info('ScraperAPI status:', {
+        hasKey: !!process.env.SCRAPER_API_KEY
       });
     });
   })

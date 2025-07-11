@@ -1,25 +1,17 @@
 import express from 'express';
 import { analyzeGarmentImage, checkVisionApiStatus } from '../utils/vision/index.js';
-import { checkGrokStatus } from '../utils/vision/grok.js';
 import { logger } from '../utils/logger.js';
 import { authMiddleware } from '../middleware/auth.js';
-import { getCachedRetailers } from '../utils/retailers/index.js';
 
 const router = express.Router();
 
 router.get('/health', async (req, res) => {
   try {
     const visionStatus = await checkVisionApiStatus();
-    const grokStatus = await checkGrokStatus();
-    const cachedRetailers = getCachedRetailers();
 
     res.json({
       ...visionStatus,
-      grok: grokStatus,
-      retailers: {
-        count: cachedRetailers.length,
-        domains: cachedRetailers
-      }
+      status: visionStatus.status || 'error'
     });
   } catch (error) {
     logger.error('Vision API health check failed:', error);

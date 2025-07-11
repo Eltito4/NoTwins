@@ -1,292 +1,604 @@
 import { load } from 'cheerio';
 import { logger } from '../logger.js';
-import axios from 'axios';
+import { scrapeWithScraperApi } from './scraperApi.js';
+import { interpretScrapedProduct } from '../vision/deepseek.js';
+import { findClosestNamedColor } from '../colors/utils.js';
 import { detectProductType } from '../categorization/detector.js';
-import { findClosestNamedColor } from '../colors/index.js';
-import https from 'https';
-import { getRetailerHeaders } from '../retailers/index.js';
-
-// Create a custom axios instance with proper SSL configuration
-const client = axios.create({
-  httpsAgent: new https.Agent({  
-    rejectUnauthorized: false
-  }),
-  timeout: 10000,
-  maxRedirects: 5
-});
+import { universalExtract } from './universalExtractor.js';
+import axios from 'axios';
 
 export async function adaptiveExtract(url, retailerConfig) {
   try {
-    // Special handling for Carolina Herrera API URLs
-    if (url.includes('carolinaherrera.com') && url.includes('/p-ready-to-wear/')) {
-      return await extractCarolinaHerreraDetails(url);
-    }
+    logger.info('Starting adaptive extraction for:', { url, retailer: retailerConfig.name });
+
+    // Try universal extraction first (works for any retailer)
+    const extractionMethods = [
+      () => universalExtract(url),
+      () => extractWithMetaTags(url),
+      () => extractWithScraperApi(url, retailerConfig),
+      () => extractWithDirectRequest(url, retailerConfig),
+      () => extractWithAI(url, retailerConfig)
+    ];
+
+    let lastError = null;
     
-    // Check if this is an API URL
-    if (url.includes('/api/')) {
-      return await extractFromApi(url, retailerConfig);
+    for (const method of extractionMethods) {
+      try {
+        const result = await method();
+        if (result && result.name) {
+          logger.info('Successfully extracted product data:', { 
+            method: method.name, 
+            hasName: !!result.name,
+            hasImage: !!result.imageUrl,
+            hasPrice: !!result.price,
+            hasColor: !!result.color
+          });
+          return result;
+        }
+      } catch (error) {
+        lastError = error;
+        logger.warn(`Extraction method ${method.name} failed:`, error.message);
+        continue;
+      }
     }
-    
-    // Otherwise, extract from HTML
-    return await extractFromHtml(url, retailerConfig);
+
+    throw lastError || new Error('All extraction methods failed');
   } catch (error) {
-    const errorDetails = {
+    logger.error('Adaptive extraction error:', {
       message: error.message,
       url,
-      code: error.code,
-      status: error.response?.status
-    };
-    logger.error('Adaptive extraction error:', errorDetails);
-    throw new Error(`Failed to extract product details: ${error.message}`);
+      retailer: retailerConfig.name
+    });
+    throw error;
   }
 }
 
-async function extractCarolinaHerreraDetails(url) {
+async function extractWithMetaTags(url) {
+  logger.debug('Trying meta tags extraction');
+  
   try {
-    logger.info('Using Carolina Herrera extraction method');
-    
-    const response = await client.get(url, {
+    const response = await axios.get(url, {
       headers: {
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36'
-      }
+        'Cache-Control': 'no-cache'
+      },
+      timeout: 10000
     });
 
     const $ = load(response.data);
     
-    // Extract product name
-    const name = $('h1.product-name').text().trim() || 
-                $('meta[property="og:title"]').attr('content') ||
-                $('h1').first().text().trim();
+    // Extract from meta tags (most reliable)
+    const name = $('meta[property="og:title"]').attr('content') ||
+                $('meta[name="twitter:title"]').attr('content') ||
+                $('title').text();
                 
-    if (!name) {
-      throw new Error('Could not find product name');
-    }
-
-    // Extract image URL
     const imageUrl = $('meta[property="og:image"]').attr('content') ||
-                    $('.product-image img').attr('src') ||
-                    $('.gallery-image img').first().attr('src');
+                    $('meta[name="twitter:image"]').attr('content');
                     
-    if (!imageUrl) {
-      throw new Error('Could not find product image');
-    }
+    const price = extractPriceFromMeta($);
+    const description = $('meta[property="og:description"]').attr('content') ||
+                       $('meta[name="description"]').attr('content');
 
-    // Extract price
-    const priceText = $('.product-price').text().trim() ||
-                     $('meta[property="product:price:amount"]').attr('content');
-    const price = priceText ? parseFloat(priceText.replace(/[^\d.,]/g, '').replace(',', '.')) : null;
+    // Enhanced color extraction from URL, title, and description
+    const colorText = (url + ' ' + (name || '') + ' ' + (description || '')).toLowerCase();
+    const color = findColorInText(colorText);
+    
+    // Enhanced brand extraction
+    const brand = $('meta[property="og:site_name"]').attr('content') ||
+                 $('meta[property="product:brand"]').attr('content') ||
+                 extractBrandFromUrl(url);
 
-    // Extract color
-    const colorText = $('.selected-color').text().trim() ||
-                     $('.color-selector .active').text().trim();
-    const color = colorText ? findClosestNamedColor(colorText) : null;
+    // Enhanced product type detection
+    const productText = (name || '') + ' ' + (description || '') + ' ' + url;
+    const type = detectProductType(productText);
 
-    // Extract description
-    const description = $('.product-description').text().trim() ||
-                       $('meta[property="og:description"]').attr('content') ||
-                       url;
-
-    // Detect product type
-    const type = detectProductType(name + ' ' + description);
-
-    return {
+    logger.debug('Meta tags extraction details:', {
       name,
       imageUrl,
-      color,
       price,
-      brand: 'Carolina Herrera',
-      type,
-      description
-    };
-  } catch (error) {
-    const errorDetails = {
-      message: error.message,
-      url,
-      code: error.code,
-      status: error.response?.status
-    };
-    logger.error('Carolina Herrera extraction error:', errorDetails);
-    throw new Error(`Failed to extract Carolina Herrera details: ${error.message}`);
-  }
-}
-
-async function extractFromApi(url, retailerConfig) {
-  try {
-    const response = await client.get(url, {
-      headers: getRetailerHeaders(retailerConfig)
-    });
-
-    const data = response.data;
-    
-    // Extract product details from API response
-    const name = data.name || data.title || data.displayName;
-    if (!name) {
-      throw new Error('Could not find product name in API response');
-    }
-    
-    // Extract image URL
-    let imageUrl = null;
-    if (data.images && data.images.length > 0) {
-      imageUrl = data.images[0].url || data.images[0].src;
-    } else if (data.image) {
-      imageUrl = data.image.url || data.image.src;
-    }
-    
-    if (!imageUrl) {
-      throw new Error('Could not find product image in API response');
-    }
-    
-    // Make image URL absolute if needed
-    if (!imageUrl.startsWith('http')) {
-      const baseUrl = new URL(url).origin;
-      imageUrl = `${baseUrl}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
-    }
-    
-    // Extract other details
-    const price = data.price?.value || data.price;
-    const color = data.color?.name || data.colorName;
-    const brand = retailerConfig.brand?.defaultValue || data.brand;
-    const description = data.description || data.shortDescription || url;
-    
-    // Detect product type
-    const type = detectProductType(name + ' ' + description);
-    
-    return {
-      name,
-      imageUrl,
       color,
-      price,
       brand,
       type,
-      description
-    };
+      url
+    });
+
+    if (name && imageUrl) {
+      const result = {
+        name: name.trim(),
+        imageUrl: imageUrl ? makeAbsoluteUrl(imageUrl, url) : null,
+        price: price,
+        description: description?.trim(),
+        color: color,
+        brand: brand,
+        type: type
+      };
+      
+      logger.debug('Meta tags extraction result:', result);
+      return result;
+    }
+    
+    throw new Error('Required meta tags not found');
   } catch (error) {
-    const errorDetails = {
-      message: error.message,
-      url,
-      code: error.code,
-      status: error.response?.status
-    };
-    logger.error('API extraction error:', errorDetails);
-    throw error;
+    throw new Error(`Meta tags extraction failed: ${error.message}`);
   }
 }
 
-async function extractFromHtml(url, retailerConfig) {
+async function extractWithScraperApi(url, retailerConfig) {
+  logger.debug('Trying ScraperAPI extraction');
+  
   try {
-    logger.debug('Extracting from HTML with config:', {
-      retailer: retailerConfig.name,
-      selectors: retailerConfig.selectors
-    });
+    const { html } = await scrapeWithScraperApi(url);
+    const $ = load(html);
+    
+    const basicInfo = extractBasicInfo($, retailerConfig);
+    
+    // Enhanced extraction for Zara specifically
+    if (url.includes('zara.com')) {
+      // Try to extract image from JSON-LD or data attributes
+      const scripts = $('script[type="application/ld+json"]');
+      for (let i = 0; i < scripts.length; i++) {
+        try {
+          const data = JSON.parse($(scripts[i]).html());
+          if (data.image) {
+            basicInfo.imageUrl = Array.isArray(data.image) ? data.image[0] : data.image;
+          }
+          if (data.offers && data.offers.price) {
+            basicInfo.price = parseFloat(data.offers.price);
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+      
+      // Try additional Zara-specific selectors
+      if (!basicInfo.imageUrl) {
+        const imgSelectors = [
+          'picture.media-image img',
+          '.product-detail-images img',
+          '.media-image img',
+          'img[data-qa-anchor="product-image"]'
+        ];
+        
+        for (const selector of imgSelectors) {
+          const img = $(selector).first();
+          if (img.length) {
+            const src = img.attr('src') || img.attr('data-src');
+            if (src) {
+              basicInfo.imageUrl = makeAbsoluteUrl(src, url);
+              break;
+            }
+          }
+        }
+      }
+      
+      // Try to extract price from various selectors
+      if (!basicInfo.price) {
+        const priceSelectors = [
+          '.price .money-amount__main',
+          '.price__amount',
+          '[data-qa-anchor="product-price"]',
+          '.product-detail-info__price'
+        ];
+        
+        for (const selector of priceSelectors) {
+          const priceEl = $(selector).first();
+          if (priceEl.length) {
+            const priceText = priceEl.text().trim();
+            const price = normalizePrice(priceText);
+            if (price) {
+              basicInfo.price = price;
+              break;
+            }
+          }
+        }
+      }
+      
+      // Try to extract color
+      if (!basicInfo.color) {
+        const colorSelectors = [
+          '.product-detail-selected-color',
+          '.color-name',
+          '[data-qa-anchor="product-color"]'
+        ];
+        
+        for (const selector of colorSelectors) {
+          const colorEl = $(selector).first();
+          if (colorEl.length) {
+            const colorText = colorEl.text().trim();
+            if (colorText) {
+              basicInfo.color = colorText;
+              break;
+            }
+          }
+        }
+      }
+    }
+    if (basicInfo.name && basicInfo.imageUrl) {
+      // Try to enhance with AI if available
+      try {
+        const enhancedInfo = await interpretScrapedProduct({
+          html,
+          basicInfo,
+          url
+        });
+        
+        return {
+          name: enhancedInfo.name || basicInfo.name,
+          imageUrl: enhancedInfo.imageUrl || basicInfo.imageUrl,
+          color: findClosestNamedColor(enhancedInfo.color || basicInfo.color),
+          price: normalizePrice(enhancedInfo.price || basicInfo.price),
+          brand: enhancedInfo.brand || basicInfo.brand || retailerConfig.brand?.defaultValue,
+          description: enhancedInfo.description || basicInfo.description || url,
+          type: enhancedInfo.type || detectProductType(basicInfo.name)
+        };
+      } catch (aiError) {
+        logger.warn('AI enhancement failed, using basic info:', aiError.message);
+        return {
+          ...basicInfo,
+          color: findClosestNamedColor(basicInfo.color),
+          type: detectProductType(basicInfo.name),
+          brand: basicInfo.brand || retailerConfig.brand?.defaultValue
+        };
+      }
+    }
+    
+    throw new Error('Could not extract required information from ScraperAPI response');
+  } catch (error) {
+    throw new Error(`ScraperAPI extraction failed: ${error.message}`);
+  }
+}
 
-    const response = await client.get(url, {
-      headers: getRetailerHeaders(retailerConfig)
+async function extractWithDirectRequest(url, retailerConfig) {
+  logger.debug('Trying direct request extraction');
+  
+  try {
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      },
+      timeout: 15000,
+      maxRedirects: 5
     });
 
     const $ = load(response.data);
+    const basicInfo = extractBasicInfo($, retailerConfig);
     
-    // Extract product name
-    const name = extractText($, retailerConfig.selectors.name);
-    if (!name) {
-      // Log HTML content for debugging
-      logger.debug('HTML content:', $.html());
-      throw new Error('Could not find product name');
+    if (basicInfo.name && basicInfo.imageUrl) {
+      return {
+        ...basicInfo,
+        color: findClosestNamedColor(basicInfo.color),
+        type: detectProductType(basicInfo.name),
+        brand: basicInfo.brand || retailerConfig.brand?.defaultValue
+      };
     }
     
-    // Extract image URL
-    let imageUrl = null;
-    for (const selector of retailerConfig.selectors.image) {
-      const element = $(selector);
-      if (element.length) {
-        imageUrl = element.attr('content') || element.attr('src') || element.attr('data-src');
-        if (imageUrl) break;
-      }
-    }
-    
-    // Try meta tags if no image found
-    if (!imageUrl) {
-      const metaImage = $('meta[property="og:image"], meta[property="product:image"]').attr('content');
-      if (metaImage) {
-        imageUrl = metaImage;
-      }
-    }
-    
-    if (!imageUrl) {
-      throw new Error('Could not find product image');
-    }
-    
-    // Make image URL absolute
-    if (!imageUrl.startsWith('http')) {
-      const baseUrl = new URL(url).origin;
-      imageUrl = `${baseUrl}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
-    }
-    
-    // Extract other details
-    const price = extractPrice($, retailerConfig.selectors.price);
-    const color = extractColor($, retailerConfig.selectors.color);
-    const brand = retailerConfig.brand?.defaultValue || extractText($, retailerConfig.selectors.brand);
-    const description = extractText($, retailerConfig.selectors.description) || url;
-    
-    // Detect product type
-    const type = detectProductType(name + ' ' + description);
-    
-    return {
-      name,
-      imageUrl,
-      color,
-      price,
-      brand,
-      type,
-      description
-    };
+    throw new Error('Could not extract required information from direct request');
   } catch (error) {
-    const errorDetails = {
-      message: error.message,
-      url,
-      code: error.code,
-      status: error.response?.status
-    };
-    logger.error('HTML extraction error:', errorDetails);
-    throw error;
+    throw new Error(`Direct request extraction failed: ${error.message}`);
   }
+}
+
+async function extractWithAI(url, retailerConfig) {
+  logger.debug('Trying AI-only extraction');
+  
+  try {
+    // Use AI to generate product info based on URL
+    const enhancedInfo = await interpretScrapedProduct({
+      html: '',
+      basicInfo: { name: null, imageUrl: null },
+      url
+    });
+    
+    if (enhancedInfo && enhancedInfo.name) {
+      // For AI extraction, we can use a placeholder image or make it optional
+      const imageUrl = enhancedInfo.imageUrl || generatePlaceholderImage(enhancedInfo.name);
+      
+      return {
+        name: enhancedInfo.name,
+        imageUrl: imageUrl,
+        color: findClosestNamedColor(enhancedInfo.color),
+        price: normalizePrice(enhancedInfo.price),
+        brand: enhancedInfo.brand || retailerConfig.brand?.defaultValue,
+        description: enhancedInfo.description || url,
+        type: enhancedInfo.type || detectProductType(enhancedInfo.name)
+      };
+    }
+    
+    throw new Error('AI could not generate product information');
+  } catch (error) {
+    throw new Error(`AI extraction failed: ${error.message}`);
+  }
+}
+
+function generatePlaceholderImage(productName) {
+  // Generate a placeholder image URL based on the product name
+  const encodedName = encodeURIComponent(productName);
+  return `https://via.placeholder.com/400x400/CCCCCC/666666?text=${encodedName}`;
+}
+function extractBasicInfo($, retailerConfig) {
+  const info = {
+    name: null,
+    imageUrl: null,
+    color: null,
+    price: null,
+    brand: null,
+    description: null
+  };
+
+  // Extract using multiple selector strategies
+  info.name = extractText($, [
+    ...retailerConfig.selectors.name,
+    'h1',
+    '.product-title',
+    '.product-name',
+    '[data-testid*="title"]',
+    '[data-testid*="name"]'
+  ]);
+
+  info.imageUrl = extractImageUrl($, [
+    ...retailerConfig.selectors.image,
+    'img[src*="product"]',
+    '.product-image img',
+    '.gallery img',
+    '[data-testid*="image"] img'
+  ]);
+
+  info.color = extractText($, [
+    ...retailerConfig.selectors.color,
+    '.color-name',
+    '.selected-color',
+    '[data-testid*="color"]'
+  ]);
+
+  info.brand = extractText($, [
+    ...retailerConfig.selectors.brand,
+    '.brand',
+    '.designer',
+    '[data-testid*="brand"]'
+  ]);
+
+  const priceText = extractText($, [
+    ...retailerConfig.selectors.price,
+    '.price',
+    '.cost',
+    '[data-testid*="price"]'
+  ]);
+  
+  if (priceText) {
+    info.price = normalizePrice(priceText);
+  }
+
+  info.description = extractText($, [
+    '.description',
+    '.product-description',
+    '[data-testid*="description"]'
+  ]);
+
+  return info;
 }
 
 function extractText($, selectors) {
-  if (!selectors) return null;
-
   for (const selector of selectors) {
-    const element = $(selector);
-    if (element.length) {
-      const text = element.text().trim();
-      if (text) return text;
+    try {
+      const element = $(selector);
+      if (element.length) {
+        const content = element.attr('content');
+        if (content) return content.trim();
 
-      const content = element.attr('content');
-      if (content) return content.trim();
+        const text = element.text().trim();
+        if (text) return text;
+      }
+    } catch (error) {
+      continue;
     }
   }
-
   return null;
 }
 
-function extractPrice($, selectors) {
-  const priceText = extractText($, selectors);
-  if (!priceText) return null;
-
-  // Remove currency symbols and normalize decimal separator
-  const normalized = priceText
-    .replace(/[^\d.,]/g, '')
-    .replace(/[.,](\d{2})$/, '.$1')
-    .replace(/[.,]/g, '');
-
-  const price = parseFloat(normalized);
-  return isNaN(price) ? null : price;
+function extractImageUrl($, selectors) {
+  for (const selector of selectors) {
+    try {
+      const element = $(selector);
+      if (element.length) {
+        const url = element.attr('content') || 
+                   element.attr('src') || 
+                   element.attr('data-src') ||
+                   element.attr('data-zoom-image');
+        
+        if (url) return makeAbsoluteUrl(url);
+      }
+    } catch (error) {
+      continue;
+    }
+  }
+  return null;
 }
 
-function extractColor($, selectors) {
-  const colorText = extractText($, selectors);
-  if (!colorText) return null;
+function extractPriceFromMeta($) {
+  const priceSelectors = [
+    'meta[property="product:price:amount"]',
+    'meta[property="og:price:amount"]',
+    'meta[name="price"]'
+  ];
   
-  return findClosestNamedColor(colorText);
+  for (const selector of priceSelectors) {
+    const content = $(selector).attr('content');
+    if (content) {
+      const price = normalizePrice(content);
+      if (price) return price;
+    }
+  }
+  return null;
+}
+
+function normalizePrice(priceText) {
+  if (!priceText) return null;
+
+  try {
+    // Handle different price formats
+    let normalized = priceText.toString()
+      .replace(/[^\d.,]/g, '')
+      .trim();
+    
+    // Handle European format (e.g., "45,95" or "1.234,95")
+    if (normalized.includes(',')) {
+      // If there's both comma and dot, assume dot is thousands separator
+      if (normalized.includes('.') && normalized.includes(',')) {
+        normalized = normalized.replace(/\./g, '').replace(',', '.');
+      } else {
+        // Just comma, assume it's decimal separator
+        normalized = normalized.replace(',', '.');
+      }
+    }
+    
+    // Remove any remaining non-digit characters except the last dot
+    const parts = normalized.split('.');
+    if (parts.length > 2) {
+      // Multiple dots, keep only the last one as decimal
+      const lastPart = parts.pop();
+      normalized = parts.join('') + '.' + lastPart;
+    }
+
+    const price = parseFloat(normalized);
+    return isNaN(price) ? null : price;
+  } catch (error) {
+    return null;
+  }
+}
+
+function extractBrandFromUrl(url) {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    
+    // Common brand mappings from domain names
+    const brandMappings = {
+      'bimbaylola.com': 'Bimba y Lola',
+      'zara.com': 'Zara',
+      'hm.com': 'H&M',
+      'mango.com': 'Mango',
+      'massimodutti.com': 'Massimo Dutti',
+      'cos.com': 'COS',
+      'asos.com': 'ASOS',
+      'pullandbear.com': 'Pull & Bear',
+      'bershka.com': 'Bershka',
+      'stradivarius.com': 'Stradivarius',
+      'oysho.com': 'Oysho',
+      'uterque.com': 'Uterque'
+    };
+    
+    for (const [domain, brand] of Object.entries(brandMappings)) {
+      if (hostname.includes(domain)) {
+        return brand;
+      }
+    }
+    
+    // Extract brand from domain name (e.g., "example.com" -> "Example")
+    const domainParts = hostname.replace('www.', '').split('.');
+    if (domainParts.length > 0) {
+      return domainParts[0].charAt(0).toUpperCase() + domainParts[0].slice(1);
+    }
+    
+    return null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function findColorInText(text) {
+  if (!text) return null;
+  
+  const lowerText = text.toLowerCase();
+  
+  // Enhanced Spanish and English color mappings
+  const colorMappings = {
+    // Spanish colors
+    'blanco': 'White',
+    'negro': 'Black',
+    'rojo': 'Red',
+    'azul': 'Blue',
+    'verde': 'Green',
+    'amarillo': 'Yellow',
+    'rosa': 'Pink',
+    'morado': 'Purple',
+    'naranja': 'Orange',
+    'marrón': 'Brown',
+    'gris': 'Gray',
+    'beige': 'Beige',
+    'crema': 'Cream',
+    'dorado': 'Gold',
+    'plateado': 'Silver',
+    'marino': 'Navy Blue',
+    'kiwi': 'Green',
+    'coral': 'Coral',
+    'turquesa': 'Turquoise',
+    'lavanda': 'Lavender',
+    'fucsia': 'Hot Pink',
+    'burdeos': 'Burgundy',
+    'granate': 'Maroon',
+    'camel': 'Beige',
+    'mostaza': 'Yellow',
+    'oliva': 'Olive',
+    'caqui': 'Khaki',
+    // English colors
+    'white': 'White',
+    'black': 'Black',
+    'red': 'Red',
+    'blue': 'Blue',
+    'green': 'Green',
+    'yellow': 'Yellow',
+    'pink': 'Pink',
+    'purple': 'Purple',
+    'orange': 'Orange',
+    'brown': 'Brown',
+    'gray': 'Gray',
+    'grey': 'Gray',
+    'beige': 'Beige',
+    'cream': 'Cream',
+    'gold': 'Gold',
+    'silver': 'Silver',
+    'navy': 'Navy Blue',
+    'coral': 'Coral',
+    'turquoise': 'Turquoise',
+    'lavender': 'Lavender',
+    'fuchsia': 'Hot Pink',
+    'burgundy': 'Burgundy',
+    'maroon': 'Maroon',
+    'camel': 'Beige',
+    'mustard': 'Yellow',
+    'olive': 'Olive',
+    'khaki': 'Khaki'
+  };
+  
+  // Check for exact color matches first
+  for (const [key, value] of Object.entries(colorMappings)) {
+    if (lowerText.includes(key)) {
+      return value;
+    }
+  }
+  
+  return null;
+}
+function makeAbsoluteUrl(url, baseUrl = '') {
+  if (!url) return null;
+  if (url.startsWith('data:')) return url;
+  
+  try {
+    if (url.startsWith('//')) {
+      return `https:${url}`;
+    }
+    
+    if (!url.startsWith('http')) {
+      return new URL(url, baseUrl || 'https://').toString();
+    }
+    
+    return url.replace(/^http:/, 'https:');
+  } catch (error) {
+    return null;
+  }
 }

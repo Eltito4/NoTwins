@@ -1,8 +1,6 @@
-import { interpretProductDetails } from './grok.js';
-import { logger } from '../../utils/logger.js';
+import { interpretVisionResults, interpretScrapedProduct } from './deepseek.js';
+import { logger } from '../logger.js';
 import vision from '@google-cloud/vision';
-import { detectProductType } from '../categorization/detector.js';
-import { findClosestNamedColor } from '../colors/index.js';
 import axios from 'axios';
 
 let visionClient = null;
@@ -41,10 +39,7 @@ async function initializeVisionClient() {
     await testVisionClient(client);
     return client;
   } catch (error) {
-    logger.error('Vision client initialization failed:', {
-      error: error.message,
-      stack: error.stack
-    });
+    logger.error('Vision client initialization failed:', error);
     return null;
   }
 }
@@ -99,91 +94,29 @@ export async function analyzeGarmentImage(imageUrl) {
       throw new Error('No analysis results received from Vision API');
     }
 
-    logger.debug('Raw Vision API response:', {
-      hasImageProperties: !!result.imagePropertiesAnnotation,
-      hasLabelAnnotations: !!result.labelAnnotations,
-      hasLogoAnnotations: !!result.logoAnnotations,
-      hasObjectAnnotations: !!result.localizedObjectAnnotations,
-      hasWebSearch: !!result.webDetection
+    // Log Vision API results
+    logger.debug('Vision API results:', {
+      hasLabels: !!result.labelAnnotations?.length,
+      hasObjects: !!result.localizedObjectAnnotations?.length,
+      hasLogos: !!result.logoAnnotations?.length,
+      hasColors: !!result.imagePropertiesAnnotation?.dominantColors?.colors?.length
     });
 
-    const productUrls = result.webDetection?.pagesWithMatchingImages
-      ?.map(page => page.url)
-      .filter(url => {
-        try {
-          const urlObj = new URL(url);
-          return (
-            !urlObj.hostname.includes('pinterest') &&
-            !urlObj.hostname.includes('instagram') &&
-            !urlObj.hostname.includes('facebook') &&
-            !urlObj.hostname.includes('twitter') &&
-            !urlObj.hostname.includes('youtube') &&
-            !urlObj.hostname.includes('google') &&
-            !urlObj.hostname.includes('bing') &&
-            (urlObj.hostname.includes('shop') ||
-             urlObj.hostname.includes('store') ||
-             /\.(com|net|org)$/.test(urlObj.hostname))
-          );
-        } catch {
-          return false;
-        }
-      }) || [];
+    // Use DeepSeek to interpret Vision API results
+    const productInfo = await interpretVisionResults(result);
 
-    const visionResults = {
-      labelAnnotations: result.labelAnnotations || [],
-      localizedObjectAnnotations: result.localizedObjectAnnotations || [],
-      imageProperties: result.imagePropertiesAnnotation || {},
-      logoAnnotations: result.logoAnnotations || [],
-      webDetection: result.webDetection || {},
-      productUrls
-    };
-
-    const directType = result.localizedObjectAnnotations?.[0]?.name || 
-                      result.labelAnnotations?.[0]?.description;
-
-    const dominantColors = result.imagePropertiesAnnotation?.dominantColors?.colors || [];
-    dominantColors.sort((a, b) => b.score - a.score);
-    const dominantColor = dominantColors[0];
-    
-    let colorName = null;
-    if (dominantColor) {
-      const rgb = `rgb(${Math.round(dominantColor.color.red)}, ${Math.round(dominantColor.color.green)}, ${Math.round(dominantColor.color.blue)})`;
-      colorName = findClosestNamedColor(rgb);
-      
-      if (!colorName) {
-        const colorLabel = result.labelAnnotations?.find(label => 
-          label.description.toLowerCase().includes('red') ||
-          label.description.toLowerCase().includes('blue') ||
-          label.description.toLowerCase().includes('green') ||
-          label.description.toLowerCase().includes('black') ||
-          label.description.toLowerCase().includes('white') ||
-          label.description.toLowerCase().includes('yellow') ||
-          label.description.toLowerCase().includes('purple') ||
-          label.description.toLowerCase().includes('pink') ||
-          label.description.toLowerCase().includes('orange') ||
-          label.description.toLowerCase().includes('brown') ||
-          label.description.toLowerCase().includes('gray') ||
-          label.description.toLowerCase().includes('grey')
-        );
-        
-        if (colorLabel) {
-          colorName = findClosestNamedColor(colorLabel.description);
-        }
-      }
-    }
-
-    const productInfo = await interpretProductDetails(visionResults);
+    logger.debug('DeepSeek Interpretation:', {
+      interpretedData: productInfo
+    });
 
     const analysis = {
-      name: productInfo?.name || directType || 'Unknown Item',
+      name: productInfo?.name || result.localizedObjectAnnotations?.[0]?.name || 'Unknown Item',
       brand: productInfo?.brand || null,
-      color: productInfo?.color || colorName || null,
-      type: productInfo?.type || detectProductType(result.labelAnnotations?.map(l => l.description).join(' ')),
-      price: productInfo?.price || null,
-      description: productInfo?.description || productUrls[0] || '',
+      color: productInfo?.color || null,
+      type: productInfo?.type || null,
+      description: productInfo?.description || '',
       confidence: {
         labels: result.labelAnnotations?.[0]?.score || 0,
-        color: dominantColor?.score || 0,
         overall: result.labelAnnotations?.[0]?.score || 0
       }
     };
@@ -193,9 +126,7 @@ export async function analyzeGarmentImage(imageUrl) {
       hasBrand: !!analysis.brand,
       hasColor: !!analysis.color,
       hasType: !!analysis.type,
-      hasUrl: !!analysis.description,
-      confidence: analysis.confidence.overall,
-      productUrls: productUrls.slice(0, 3)
+      confidence: analysis.confidence.overall
     });
 
     return analysis;
@@ -215,16 +146,13 @@ export async function checkVisionApiStatus() {
       visionClient = await initializeVisionClient();
     }
 
-    const grokStatus = await import('./grok.js').then(m => m.checkGrokStatus());
-
     return {
       status: 'ok',
       credentials: {
         hasProjectId: !!process.env.GOOGLE_CLOUD_PROJECT_ID,
         hasClientEmail: !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
         hasPrivateKey: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY
-      },
-      grok: grokStatus
+      }
     };
   } catch (error) {
     return {
@@ -235,8 +163,7 @@ export async function checkVisionApiStatus() {
         hasProjectId: !!process.env.GOOGLE_CLOUD_PROJECT_ID,
         hasClientEmail: !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
         hasPrivateKey: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY
-      },
-      grok: await import('./grok.js').then(m => m.checkGrokStatus())
+      }
     };
   }
 }

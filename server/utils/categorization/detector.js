@@ -5,6 +5,27 @@ export function detectProductType(text) {
   
   const normalizedText = text.toLowerCase();
 
+  // Enhanced keyword detection for bags and accessories
+  const bagKeywords = ['bolso', 'bag', 'handbag', 'purse', 'cartera', 'mochila', 'backpack', 'clutch', 'tote', 'bandolera', 'crossbody'];
+  const shoeKeywords = ['zapato', 'shoe', 'boot', 'sandal', 'sneaker', 'heel', 'flat', 'loafer'];
+  
+  // Check for bags first
+  if (bagKeywords.some(keyword => normalizedText.includes(keyword))) {
+    return {
+      category: 'accessories',
+      subcategory: 'bags',
+      name: 'Bags'
+    };
+  }
+  
+  // Check for shoes
+  if (shoeKeywords.some(keyword => normalizedText.includes(keyword))) {
+    return {
+      category: 'accessories',
+      subcategory: 'shoes',
+      name: 'Shoes'
+    };
+  }
   // First try to find a match in subcategories
   for (const category of CATEGORIES) {
     for (const subcategory of category.subcategories) {
