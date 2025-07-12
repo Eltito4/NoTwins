@@ -1,12 +1,20 @@
 import { interpretVisionResults, interpretScrapedProduct } from './deepseek.js';
 import { logger } from '../logger.js';
-import vision from '@google-cloud/vision';
 import axios from 'axios';
 
 let visionClient = null;
 
 async function initializeVisionClient() {
   try {
+    // Try to import Google Cloud Vision dynamically
+    let vision;
+    try {
+      vision = await import('@google-cloud/vision');
+    } catch (importError) {
+      logger.warn('Google Cloud Vision package not available:', importError.message);
+      return null;
+    }
+
     const requiredEnvVars = [
       'GOOGLE_CLOUD_PROJECT_ID',
       'GOOGLE_CLOUD_CLIENT_EMAIL',
@@ -31,7 +39,7 @@ async function initializeVisionClient() {
       project_id: process.env.GOOGLE_CLOUD_PROJECT_ID
     };
 
-    const client = new vision.ImageAnnotatorClient({
+    const client = new vision.default.ImageAnnotatorClient({
       credentials,
       projectId: process.env.GOOGLE_CLOUD_PROJECT_ID
     });

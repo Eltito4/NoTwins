@@ -3,7 +3,6 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { logger } from './utils/logger.js';
-import { initializeVisionClient } from './config/vision.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -36,12 +35,6 @@ if (missingVars.length > 0) {
 
 const app = express();
 const port = process.env.PORT || 3001;
-
-// Initialize Vision API client
-const visionClient = initializeVisionClient();
-if (!visionClient) {
-  logger.warn('Vision API client initialization failed - some features may be unavailable');
-}
 
 // Configure CORS with specific options
 app.use(cors({

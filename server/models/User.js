@@ -14,7 +14,8 @@ const userSchema = new mongoose.Schema({
     unique: true,
     lowercase: true,
     trim: true,
-    match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please enter a valid email']
+    match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please enter a valid email'],
+    index: true
   },
   password: {
     type: String,
@@ -38,7 +39,5 @@ const userSchema = new mongoose.Schema({
   }
 });
 
-// Add index for email
-userSchema.index({ email: 1 });
 
 export default mongoose.model('User', userSchema);

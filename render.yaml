@@ -3,7 +3,7 @@ services:
     name: unique-dress-api
     env: node
     region: oregon
-    buildCommand: cd server && npm install
+    buildCommand: cd server && npm ci --only=production
     startCommand: cd server && node index.js
     healthCheckPath: /api/health
     envVars:

@@ -1,10 +1,17 @@
-import { ImageAnnotatorClient } from '@google-cloud/vision';
-import { logger } from '../utils/logger.js';
-
 let visionClient = null;
 
-export function initializeVisionClient() {
+export async function initializeVisionClient() {
   try {
+    // Try to import Google Cloud Vision dynamically
+    let ImageAnnotatorClient;
+    try {
+      const visionModule = await import('@google-cloud/vision');
+      ImageAnnotatorClient = visionModule.ImageAnnotatorClient;
+    } catch (importError) {
+      console.warn('Google Cloud Vision package not available:', importError.message);
+      return null;
+    }
+
     // Check for required credentials
     const requiredEnvVars = [
       'GOOGLE_CLOUD_PROJECT_ID',
@@ -15,11 +22,12 @@ export function initializeVisionClient() {
     const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
     
     if (missingVars.length > 0) {
-      throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+      console.warn(`Missing required environment variables: ${missingVars.join(', ')}`);
+      return null;
     }
 
     // Log credential info (without sensitive data)
-    logger.debug('Initializing Vision client with:', {
+    console.log('Initializing Vision client with:', {
       projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
       clientEmail: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
       hasPrivateKey: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY
@@ -40,9 +48,11 @@ export function initializeVisionClient() {
     });
 
     // Test the client immediately
-    return testVisionClient(visionClient);
+    await testVisionClient(visionClient);
+    console.log('Vision API client initialized successfully');
+    return visionClient;
   } catch (error) {
-    logger.error('Vision client initialization failed:', {
+    console.error('Vision client initialization failed:', {
       error: error.message,
       stack: error.stack
     });
@@ -57,29 +67,29 @@ async function testVisionClient(client) {
       'base64'
     );
     await client.labelDetection(testImage);
-    logger.info('Vision API client test successful');
+    console.log('Vision API client test successful');
     return true;
   } catch (error) {
-    logger.error('Vision API test failed:', error);
+    console.error('Vision API test failed:', error);
     throw error;
   }
 }
 
 export function getVisionClient() {
-  if (!visionClient) {
-    visionClient = initializeVisionClient();
-  }
   return visionClient;
 }
 
 export async function checkVisionApiStatus() {
   try {
-    const client = getVisionClient();
-    if (!client) {
+    if (!visionClient) {
+      visionClient = await initializeVisionClient();
+    }
+    
+    if (!visionClient) {
       throw new Error('Failed to initialize Vision client');
     }
 
-    await testVisionClient(client);
+    await testVisionClient(visionClient);
     
     return {
       status: 'ok',

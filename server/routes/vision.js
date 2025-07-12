@@ -51,12 +51,23 @@ router.post('/analyze', authMiddleware, async (req, res) => {
       });
     }
 
+    // Check if Vision API is available
+    try {
     const analysis = await analyzeGarmentImage(imageUrl);
     
     res.json({
       success: true,
       data: analysis
     });
+    } catch (visionError) {
+      if (visionError.message.includes('Vision client')) {
+        return res.status(503).json({
+          error: 'Vision API not available',
+          details: 'Image analysis service is temporarily unavailable'
+        });
+      }
+      throw visionError;
+    }
   } catch (error) {
     logger.error('Vision analysis endpoint error:', {
       error: error.message,
