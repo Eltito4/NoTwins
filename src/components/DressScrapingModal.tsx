@@ -213,44 +213,47 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, onBack }
 
         {scrapedData && (
           <form onSubmit={handleSubmit} className="space-y-6">
-            {scrapedData.imageUrl && !scrapedData.imageUrl.includes('placeholder') ? (
-              <div className="relative aspect-square w-full max-w-md mx-auto rounded-lg overflow-hidden bg-gray-100">
+            <div className="relative aspect-square w-full max-w-md mx-auto rounded-lg overflow-hidden bg-gray-100 border-2 border-dashed border-gray-300">
+              {scrapedData.imageUrl && !scrapedData.imageUrl.includes('placeholder') ? (
                 <img
                   src={scrapedData.imageUrl}
                   alt={scrapedData.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover rounded-lg"
                   crossOrigin="anonymous"
                   referrerPolicy="no-referrer"
                   onError={handleImageError}
                   onLoad={() => setImageError(false)}
                 />
-                {imageError && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 text-gray-500">
-                    <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center mb-3">
-                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <p className="text-sm font-medium">Image not available</p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="relative aspect-square w-full max-w-md mx-auto rounded-lg overflow-hidden bg-gray-100 border-2 border-dashed border-gray-300">
+              ) : null}
+              
+              {(imageError || !scrapedData.imageUrl || scrapedData.imageUrl.includes('placeholder')) && (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500">
                   <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center mb-3">
                     <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <p className="text-sm font-medium">No image available</p>
-                  <p className="text-xs text-center mt-1">
-                    Product details extracted successfully<br />
-                    but image could not be retrieved
+                  <p className="text-sm font-medium">
+                    {imageError ? 'Image failed to load' : 'No image available'}
                   </p>
+                  <p className="text-xs text-center mt-1">
+                    {imageError 
+                      ? 'The image URL was found but failed to load'
+                      : 'Product details extracted successfully but image could not be retrieved'
+                    }
+                  </p>
+                  {scrapedData.imageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => window.open(scrapedData.imageUrl, '_blank')}
+                      className="mt-2 text-xs text-primary hover:text-primary-600 underline"
+                    >
+                      Try opening image in new tab
+                    </button>
+                  )}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>

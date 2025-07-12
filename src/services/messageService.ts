@@ -4,10 +4,12 @@ import toast from 'react-hot-toast';
 
 export async function sendDirectMessage(data: SendMessageData): Promise<Message> {
   try {
+    console.log('Sending message with data:', data);
     const response = await api.post('/messages/direct', data);
     toast.success('Message sent successfully');
     return response.data;
   } catch (error) {
+    console.error('Message send error:', error);
     toast.error('Failed to send message');
     throw error;
   }

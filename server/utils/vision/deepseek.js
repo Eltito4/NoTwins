@@ -119,13 +119,21 @@ async function interpretScrapedProduct({ html, basicInfo, url }) {
         7. Price must be properly formatted:
            - Convert prices like "45,95€" to 45.95 (NOT 4595)
            - Convert prices like "169,95€" to 169.95 (NOT 16995)
+           - Convert prices like "1.234,56€" to 1234.56
+           - Handle prices like "1,234.56$" to 1234.56
            - Remove currency symbols
            - Use period as decimal separator
            - CRITICAL: Never multiply by 100 or remove decimal places
            - Examples: "45,95€" → 45.95, "129,99€" → 129.99, "1.234,56€" → 1234.56
+           - Look for prices in JSON-LD structured data
+           - Check data-price attributes and price-related classes
         8. For Zara products, extract color information from Spanish color names:
            - "Negro" = "Black", "Blanco" = "White", "Azul" = "Blue", etc.
-        9. Look for image URLs in the HTML content and return the best quality one
+        9. Enhanced image detection:
+           - Look for high-resolution product images
+           - Check data-src, data-lazy, srcset attributes
+           - Find images in product galleries and carousels
+           - Return the best quality image URL available
         
         EXAMPLES:
         - "Vestido largo de punto" → category: "clothes", subcategory: "dresses"

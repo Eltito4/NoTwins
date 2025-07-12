@@ -11,9 +11,10 @@ interface MessageComposerProps {
   eventId: string;
   onClose: () => void;
   relatedDressIds?: string[];
+  multipleUsers?: Array<{userId: string, userName: string}>;
 }
 
-export function MessageComposer({ toUserId, userName, eventId, onClose, relatedDressIds }: MessageComposerProps) {
+export function MessageComposer({ toUserId, userName, eventId, onClose, relatedDressIds, multipleUsers }: MessageComposerProps) {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [suggestedItemUrl, setSuggestedItemUrl] = useState('');
@@ -46,14 +47,31 @@ export function MessageComposer({ toUserId, userName, eventId, onClose, relatedD
 
     setLoading(true);
     try {
-      await sendDirectMessage({
-        toUserId,
-        eventId,
-        title: title.trim(),
-        body: body.trim(),
-        suggestedItemUrl: suggestedItemUrl || undefined,
-        relatedDressIds
-      });
+      if (multipleUsers && multipleUsers.length > 0) {
+        // Send to multiple users
+        const promises = multipleUsers.map(user => 
+          sendDirectMessage({
+            toUserId: user.userId,
+            eventId,
+            title: title.trim(),
+            body: body.trim(),
+            suggestedItemUrl: suggestedItemUrl || undefined,
+            relatedDressIds
+          })
+        );
+        await Promise.all(promises);
+        toast.success(`Message sent to ${multipleUsers.length} users`);
+      } else {
+        // Send to single user
+        await sendDirectMessage({
+          toUserId,
+          eventId,
+          title: title.trim(),
+          body: body.trim(),
+          suggestedItemUrl: suggestedItemUrl || undefined,
+          relatedDressIds
+        });
+      }
 
       await loadMessages();
       onClose();
@@ -68,11 +86,29 @@ export function MessageComposer({ toUserId, userName, eventId, onClose, relatedD
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg w-full max-w-md">
         <div className="p-4 border-b flex justify-between items-center">
-          <h2 className="text-lg font-semibold">Send Message to {userName}</h2>
+          <h2 className="text-lg font-semibold">
+            {multipleUsers && multipleUsers.length > 0 
+              ? `Send Message to ${multipleUsers.length} Users`
+              : `Send Message to ${userName}`
+            }
+          </h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <X size={20} />
           </button>
         </div>
+
+        {multipleUsers && multipleUsers.length > 0 && (
+          <div className="p-4 bg-blue-50 border-b">
+            <p className="text-sm text-blue-700 font-medium">Sending to:</p>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {multipleUsers.map(user => (
+                <span key={user.userId} className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                  {user.userName}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div>

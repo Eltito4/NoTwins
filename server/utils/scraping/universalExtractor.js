@@ -12,6 +12,8 @@ const ENHANCED_COLOR_MAPPINGS = {
   'negro': 'Black',
   'rojo': 'Red',
   'azul': 'Blue',
+  'azul cielo': 'Sky Blue',
+  'azul marino': 'Navy Blue',
   'verde': 'Green',
   'amarillo': 'Yellow',
   'rosa': 'Pink',
@@ -42,6 +44,8 @@ const ENHANCED_COLOR_MAPPINGS = {
   'black': 'Black',
   'red': 'Red',
   'blue': 'Blue',
+  'sky blue': 'Sky Blue',
+  'light blue': 'Light Blue',
   'green': 'Green',
   'yellow': 'Yellow',
   'pink': 'Pink',
@@ -322,16 +326,33 @@ function extractImageUrl($, url) {
   const selectors = [
     'meta[property="og:image"]',
     'meta[name="twitter:image"]',
+    'meta[property="product:image"]',
+    'link[rel="image_src"]',
     '.product-image img',
     '.gallery-image img',
     '.pdp-image img',
-    '.media-image img'
+    '.media-image img',
+    '.product-gallery img',
+    '.hero-image img',
+    '.main-image img',
+    '[data-testid*="image"] img',
+    '.swiper-slide img',
+    '.carousel img',
+    'img[src*="product"]',
+    'img[src*="item"]',
+    'img[alt*="product"]',
+    'picture img'
   ];
 
   for (const selector of selectors) {
     const element = $(selector);
     if (element.length) {
-      const src = element.attr('content') || element.attr('src');
+      const src = element.attr('content') || 
+                 element.attr('src') || 
+                 element.attr('data-src') ||
+                 element.attr('data-lazy') ||
+                 element.attr('data-original') ||
+                 element.attr('srcset')?.split(',')[0]?.split(' ')[0];
       if (src) {
         return makeAbsoluteUrl(src, url);
       }
@@ -344,15 +365,35 @@ function extractImageUrl($, url) {
 function extractPrice($, url) {
   const selectors = [
     'meta[property="product:price:amount"]',
+    'meta[property="product:price"]',
+    'meta[name="price"]',
+    '[data-testid*="price"]',
+    '[data-price]',
     '.price',
     '.product-price',
-    '.current-price'
+    '.current-price',
+    '.price-current',
+    '.final-price',
+    '.sale-price',
+    '.regular-price',
+    '.money',
+    '.amount',
+    '.cost',
+    '.precio',
+    '[class*="price"]',
+    '[id*="price"]',
+    'span:contains("€")',
+    'span:contains("$")',
+    'div:contains("€")',
+    'div:contains("$")'
   ];
 
   for (const selector of selectors) {
     const element = $(selector);
     if (element.length) {
-      const content = element.attr('content') || element.text();
+      const content = element.attr('content') || 
+                     element.attr('data-price') ||
+                     element.text().trim();
       if (content) {
         const price = normalizePrice(content);
         if (price) return price;
@@ -360,6 +401,23 @@ function extractPrice($, url) {
     }
   }
 
+  // Try to find price in JSON-LD structured data
+  const scripts = $('script[type="application/ld+json"]');
+  for (let i = 0; i < scripts.length; i++) {
+    try {
+      const data = JSON.parse($(scripts[i]).html());
+      if (data.offers && data.offers.price) {
+        const price = normalizePrice(data.offers.price);
+        if (price) return price;
+      }
+      if (data.price) {
+        const price = normalizePrice(data.price);
+        if (price) return price;
+      }
+    } catch (e) {
+      continue;
+    }
+  }
   return null;
 }
 

@@ -409,7 +409,12 @@ function extractImageUrl($, selectors) {
         const url = element.attr('content') || 
                    element.attr('src') || 
                    element.attr('data-src') ||
-                   element.attr('data-zoom-image');
+                   element.attr('data-zoom-image') ||
+                   element.attr('data-lazy') ||
+                   element.attr('data-original') ||
+                   element.attr('data-large') ||
+                   element.attr('data-full') ||
+                   element.attr('srcset')?.split(',')[0]?.split(' ')[0];
         
         if (url) return makeAbsoluteUrl(url);
       }

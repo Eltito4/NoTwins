@@ -115,17 +115,33 @@ router.post('/direct', async (req, res) => {
   try {
     const { toUserId, eventId, title, body, suggestedItemUrl, relatedDressIds } = req.body;
 
+    logger.info('Direct message request:', {
+      fromUserId: req.user.id,
+      toUserId,
+      eventId,
+      title,
+      hasBody: !!body,
+      hasSuggestedUrl: !!suggestedItemUrl
+    });
+
     if (!toUserId || !eventId || !title || !body) {
+      logger.error('Missing required fields:', { toUserId, eventId, title, body });
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     // Verify both users are in the same event
     const event = await Event.findById(eventId);
     if (!event) {
+      logger.error('Event not found:', { eventId });
       return res.status(404).json({ error: 'Event not found' });
     }
 
     if (!event.participants.includes(req.user.id) || !event.participants.includes(toUserId)) {
+      logger.error('Users not in event:', {
+        fromUserId: req.user.id,
+        toUserId,
+        eventParticipants: event.participants
+      });
       return res.status(403).json({ error: 'Both users must be participants in the event' });
     }
 
@@ -160,6 +176,8 @@ router.post('/direct', async (req, res) => {
 
     const message = new Message(messageData);
     await message.save();
+
+    logger.info('Message saved successfully:', { messageId: message._id });
 
     // Get user info
     const [fromUser, toUser] = await Promise.all([

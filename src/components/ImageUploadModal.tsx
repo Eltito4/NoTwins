@@ -210,14 +210,14 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="aspect-square w-full max-w-md mx-auto relative rounded-lg overflow-hidden bg-gray-100">
+            <div className="aspect-square w-full max-w-md mx-auto relative rounded-lg overflow-hidden bg-gray-100 border-2 border-gray-200 shadow-sm">
               <img
                 src={imageUrl}
                 alt="Preview"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover rounded-lg"
               />
               {confidence !== null && (
-                <div className={`absolute -top-2 -right-2 px-2 py-1 rounded-lg border ${getConfidenceColor(confidence)} flex items-center gap-1.5 shadow-lg`}>
+                <div className={`absolute top-2 right-2 px-3 py-1.5 rounded-full border ${getConfidenceColor(confidence)} flex items-center gap-1.5 shadow-lg backdrop-blur-sm`}>
                   {getConfidenceIcon(confidence)}
                   <span className="text-sm font-medium">
                     {Math.round(confidence * 100)}%
@@ -225,10 +225,13 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
                 </div>
               )}
               {(loading || analyzing) && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
                   <div className="text-white text-center">
                     <Loader2 className="mx-auto h-8 w-8 animate-spin" />
-                    <p className="mt-2">{analyzing ? 'Analyzing...' : 'Loading...'}</p>
+                    <p className="mt-2 font-medium">{analyzing ? 'AI Analyzing Image...' : 'Processing Image...'}</p>
+                    {analyzing && (
+                      <p className="mt-1 text-sm text-gray-300">Detecting clothing type, color, and brand</p>
+                    )}
                   </div>
                 </div>
               )}

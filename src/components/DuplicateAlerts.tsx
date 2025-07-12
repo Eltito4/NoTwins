@@ -1,6 +1,6 @@
 import React from 'react';
 import { Dress, User } from '../types';
-import { Bell, Mail } from 'lucide-react';
+import { Bell, Mail, Users } from 'lucide-react';
 import { MessageComposer } from './messages/MessageComposer';
 
 interface DuplicateAlertsProps {
@@ -20,6 +20,7 @@ export function DuplicateAlerts({
 }: DuplicateAlertsProps) {
   const [expandedGroup, setExpandedGroup] = React.useState<string | null>(null);
   const [messageToUser, setMessageToUser] = React.useState<{userId: string, userName: string} | null>(null);
+  const [messageToMultiple, setMessageToMultiple] = React.useState<Array<{userId: string, userName: string}> | null>(null);
 
   const findDuplicates = () => {
     const duplicateGroups = new Map<string, {
@@ -156,6 +157,23 @@ export function DuplicateAlerts({
                   ))}
                 </ul>
               )}
+              {isEventCreator && expandedGroup === group.name && group.items.length > 1 && (
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const usersToMessage = group.items
+                        .filter(item => item.userId !== currentUserId)
+                        .map(item => ({ userId: item.userId, userName: item.userName }));
+                      setMessageToMultiple(usersToMessage);
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors text-sm"
+                  >
+                    <Users size={16} />
+                    <span>Message All Users</span>
+                  </button>
+                </div>
+              )}
             </div>
           </button>
         </div>
@@ -165,7 +183,18 @@ export function DuplicateAlerts({
         <MessageComposer
           toUserId={messageToUser.userId}
           userName={messageToUser.userName}
+          eventId={dresses[0]?.eventId || ''}
           onClose={() => setMessageToUser(null)}
+        />
+      )}
+
+      {messageToMultiple && (
+        <MessageComposer
+          toUserId=""
+          userName=""
+          eventId={dresses[0]?.eventId || ''}
+          multipleUsers={messageToMultiple}
+          onClose={() => setMessageToMultiple(null)}
         />
       )}
     </div>
