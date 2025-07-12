@@ -68,15 +68,32 @@ export interface Message {
   id: string;
   fromUserId: string;
   toUserId: string;
+  eventId: string;
+  type: 'event_broadcast' | 'duplicate_alert' | 'direct_message';
   title: string;
   body: string;
   suggestedItemUrl?: string;
   suggestedItemDetails?: MessageItemDetails;
   createdAt: Date;
   readAt?: Date;
-  relatedDressId?: string;
+  isRead: boolean;
+  relatedDressIds?: string[];
+  duplicateInfo?: {
+    duplicateType: 'exact' | 'partial';
+    conflictingItems: Array<{
+      dressId: string;
+      userId: string;
+      userName: string;
+      itemName: string;
+      color?: string;
+    }>;
+  };
   from?: User;
   to?: User;
+  event?: {
+    id: string;
+    name: string;
+  };
 }
 
 export interface MessageNotification {
@@ -89,8 +106,32 @@ export interface MessageNotification {
 
 export interface SendMessageData {
   toUserId: string;
+  eventId: string;
   title: string;
   body: string;
   suggestedItemUrl?: string;
-  relatedDressId?: string;
+  relatedDressIds?: string[];
+}
+
+export interface BroadcastMessageData {
+  eventId: string;
+  title: string;
+  body: string;
+  suggestedItemUrl?: string;
+}
+
+export interface DuplicateAlertData {
+  toUserId: string;
+  eventId: string;
+  duplicateInfo: {
+    duplicateType: 'exact' | 'partial';
+    conflictingItems: Array<{
+      dressId: string;
+      userId: string;
+      userName: string;
+      itemName: string;
+      color?: string;
+    }>;
+  };
+  suggestedItemUrl?: string;
 }

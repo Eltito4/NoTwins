@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Message } from '../types/message';
-import { getUserMessages, markMessageAsRead } from '../services/messageService';
+import { Message } from '../types';
+import { getUserMessages, markMessageAsRead, getUnreadMessageCount } from '../services/messageService';
 import { useAuth } from './AuthContext';
 
 interface MessageContextType {
@@ -9,38 +9,65 @@ interface MessageContextType {
   loadMessages: () => Promise<void>;
   markAsRead: (messageId: string) => Promise<void>;
   hasUnreadMessages: boolean;
+  refreshUnreadCount: () => Promise<void>;
 }
 
 const MessageContext = createContext<MessageContextType | null>(null);
 
 export function MessageProvider({ children }: { children: React.ReactNode }) {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { currentUser } = useAuth();
 
   const loadMessages = async () => {
     if (!currentUser) return;
-    const userMessages = await getUserMessages();
-    setMessages(userMessages);
+    try {
+      const userMessages = await getUserMessages();
+      setMessages(userMessages);
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    }
+  };
+
+  const refreshUnreadCount = async () => {
+    if (!currentUser) return;
+    try {
+      const count = await getUnreadMessageCount();
+      setUnreadCount(count);
+    } catch (error) {
+      console.error('Error refreshing unread count:', error);
+    }
   };
 
   const markAsRead = async (messageId: string) => {
-    await markMessageAsRead(messageId);
-    setMessages(prev => 
-      prev.map(msg => 
-        msg.id === messageId ? { ...msg, readAt: new Date() } : msg
-      )
-    );
+    try {
+      await markMessageAsRead(messageId);
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === messageId ? { ...msg, readAt: new Date(), isRead: true } : msg
+        )
+      );
+      await refreshUnreadCount();
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+    }
   };
 
   useEffect(() => {
     if (currentUser) {
       loadMessages();
-      const interval = setInterval(loadMessages, 30000);
+      refreshUnreadCount();
+      
+      // Refresh every 30 seconds
+      const interval = setInterval(() => {
+        loadMessages();
+        refreshUnreadCount();
+      }, 30000);
+      
       return () => clearInterval(interval);
     }
   }, [currentUser]);
 
-  const unreadCount = messages.filter(msg => !msg.readAt).length;
   const hasUnreadMessages = unreadCount > 0;
 
   return (
@@ -49,7 +76,8 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
       unreadCount, 
       loadMessages, 
       markAsRead,
-      hasUnreadMessages 
+      hasUnreadMessages,
+      refreshUnreadCount
     }}>
       {children}
     </MessageContext.Provider>

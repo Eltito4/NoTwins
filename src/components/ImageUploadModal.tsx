@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, ArrowLeft, Loader2, Eye, EyeOff, Camera, CheckCircle, AlertTriangle, HelpCircle } from 'lucide-react';
 import { analyzeGarmentImage } from '../services/visionService';
-import { AVAILABLE_COLORS } from '../utils/colors';
+import { AVAILABLE_COLORS } from '../utils/colors/constants';
 import { getAllCategories, getSubcategoryName } from '../utils/categorization';
 import { formatPrice } from '../utils/currency';
 import toast from 'react-hot-toast';
@@ -50,6 +50,12 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const categories = getAllCategories();
 
+  // Debug logging
+  React.useEffect(() => {
+    console.log('Available categories:', categories);
+    console.log('Available colors:', AVAILABLE_COLORS);
+    console.log('Current form data:', formData);
+  }, [categories, formData]);
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -71,6 +77,8 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
     setAnalyzing(true);
     try {
       const analysis = await analyzeGarmentImage(url);
+      
+      console.log('Analysis result:', analysis);
       
       // Update form data with analysis results
       setFormData(prev => ({
@@ -100,18 +108,47 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation checks
+    const missingFields = [];
     if (!imageUrl || !formData.name) {
-      toast.error('Please fill in all required fields');
+      missingFields.push('name and image');
+    }
+    if (!formData.color) {
+      missingFields.push('color');
+    }
+    if (!formData.category || !formData.subcategory) {
+      missingFields.push('category and type');
+    }
+    if (!formData.brand) {
+      missingFields.push('brand');
+    }
+    
+    if (missingFields.length > 0) {
+      toast.error(`⚠️ Please fill in: ${missingFields.join(', ')}`);
       return;
     }
 
+    // Validate and format price
+    let finalPrice = undefined;
+    if (formData.price) {
+      const priceValue = parseFloat(formData.price);
+      if (isNaN(priceValue) || priceValue < 0) {
+        toast.error('Please enter a valid price');
+        return;
+      }
+      // Round to 2 decimal places
+      finalPrice = Math.round(priceValue * 100) / 100;
+    }
+
+    console.log('Submitting form data:', formData);
     onSubmit({
       name: formData.name,
       imageUrl,
       description: formData.description,
       color: formData.color,
       brand: formData.brand,
-      price: formData.price ? parseFloat(formData.price) : undefined,
+      price: finalPrice,
       type: formData.category && formData.subcategory ? {
         category: formData.category,
         subcategory: formData.subcategory,
@@ -133,6 +170,10 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
     return <AlertTriangle className="w-4 h-4" />;
   };
 
+  // Get current category subcategories
+  const currentCategorySubcategories = formData.category 
+    ? categories.find(c => c.id === formData.category)?.subcategories || []
+    : [];
   return (
     <div className="flex flex-col h-full">
       <div className="p-6 border-b">
@@ -228,11 +269,13 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
                   required
                 >
                   <option value="">Select category</option>
-                  {categories.map(category => (
+                  {categories && categories.length > 0 ? categories.map(category => (
                     <option key={category.id} value={category.id}>
                       {category.name}
                     </option>
-                  ))}
+                  )) : (
+                    <option disabled>Loading categories...</option>
+                  )}
                 </select>
               </div>
 
@@ -246,13 +289,11 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
                   disabled={!formData.category}
                 >
                   <option value="">Select type</option>
-                  {formData.category && categories
-                    .find(c => c.id === formData.category)
-                    ?.subcategories.map(sub => (
+                  {currentCategorySubcategories.map(sub => (
                       <option key={sub.id} value={sub.id}>
                         {sub.name}
                       </option>
-                    ))}
+                  ))}
                 </select>
               </div>
 
@@ -265,11 +306,13 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
                   required
                 >
                   <option value="">Select color</option>
-                  {AVAILABLE_COLORS.map(color => (
+                  {AVAILABLE_COLORS && AVAILABLE_COLORS.length > 0 ? AVAILABLE_COLORS.map(color => (
                     <option key={color.name} value={color.name}>
                       {color.name}
                     </option>
-                  ))}
+                  )) : (
+                    <option disabled>Loading colors...</option>
+                  )}
                 </select>
               </div>
 
@@ -282,7 +325,14 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
                   min="0"
                   step="0.01"
+                  max="99999.99"
+                  placeholder="0.00"
                 />
+                {formData.price && (
+                  <p className="mt-1 text-sm text-gray-600">
+                    Price: €{parseFloat(formData.price).toFixed(2)}
+                  </p>
+                )}
               </div>
             </div>
 

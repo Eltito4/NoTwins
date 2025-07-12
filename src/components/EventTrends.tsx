@@ -48,7 +48,13 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
 
       // Handle types
       if (dress.type) {
-        const type = dress.type.subcategory;
+        // Get the proper subcategory name
+        const typeName = getSubcategoryName(dress.type.category, dress.type.subcategory);
+        const type = typeName || dress.type.name || dress.type.subcategory;
+        types[type] = (types[type] || 0) + 1;
+      } else if (dress.type && dress.type.name) {
+        // Fallback to type name if subcategory is not available
+        const type = dress.type.name;
         types[type] = (types[type] || 0) + 1;
       }
     });
@@ -95,7 +101,7 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
   };
 
   const typeChartData = {
-    labels: Object.keys(typeData).map(type => getSubcategoryName('garments', type)),
+    labels: Object.keys(typeData),
     datasets: [{
       data: Object.values(typeData),
       backgroundColor: [
@@ -103,7 +109,12 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
         '#3b82f6', // Blue
         '#ef4444', // Red
         '#f59e0b', // Yellow
-        '#10b981'  // Green
+        '#10b981', // Green
+        '#f97316', // Orange
+        '#8b5cf6', // Violet
+        '#06b6d4', // Cyan
+        '#84cc16', // Lime
+        '#ec4899'  // Pink
       ],
       borderColor: '#ffffff',
       borderWidth: 2
@@ -193,7 +204,7 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
     <div className="space-y-12 p-6">
       {Object.keys(typeData).length > 0 && (
         <div className="bg-white p-8 rounded-lg shadow-sm">
-          <h3 className="text-xl font-semibold mb-6">Article Types</h3>
+          <h3 className="text-xl font-semibold mb-6">Clothing Types</h3>
           <div className="h-[400px] relative">
             <Pie data={typeChartData} options={chartOptions} />
           </div>

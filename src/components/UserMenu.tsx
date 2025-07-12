@@ -26,14 +26,15 @@ export function UserMenu() {
   const getGrokStatusColor = () => {
     if (loading) return 'text-yellow-500';
     if (!status?.grok) return 'text-red-500';
-    return status.grok.initialized && status.grok.hasApiKey ? 'text-green-500' : 'text-red-500';
+    return status.grok.initialized && status.grok.hasApiKey ? 'text-green-500' : 'text-yellow-500';
   };
 
   const getGrokStatusTooltip = () => {
     if (loading) return 'Grok API: Connecting...';
     if (!status?.grok) return 'Grok API: Connection Error';
     if (!status.grok.hasApiKey) return 'Grok API: Missing API Key';
-    return status.grok.initialized ? 'Grok API: Connected' : 'Grok API: Connection Error';
+    if (status.grok.error) return `Grok API: ${status.grok.error}`;
+    return status.grok.initialized ? 'Grok API: Connected' : 'Grok API: Not Initialized';
   };
 
   return (

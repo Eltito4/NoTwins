@@ -1,19 +1,18 @@
 import React, { useState } from 'react';
-import { X, Link, Loader2 } from 'lucide-react';
-import { sendDirectMessage } from '../../services/messageService';
+import { X, Users, Loader2 } from 'lucide-react';
+import { sendBroadcastMessage } from '../../services/messageService';
 import { scrapeDressDetails } from '../../services/scrapingService';
 import { useMessages } from '../../contexts/MessageContext';
 import toast from 'react-hot-toast';
 
-interface MessageComposerProps {
-  toUserId: string;
-  userName: string;
+interface BroadcastComposerProps {
   eventId: string;
+  eventName: string;
+  participantCount: number;
   onClose: () => void;
-  relatedDressIds?: string[];
 }
 
-export function MessageComposer({ toUserId, userName, eventId, onClose, relatedDressIds }: MessageComposerProps) {
+export function BroadcastComposer({ eventId, eventName, participantCount, onClose }: BroadcastComposerProps) {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [suggestedItemUrl, setSuggestedItemUrl] = useState('');
@@ -46,13 +45,11 @@ export function MessageComposer({ toUserId, userName, eventId, onClose, relatedD
 
     setLoading(true);
     try {
-      await sendDirectMessage({
-        toUserId,
+      await sendBroadcastMessage({
         eventId,
         title: title.trim(),
         body: body.trim(),
-        suggestedItemUrl: suggestedItemUrl || undefined,
-        relatedDressIds
+        suggestedItemUrl: suggestedItemUrl || undefined
       });
 
       await loadMessages();
@@ -68,7 +65,15 @@ export function MessageComposer({ toUserId, userName, eventId, onClose, relatedD
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg w-full max-w-md">
         <div className="p-4 border-b flex justify-between items-center">
-          <h2 className="text-lg font-semibold">Send Message to {userName}</h2>
+          <div>
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Users size={20} />
+              Broadcast Message
+            </h2>
+            <p className="text-sm text-gray-500">
+              Send to all {participantCount} participants in "{eventName}"
+            </p>
+          </div>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <X size={20} />
           </button>
@@ -98,14 +103,14 @@ export function MessageComposer({ toUserId, userName, eventId, onClose, relatedD
               onChange={(e) => setBody(e.target.value)}
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary"
               rows={4}
-              placeholder="Your message..."
+              placeholder="Your message to all participants..."
               required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Suggested Alternative (Optional)
+              Suggested Item (Optional)
             </label>
             <div className="flex gap-2">
               <input
@@ -124,7 +129,7 @@ export function MessageComposer({ toUserId, userName, eventId, onClose, relatedD
                 {scrapingUrl ? (
                   <Loader2 className="animate-spin" size={16} />
                 ) : (
-                  <Link size={16} />
+                  'Fetch'
                 )}
               </button>
             </div>
@@ -146,7 +151,7 @@ export function MessageComposer({ toUserId, userName, eventId, onClose, relatedD
                     <p className="text-sm text-gray-600">Brand: {scrapedItem.brand}</p>
                   )}
                   {scrapedItem.price && (
-                    <p className="text-sm text-gray-600">Price: ${scrapedItem.price}</p>
+                    <p className="text-sm text-gray-600">Price: €{scrapedItem.price}</p>
                   )}
                   {scrapedItem.color && (
                     <div className="flex items-center gap-2">
@@ -156,11 +161,6 @@ export function MessageComposer({ toUserId, userName, eventId, onClose, relatedD
                       />
                       <span className="text-sm text-gray-600">{scrapedItem.color}</span>
                     </div>
-                  )}
-                  {scrapedItem.type && (
-                    <p className="text-sm text-gray-600">
-                      Type: {scrapedItem.type.name}
-                    </p>
                   )}
                 </div>
               </div>
@@ -178,9 +178,19 @@ export function MessageComposer({ toUserId, userName, eventId, onClose, relatedD
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 flex items-center gap-2"
             >
-              {loading ? 'Sending...' : 'Send Message'}
+              {loading ? (
+                <>
+                  <Loader2 className="animate-spin" size={16} />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Users size={16} />
+                  Send to All
+                </>
+              )}
             </button>
           </div>
         </form>

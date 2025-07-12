@@ -29,8 +29,12 @@ export const CATEGORIES = [
         keywords: [
           'dress', 'gown', 'frock', 'sundress', 'cocktail dress',
           'evening dress', 'maxi dress', 'mini dress', 'jumpsuit',
-          'romper', 'caftan', 'kimono', 'wrap dress', 'shift dress',
-          'sheath dress', 'a-line dress', 'bodycon dress'
+          'romper', 'caftan', 'kimono', 'wrap dress', 'shift dress', 
+          'sheath dress', 'a-line dress', 'bodycon dress',
+          // Spanish dress terms - CRITICAL for detection
+          'vestido', 'vestidos', 'vestido largo', 'vestido corto',
+          'vestido de punto', 'vestido de noche', 'vestido de fiesta',
+          'vestido midi', 'vestido maxi', 'vestido casual'
         ]
       },
       {
@@ -57,7 +61,11 @@ export const CATEGORIES = [
           'flats', 'loafers', 'oxfords', 'pumps', 'mules',
           'espadrilles', 'slippers', 'ankle boots', 'footwear',
           'ballet flats', 'platforms', 'wedges', 'stilettos',
-          'ballerina', 'slingback', 'mary jane'
+          'ballerina', 'slingback', 'mary jane',
+          // Spanish shoe terms - CRITICAL for detection
+          'zapato', 'zapatos', 'sandalia', 'sandalias', 'bota', 'botas',
+          'zapatilla', 'zapatillas', 'tacón', 'tacones', 'bailarina',
+          'mocasín', 'alpargata', 'deportiva'
         ]
       },
       {
@@ -66,8 +74,11 @@ export const CATEGORIES = [
         keywords: [
           'bag', 'purse', 'handbag', 'backpack', 'tote',
           'clutch', 'wallet', 'satchel', 'crossbody',
-          'shoulder bag', 'duffel', 'messenger', 'hobo',
-          'bucket bag', 'wristlet', 'pouch'
+          'shoulder bag', 'duffel', 'messenger', 'hobo', 
+          'bucket bag', 'wristlet', 'pouch',
+          // Spanish bag terms - CRITICAL for detection
+          'bolso', 'bolsos', 'cartera', 'carteras', 'mochila', 'mochilas',
+          'bandolera', 'riñonera', 'bolso de mano', 'bolso tote'
         ]
       },
       {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, Loader2, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { scrapeDressDetails } from '../services/scrapingService';
-import { AVAILABLE_COLORS } from '../utils/colors';
+import { AVAILABLE_COLORS } from '../utils/colors/constants';
 import { getAllCategories, getSubcategoryName } from '../utils/categorization';
 import { formatPrice } from '../utils/currency';
 import { ScrapedProduct } from '../types';
@@ -42,6 +42,11 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, onBack }
 
   const categories = getAllCategories();
 
+  // Debug logging
+  React.useEffect(() => {
+    console.log('Scraping modal - Available categories:', categories);
+    console.log('Scraping modal - Available colors:', AVAILABLE_COLORS);
+  }, [categories]);
   const handleScrape = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url) {
@@ -64,8 +69,8 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, onBack }
         color: data.color || '',
         brand: data.brand || '',
         price: data.price ? data.price.toString() : '',
-        category: data.type?.category || 'clothes',
-        subcategory: data.type?.subcategory || 'other'
+        category: data.type?.category || 'accessories',
+        subcategory: data.type?.subcategory || 'shoes'
       });
       
       // Log the form data for debugging
@@ -75,8 +80,8 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, onBack }
         color: data.color || '',
         brand: data.brand || '',
         price: data.price ? data.price.toString() : '',
-        category: data.type?.category || 'clothes',
-        subcategory: data.type?.subcategory || 'other'
+        category: data.type?.category || 'accessories',
+        subcategory: data.type?.subcategory || 'shoes'
       });
       
       toast.success('Product details fetched successfully!');
@@ -92,13 +97,44 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, onBack }
     e.preventDefault();
     if (!scrapedData) return;
 
+    // Validation checks
+    const missingFields = [];
+    if (!formData.name) {
+      missingFields.push('name');
+    }
+    if (!formData.color) {
+      missingFields.push('color');
+    }
+    if (!formData.category || !formData.subcategory) {
+      missingFields.push('category and type');
+    }
+    if (!formData.brand) {
+      missingFields.push('brand');
+    }
+    
+    if (missingFields.length > 0) {
+      toast.error(`⚠️ Please fill in: ${missingFields.join(', ')}`);
+      return;
+    }
+
+    // Validate and format price
+    let finalPrice = undefined;
+    if (formData.price) {
+      const priceValue = parseFloat(formData.price);
+      if (isNaN(priceValue) || priceValue < 0) {
+        toast.error('Please enter a valid price');
+        return;
+      }
+      // Round to 2 decimal places
+      finalPrice = Math.round(priceValue * 100) / 100;
+    }
     onSubmit({
       name: formData.name,
       imageUrl: scrapedData.imageUrl,
       description: formData.description,
       color: formData.color,
       brand: formData.brand,
-      price: formData.price ? parseFloat(formData.price) : undefined,
+      price: finalPrice,
       type: formData.category && formData.subcategory ? {
         category: formData.category,
         subcategory: formData.subcategory,
@@ -112,6 +148,10 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, onBack }
     setImageError(true);
   };
 
+  // Get current category subcategories
+  const currentCategorySubcategories = formData.category 
+    ? categories.find(c => c.id === formData.category)?.subcategories || []
+    : [];
   return (
     <div className="flex flex-col h-full">
       <div className="p-6 border-b">
@@ -247,11 +287,13 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, onBack }
                   required
                 >
                   <option value="">Select category</option>
-                  {categories.map(category => (
+                  {categories && categories.length > 0 ? categories.map(category => (
                     <option key={category.id} value={category.id}>
                       {category.name}
                     </option>
-                  ))}
+                  )) : (
+                    <option disabled>Loading categories...</option>
+                  )}
                 </select>
               </div>
 
@@ -265,13 +307,11 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, onBack }
                   disabled={!formData.category}
                 >
                   <option value="">Select type</option>
-                  {formData.category && categories
-                    .find(c => c.id === formData.category)
-                    ?.subcategories.map(sub => (
+                  {currentCategorySubcategories.map(sub => (
                       <option key={sub.id} value={sub.id}>
                         {sub.name}
                       </option>
-                    ))}
+                  ))}
                 </select>
               </div>
 
@@ -284,11 +324,13 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, onBack }
                   required
                 >
                   <option value="">Select color</option>
-                  {AVAILABLE_COLORS.map(color => (
+                  {AVAILABLE_COLORS && AVAILABLE_COLORS.length > 0 ? AVAILABLE_COLORS.map(color => (
                     <option key={color.name} value={color.name}>
                       {color.name}
                     </option>
-                  ))}
+                  )) : (
+                    <option disabled>Loading colors...</option>
+                  )}
                 </select>
               </div>
 
@@ -301,11 +343,12 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, onBack }
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
                   min="0"
                   step="0.01"
+                  max="99999.99"
                   placeholder="Enter price in EUR"
                 />
                 {formData.price && (
                   <p className="mt-1 text-sm text-gray-600">
-                    Price: {formatPrice(parseFloat(formData.price))}
+                    Price: €{parseFloat(formData.price).toFixed(2)}
                   </p>
                 )}
               </div>

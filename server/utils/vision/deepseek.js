@@ -113,16 +113,24 @@ async function interpretScrapedProduct({ html, basicInfo, url }) {
         1. Categories must be one of: clothes, accessories
         2. For clothes, subcategories must be: tops, bottoms, dresses, outerwear
         3. For accessories, subcategories must be: shoes, bags, jewelry, other
-        4. Price must be properly formatted:
+        4. DRESS DETECTION: If text contains "vestido", "dress", "robe", "vestito" = ALWAYS category "dresses"
+        5. SHOE DETECTION: If text contains "zapato", "shoe", "sandalia", "bota" = ALWAYS category "shoes"  
+        6. BAG DETECTION: If text contains "bolso", "bag", "cartera", "mochila" = ALWAYS category "bags"
+        7. Price must be properly formatted:
            - Convert prices like "45,95€" to 45.95 (NOT 4595)
            - Convert prices like "169,95€" to 169.95 (NOT 16995)
            - Remove currency symbols
            - Use period as decimal separator
            - CRITICAL: Never multiply by 100 or remove decimal places
            - Examples: "45,95€" → 45.95, "129,99€" → 129.99, "1.234,56€" → 1234.56
-        5. For Zara products, extract color information from Spanish color names:
+        8. For Zara products, extract color information from Spanish color names:
            - "Negro" = "Black", "Blanco" = "White", "Azul" = "Blue", etc.
-        6. Look for image URLs in the HTML content and return the best quality one
+        9. Look for image URLs in the HTML content and return the best quality one
+        
+        EXAMPLES:
+        - "Vestido largo de punto" → category: "clothes", subcategory: "dresses"
+        - "Zapatos de tacón" → category: "accessories", subcategory: "shoes"
+        - "Bolso de mano" → category: "accessories", subcategory: "bags"
         
         Available categories: ${categories.map(c => c.name).join(', ')}
         Available colors: ${colors.join(', ')}`
@@ -143,6 +151,11 @@ async function interpretScrapedProduct({ html, basicInfo, url }) {
         - Look for price in format like "45,95 EUR" or "45,95€"
         - Extract color from Spanish names (Negro=Black, Blanco=White, etc.)
         - Find high-quality product images from media-image or product-detail-images
+        
+        CRITICAL CATEGORIZATION:
+        - "vestido" = dresses (NOT outerwear)
+        - "zapato" = shoes
+        - "bolso" = bags
         
         Return a JSON object with:
         - name: Product name (prefer basic info if available)
@@ -311,22 +324,38 @@ async function checkDeepSeekStatus() {
       };
     }
 
-    // Simple test request
-    const response = await deepseekClient.post('/chat/completions', {
-      model: "deepseek-chat",
-      messages: [
-        { role: "user", content: "Test connection" }
-      ],
-      max_tokens: 5
-    });
-
-    lastHealthCheck = now;
-
-    return {
-      initialized: true,
-      hasApiKey: true,
-      status: 'connected'
-    };
+    // Simple test request with timeout
+    try {
+      const response = await Promise.race([
+        deepseekClient.post('/chat/completions', {
+          model: "deepseek-chat",
+          messages: [
+            { role: "user", content: "Test" }
+          ],
+          max_tokens: 1
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 5000)
+        )
+      ]);
+      
+      lastHealthCheck = now;
+      return {
+        initialized: true,
+        hasApiKey: true,
+        status: 'connected'
+      };
+    } catch (testError) {
+      logger.warn('DeepSeek test request failed:', testError.message);
+      
+      // Still consider it working if we have the client and API key
+      return {
+        initialized: true,
+        hasApiKey: true,
+        status: 'limited',
+        error: 'Test failed but client available'
+      };
+    }
   } catch (error) {
     logger.error('DeepSeek status check failed:', error);
     return {

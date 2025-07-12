@@ -40,5 +40,7 @@ export const AVAILABLE_COLORS: ColorInfo[] = [
   { name: 'Plum', value: '#DDA0DD' },
   { name: 'Indigo', value: '#4B0082' },
   { name: 'Violet', value: '#8F00FF' },
-  { name: 'Magenta', value: '#FF00FF' }
+  { name: 'Magenta', value: '#FF00FF' },
+  { name: 'Leopard Print', value: '#D2691E' },
+  { name: 'Animal Print', value: '#8B4513' }
 ];

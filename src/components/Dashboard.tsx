@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { PlusCircle, UserPlus } from 'lucide-react';
 import { Event, User } from '../types';
 import { EventCard } from './EventCard';
@@ -8,6 +9,7 @@ import { EventDetailsModal } from './EventDetailsModal';
 import { useAuth } from '../contexts/AuthContext';
 import { createEvent, getEventsByUser, joinEvent, getEventParticipants, deleteEvent } from '../services/eventService';
 import toast from 'react-hot-toast';
+import { isAfter, isBefore, subMonths, parseISO } from 'date-fns';
 
 export function Dashboard() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -42,6 +44,41 @@ export function Dashboard() {
     loadEvents();
   }, []);
 
+  // Organize events by date and age
+  const organizedEvents = useMemo(() => {
+    const now = new Date();
+    const sixMonthsAgo = subMonths(now, 6);
+    
+    const upcomingEvents: Event[] = [];
+    const recentPastEvents: Event[] = [];
+    const oldEvents: Event[] = [];
+    
+    events.forEach(event => {
+      const eventDate = parseISO(event.date);
+      
+      if (isAfter(eventDate, now)) {
+        // Future events
+        upcomingEvents.push(event);
+      } else if (isAfter(eventDate, sixMonthsAgo)) {
+        // Past events within 6 months
+        recentPastEvents.push(event);
+      } else {
+        // Events older than 6 months
+        oldEvents.push(event);
+      }
+    });
+    
+    // Sort each category by event date (not creation date)
+    upcomingEvents.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
+    recentPastEvents.sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
+    oldEvents.sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
+    
+    return {
+      upcoming: upcomingEvents,
+      recent: recentPastEvents,
+      old: oldEvents
+    };
+  }, [events]);
   const handleCreateEvent = async (eventData: {
     name: string;
     date: string;
@@ -129,16 +166,66 @@ export function Dashboard() {
           </div>
         </div>
       ) : (
-        <div className="grid gap-6">
-          {events.map((event) => (
-            <EventCard
-              key={event.id}
-              event={event}
-              onClick={() => setSelectedEvent(event)}
-              onDelete={handleDeleteEvent}
-              participants={participants}
-            />
-          ))}
+        <div className="space-y-8">
+          {/* Upcoming Events */}
+          {organizedEvents.upcoming.length > 0 && (
+            <div>
+              <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                🗓️ Upcoming Events ({organizedEvents.upcoming.length})
+              </h2>
+              <div className="grid gap-4">
+                {organizedEvents.upcoming.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onClick={() => setSelectedEvent(event)}
+                    onDelete={handleDeleteEvent}
+                    participants={participants}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Recent Past Events (within 6 months) */}
+          {organizedEvents.recent.length > 0 && (
+            <div>
+              <h2 className="text-xl font-semibold text-gray-600 mb-4 flex items-center gap-2">
+                📅 Recent Events ({organizedEvents.recent.length})
+              </h2>
+              <div className="grid gap-4">
+                {organizedEvents.recent.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onClick={() => setSelectedEvent(event)}
+                    onDelete={handleDeleteEvent}
+                    participants={participants}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Old Events (older than 6 months) */}
+          {organizedEvents.old.length > 0 && (
+            <div>
+              <h2 className="text-xl font-semibold text-gray-400 mb-4 flex items-center gap-2">
+                📁 Archive ({organizedEvents.old.length})
+              </h2>
+              <div className="grid gap-4 opacity-75">
+                {organizedEvents.old.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onClick={() => setSelectedEvent(event)}
+                    onDelete={handleDeleteEvent}
+                    participants={participants}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

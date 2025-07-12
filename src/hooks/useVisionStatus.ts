@@ -9,9 +9,10 @@ interface HealthStatus {
     hasClientEmail: boolean;
     hasPrivateKey: boolean;
   };
-  gemini?: {
+  grok?: {
     initialized: boolean;
     hasApiKey: boolean;
+    error?: string;
   };
 }
 

@@ -2,10 +2,17 @@ import { useAuth } from './contexts/AuthContext';
 import { AuthForm } from './components/AuthForm';
 import { Dashboard } from './components/Dashboard';
 import { UserMenu } from './components/UserMenu';
-import { Toaster } from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
+import { useEffect } from 'react';
 
 export default function App() {
   const { currentUser } = useAuth();
+
+  useEffect(() => {
+    // Test if the app is loading properly
+    console.log('App component loaded successfully');
+    console.log('Current user:', currentUser);
+  }, [currentUser]);
 
   return (
     <div className="min-h-screen bg-background">
