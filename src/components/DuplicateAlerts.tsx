@@ -1,7 +1,8 @@
 import React from 'react';
 import { Dress, User } from '../types';
-import { Bell, Mail, Users } from 'lucide-react';
+import { Bell, Mail, Users, Lightbulb } from 'lucide-react';
 import { MessageComposer } from './messages/MessageComposer';
+import { SuggestionModal } from './suggestions/SuggestionModal';
 
 interface DuplicateAlertsProps {
   dresses: Dress[];
@@ -21,6 +22,7 @@ export function DuplicateAlerts({
   const [expandedGroup, setExpandedGroup] = React.useState<string | null>(null);
   const [messageToUser, setMessageToUser] = React.useState<{userId: string, userName: string} | null>(null);
   const [messageToMultiple, setMessageToMultiple] = React.useState<Array<{userId: string, userName: string}> | null>(null);
+  const [showSuggestions, setShowSuggestions] = React.useState<{dressId: string, dressName: string} | null>(null);
 
   const findDuplicates = () => {
     const duplicateGroups = new Map<string, {
@@ -157,6 +159,26 @@ export function DuplicateAlerts({
                   ))}
                 </ul>
               )}
+              
+              {/* AI Suggestions Button */}
+              {expandedGroup === group.name && (
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const userItem = group.items.find(item => item.userId === currentUserId);
+                      if (userItem) {
+                        setShowSuggestions({ dressId: userItem.id, dressName: group.name });
+                      }
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors text-sm"
+                  >
+                    <Lightbulb size={16} />
+                    <span>Get AI Suggestions</span>
+                  </button>
+                </div>
+              )}
+              
               {isEventCreator && expandedGroup === group.name && group.items.length > 1 && (
                 <div className="mt-3 pt-3 border-t border-gray-200">
                   <button
@@ -195,6 +217,14 @@ export function DuplicateAlerts({
           eventId={dresses[0]?.eventId || ''}
           multipleUsers={messageToMultiple}
           onClose={() => setMessageToMultiple(null)}
+        />
+      )}
+
+      {showSuggestions && (
+        <SuggestionModal
+          dressId={showSuggestions.dressId}
+          dressName={showSuggestions.dressName}
+          onClose={() => setShowSuggestions(null)}
         />
       )}
     </div>
