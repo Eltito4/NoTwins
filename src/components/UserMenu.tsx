@@ -56,13 +56,11 @@ export function UserMenu({ isAdmin = false, forceUserView = false, onToggleView 
           size={18}
           className={`${getGrokStatusColor()} ${loading ? 'animate-spin' : ''}`}
           aria-label={getGrokStatusTooltip()}
-          title={getGrokStatusTooltip()}
         />
         <Activity 
           size={18} 
           className={`${getVisionStatusColor()} ${loading ? 'animate-spin' : ''}`}
           aria-label={getVisionStatusTooltip()}
-          title={getVisionStatusTooltip()}
         />
         <button
           onClick={() => setShowInbox(true)}

@@ -127,6 +127,20 @@ export function AdminDashboard() {
               <p className="text-gray-600">Complete system oversight and analytics</p>
             </div>
             <div className="flex items-center gap-4">
+              <button 
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to logout?')) {
+                    // Clear any admin state and logout
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.reload();
+                  }
+                }}
+                className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                <LogOut size={20} />
+                Logout
+              </button>
               <button className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-600">
                 <Download size={20} />
                 Export Data

@@ -48,13 +48,15 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
 
       // Handle types
       if (dress.type) {
-        // Get the proper subcategory name
-        const typeName = getSubcategoryName(dress.type.category, dress.type.subcategory);
-        const type = typeName || dress.type.name || dress.type.subcategory;
+        // Get the proper subcategory name with proper type checking
+        const category = typeof dress.type.category === 'string' ? dress.type.category : '';
+        const subcategory = typeof dress.type.subcategory === 'string' ? dress.type.subcategory : '';
+        const typeName = getSubcategoryName(category, subcategory);
+        const type = typeName || (dress.type as any).name || subcategory || 'Other';
         types[type] = (types[type] || 0) + 1;
-      } else if (dress.type && dress.type.name) {
+      } else if (dress.type && (dress.type as any).name) {
         // Fallback to type name if subcategory is not available
-        const type = dress.type.name;
+        const type = (dress.type as any).name;
         types[type] = (types[type] || 0) + 1;
       }
     });

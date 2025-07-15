@@ -303,7 +303,8 @@ export function SuggestionModal({ dressId, dressName, onClose }: SuggestionModal
                                           <button
                                             onClick={() => {
                                               window.open(product.url, '_blank');
-                                              handleSuggestionAction(suggestion, 'product_click');
+                                              // Track product click separately
+                                              trackSuggestionInteraction(suggestion.title, 'product_click');
                                             }}
                                             className="text-xs bg-primary text-white px-3 py-1 rounded hover:bg-primary-600 transition-colors flex items-center gap-1"
                                           >

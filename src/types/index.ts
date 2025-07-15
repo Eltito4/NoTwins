@@ -62,6 +62,7 @@ export interface MessageItemDetails {
   imageUrl: string;
   price?: number;
   color?: string;
+  brand?: string;
 }
 
 export interface Message {
