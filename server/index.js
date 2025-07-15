@@ -57,6 +57,7 @@ import authRoutes from './routes/auth.js';
 import messageRoutes from './routes/messages.js';
 import scrapingRoutes from './routes/scraping.js';
 import suggestionRoutes from './routes/suggestions.js';
+import adminRoutes from './routes/admin.js';
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -84,6 +85,7 @@ app.use('/api/vision', visionRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/scraping', scrapingRoutes);
 app.use('/api/suggestions', suggestionRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
