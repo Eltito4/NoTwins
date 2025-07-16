@@ -215,6 +215,97 @@ async function extractWithScraperApi(url, retailerConfig) {
         }
       }
     }
+    
+    // Enhanced extraction for specific brands
+    if (url.includes('bimani.com')) {
+      // BIMANI specific extraction
+      if (!basicInfo.color) {
+        // Extract color from URL and product name
+        const urlColor = extractColorFromUrl(url);
+        const nameColor = extractColorFromText(basicInfo.name);
+        basicInfo.color = urlColor || nameColor;
+      }
+      
+      // Fix price format for BIMANI
+      if (!basicInfo.price) {
+        const priceSelectors = [
+          '.price-value',
+          '.product-price .price',
+          '[data-price]',
+          '.money'
+        ];
+        
+        for (const selector of priceSelectors) {
+          const priceEl = $(selector).first();
+          if (priceEl.length) {
+            const priceText = priceEl.text().trim();
+            const price = normalizePrice(priceText);
+            if (price) {
+              basicInfo.price = price;
+              break;
+            }
+          }
+        }
+      }
+    }
+    
+    if (url.includes('miphai.com')) {
+      // MIPHAI specific extraction
+      if (!basicInfo.color) {
+        // Extract color from URL and product name
+        const urlColor = extractColorFromUrl(url);
+        const nameColor = extractColorFromText(basicInfo.name);
+        basicInfo.color = urlColor || nameColor;
+      }
+    }
+    
+    if (url.includes('mariquitatrasquila.com')) {
+      // MARIQUITA TRASQUILA specific extraction
+      if (!basicInfo.imageUrl) {
+        const imgSelectors = [
+          '.product-image-main img',
+          '.product-gallery img',
+          '.featured-image img',
+          'img[alt*="vestido"]',
+          'img[alt*="dress"]'
+        ];
+        
+        for (const selector of imgSelectors) {
+          const img = $(selector).first();
+          if (img.length) {
+            const src = img.attr('src') || img.attr('data-src');
+            if (src) {
+              basicInfo.imageUrl = makeAbsoluteUrl(src, url);
+              break;
+            }
+          }
+        }
+      }
+    }
+    
+    if (url.includes('matildecano.es')) {
+      // MATILDE CANO specific extraction
+      if (!basicInfo.imageUrl) {
+        const imgSelectors = [
+          '.product-image img',
+          '.main-image img',
+          '.hero-image img',
+          'img[src*="vestido"]'
+        ];
+        
+        for (const selector of imgSelectors) {
+          const img = $(selector).first();
+          if (img.length) {
+            const src = img.attr('src') || img.attr('data-src');
+            if (src) {
+              basicInfo.imageUrl = makeAbsoluteUrl(src, url);
+              break;
+            }
+          }
+        }
+      }
+    }
+    
     if (basicInfo.name && basicInfo.imageUrl) {
       // Try to enhance with AI if available
       try {
@@ -442,41 +533,6 @@ function extractPriceFromMeta($) {
   return null;
 }
 
-function normalizePrice(priceText) {
-  if (!priceText) return null;
-
-  try {
-    // Handle different price formats
-    let normalized = priceText.toString()
-      .replace(/[^\d.,]/g, '')
-      .trim();
-    
-    // Handle European format (e.g., "45,95" or "1.234,95")
-    if (normalized.includes(',')) {
-      // If there's both comma and dot, assume dot is thousands separator
-      if (normalized.includes('.') && normalized.includes(',')) {
-        normalized = normalized.replace(/\./g, '').replace(',', '.');
-      } else {
-        // Just comma, assume it's decimal separator
-        normalized = normalized.replace(',', '.');
-      }
-    }
-    
-    // Remove any remaining non-digit characters except the last dot
-    const parts = normalized.split('.');
-    if (parts.length > 2) {
-      // Multiple dots, keep only the last one as decimal
-      const lastPart = parts.pop();
-      normalized = parts.join('') + '.' + lastPart;
-    }
-
-    const price = parseFloat(normalized);
-    return isNaN(price) ? null : price;
-  } catch (error) {
-    return null;
-  }
-}
-
 function extractBrandFromUrl(url) {
   try {
     const hostname = new URL(url).hostname.toLowerCase();
@@ -513,6 +569,65 @@ function extractBrandFromUrl(url) {
   } catch (error) {
     return null;
   }
+}
+
+function extractColorFromUrl(url) {
+  const colorMappings = {
+    'navy': 'Navy Blue',
+    'azul-marino': 'Navy Blue',
+    'granate': 'Burgundy',
+    'burgundy': 'Burgundy',
+    'amarillo': 'Yellow',
+    'yellow': 'Yellow',
+    'negro': 'Black',
+    'black': 'Black',
+    'blanco': 'White',
+    'white': 'White',
+    'rojo': 'Red',
+    'red': 'Red',
+    'verde': 'Green',
+    'green': 'Green',
+    'rosa': 'Pink',
+    'pink': 'Pink',
+    'morado': 'Purple',
+    'purple': 'Purple'
+  };
+  
+  const lowerUrl = url.toLowerCase();
+  for (const [key, value] of Object.entries(colorMappings)) {
+    if (lowerUrl.includes(key)) {
+      return value;
+    }
+  }
+  return null;
+}
+
+function extractColorFromText(text) {
+  if (!text) return null;
+  
+  const colorMappings = {
+    'navy': 'Navy Blue',
+    'marino': 'Navy Blue',
+    'granate': 'Burgundy',
+    'burgundy': 'Burgundy',
+    'amarillo': 'Yellow',
+    'yellow': 'Yellow',
+    'ambar': 'Amber',
+    'amber': 'Amber',
+    'cassia': 'Navy Blue', // CASSIA is often navy
+    'negro': 'Black',
+    'black': 'Black',
+    'blanco': 'White',
+    'white': 'White'
+  };
+  
+  const lowerText = text.toLowerCase();
+  for (const [key, value] of Object.entries(colorMappings)) {
+    if (lowerText.includes(key)) {
+      return value;
+    }
+  }
+  return null;
 }
 
 function findColorInText(text) {
@@ -589,6 +704,7 @@ function findColorInText(text) {
   
   return null;
 }
+
 function makeAbsoluteUrl(url, baseUrl = '') {
   if (!url) return null;
   if (url.startsWith('data:')) return url;
@@ -603,6 +719,41 @@ function makeAbsoluteUrl(url, baseUrl = '') {
     }
     
     return url.replace(/^http:/, 'https:');
+  } catch (error) {
+    return null;
+  }
+}
+
+function normalizePrice(priceText) {
+  if (!priceText) return null;
+
+  try {
+    // Handle different price formats
+    let normalized = priceText.toString()
+      .replace(/[^\d.,]/g, '')
+      .trim();
+    
+    // Handle European format (e.g., "45,95" or "1.234,95")
+    if (normalized.includes(',')) {
+      // If there's both comma and dot, assume dot is thousands separator
+      if (normalized.includes('.') && normalized.includes(',')) {
+        normalized = normalized.replace(/\./g, '').replace(',', '.');
+      } else {
+        // Just comma, assume it's decimal separator
+        normalized = normalized.replace(',', '.');
+      }
+    }
+    
+    // Remove any remaining non-digit characters except the last dot
+    const parts = normalized.split('.');
+    if (parts.length > 2) {
+      // Multiple dots, keep only the last one as decimal
+      const lastPart = parts.pop();
+      normalized = parts.join('') + '.' + lastPart;
+    }
+
+    const price = parseFloat(normalized);
+    return isNaN(price) ? null : price;
   } catch (error) {
     return null;
   }

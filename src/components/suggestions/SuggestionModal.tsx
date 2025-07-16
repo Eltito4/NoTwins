@@ -179,14 +179,13 @@ export function SuggestionModal({ dressId, dressName, onClose }: SuggestionModal
             </div>
           ) : (
             <div className="space-y-6">
-              {/* User's Other Items Context */}
               {userItems.length > 0 && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div>
                   <h3 className="font-semibold text-blue-900 mb-2">Tus Otros Artículos en Este Evento:</h3>
                   <div className="flex flex-wrap gap-2">
                     {userItems.map((item, index) => (
                       <span key={index} className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-                        {item.name} {item.color && `(${item.color})`}
+                        {item.name}
                       </span>
                     ))}
                   </div>
@@ -235,21 +234,21 @@ export function SuggestionModal({ dressId, dressName, onClose }: SuggestionModal
                           <p className="font-medium">{suggestion.item.style}</p>
                         </div>
                         <div>
-                          <span className="text-gray-500">Type:</span>
+                          <span className="text-gray-500">Tipo:</span>
                           <p className="font-medium">{suggestion.item.subcategory}</p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                    <div className="mb-4">
                       <h5 className="text-sm font-medium text-gray-700 mb-1">Por qué funciona:</h5>
                       <p className="text-sm text-gray-600">{suggestion.reasoning}</p>
                     </div>
 
                     {/* Real Product Recommendations */}
-                    {suggestion.realProducts && Object.keys(suggestion.realProducts).length > 0 && (
+                    {suggestion.realProducts && (
                       <div className="bg-white rounded-lg border-2 border-primary/20 p-4 mb-4">
-                        <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                           <ShoppingBag className="w-5 h-5 text-primary" />
                           Recomendaciones de Productos Reales
                         </h4>
@@ -269,9 +268,9 @@ export function SuggestionModal({ dressId, dressName, onClose }: SuggestionModal
                                       <img
                                         src={product.image}
                                         alt={product.name}
-                                        className="w-16 h-20 object-cover rounded bg-gray-100"
+                                        className="w-20 h-24 object-cover rounded bg-gray-100"
                                         onError={(e) => {
-                                          e.currentTarget.src = `https://via.placeholder.com/64x80/CCCCCC/666666?text=${encodeURIComponent(product.retailer)}`;
+                                          e.currentTarget.src = `https://via.placeholder.com/80x96/CCCCCC/666666?text=${encodeURIComponent(product.retailer)}`;
                                         }}
                                       />
                                       <div className="flex-1 min-w-0">
@@ -322,6 +321,7 @@ export function SuggestionModal({ dressId, dressName, onClose }: SuggestionModal
                         </div>
                       </div>
                     )}
+
                     {/* Future Sponsor Integration */}
                     {suggestion.sponsor?.futureFeature && (
                       <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-3 mb-4">

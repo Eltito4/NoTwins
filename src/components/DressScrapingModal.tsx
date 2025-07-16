@@ -163,7 +163,6 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, onBack }
           >
             <ArrowLeft size={20} />
           </button>
-          <h2 className="text-xl font-semibold">Add Item from URL</h2>
           <h2 className="text-xl font-semibold">Agregar Artículo desde URL</h2>
         </div>
       </div>
@@ -199,7 +198,7 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, onBack }
             <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center gap-2">
                 <Loader2 className="animate-spin text-blue-600" size={16} />
-                <p className="text-sm text-blue-700">{fetchingMessage}</p>
+                <p className="text-sm text-blue-700">Obteniendo detalles del producto... Esto puede tomar un momento.</p>
               </div>
               <p className="text-xs text-blue-600 mt-1">
                 Estamos analizando la página del producto y extrayendo detalles...

@@ -333,14 +333,14 @@ function selectBestProducts(organizedProducts, suggestion) {
   Object.entries(organizedProducts).forEach(([category, products]) => {
     if (products.length === 0) return;
     
-    // Sort by rating and reviews, then select top 2-3
+    // Sort by rating and reviews, then select top 2 per budget category
     const sortedProducts = products
       .sort((a, b) => {
         const scoreA = (a.rating || 0) * Math.log(a.reviews || 1);
         const scoreB = (b.rating || 0) * Math.log(b.reviews || 1);
         return scoreB - scoreA;
       })
-      .slice(0, 3); // Take top 3 products
+      .slice(0, 2); // Take top 2 products per category
     
     result[category] = {
       label: BUDGET_CATEGORIES[category].label,

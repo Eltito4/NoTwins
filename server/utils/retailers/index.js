@@ -31,7 +31,11 @@ const BRAND_MAPPINGS = {
   'bershka.com': 'Bershka',
   'stradivarius.com': 'Stradivarius',
   'oysho.com': 'Oysho',
-  'uterque.com': 'Uterque'
+  'uterque.com': 'Uterque',
+  'bimani.com': 'BIMANI',
+  'miphai.com': 'Miphai',
+  'mariquitatrasquila.com': 'Mariquita Trasquila',
+  'matildecano.es': 'Matilde Cano'
 };
 
 // Get retailer configuration
@@ -103,6 +107,26 @@ export async function getRetailerConfig(url) {
         defaultValue: brand
       }
     };
+    
+    // Enhanced selectors for specific brands
+    if (hostname.includes('bimani.com')) {
+      config.selectors.price.unshift('.price-value', '.product-price .price');
+      config.selectors.color.unshift('.color-selector .selected');
+    }
+    
+    if (hostname.includes('miphai.com')) {
+      config.selectors.color.unshift('.color-option.selected', '.variant-color');
+    }
+    
+    if (hostname.includes('mariquitatrasquila.com')) {
+      config.selectors.image.unshift('.product-image-main img', '.featured-image img');
+      config.selectors.color.unshift('.color-variant.active');
+    }
+    
+    if (hostname.includes('matildecano.es')) {
+      config.selectors.image.unshift('.product-image img', '.main-image img');
+      config.selectors.color.unshift('.color-selection .active');
+    }
     
     logger.debug('Generated retailer config:', { hostname, brand, config });
     return config;

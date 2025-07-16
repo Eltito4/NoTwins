@@ -432,12 +432,54 @@ function extractColor($, url, name = '', description = '') {
   const text = (url + ' ' + name + ' ' + description).toLowerCase();
   
   // Check for colors in the combined text
+  
+  // Special handling for specific product names
+  if (name && name.toLowerCase().includes('cassia')) {
+    if (text.includes('navy') || text.includes('marino')) {
+      return 'Navy Blue';
+    }
+  }
+  
+  if (name && name.toLowerCase().includes('ambar')) {
+    if (text.includes('granate') || text.includes('burgundy')) {
+      return 'Burgundy';
+    }
+    if (text.includes('amarillo') || text.includes('yellow')) {
+      return 'Yellow';
+    }
+  }
+  
+  // Enhanced color detection from URL
+  const urlColor = extractColorFromUrl(url);
+  if (urlColor) return urlColor;
+  
   for (const [key, value] of Object.entries(ENHANCED_COLOR_MAPPINGS)) {
     if (text.includes(key.toLowerCase())) {
       return value;
     }
   }
 
+  return null;
+}
+
+function extractColorFromUrl(url) {
+  const colorMappings = {
+    'navy': 'Navy Blue',
+    'azul-marino': 'Navy Blue',
+    'granate': 'Burgundy',
+    'burgundy': 'Burgundy',
+    'amarillo': 'Yellow',
+    'yellow': 'Yellow',
+    'ambar': 'Amber',
+    'amber': 'Amber'
+  };
+  
+  const lowerUrl = url.toLowerCase();
+  for (const [key, value] of Object.entries(colorMappings)) {
+    if (lowerUrl.includes(key)) {
+      return value;
+    }
+  }
   return null;
 }
 

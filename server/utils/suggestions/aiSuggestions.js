@@ -138,12 +138,13 @@ export async function generateDuplicateSuggestions(duplicateItem, userOtherItems
       // Sort by priority and limit to top 5
       const sortedSuggestions = suggestions
         .sort((a, b) => (b.priority || 0) - (a.priority || 0))
-        .slice(0, 5);
+        .slice(0, 5); // Keep all suggestions for budget categorization
 
       // Add real product recommendations to each suggestion
       const enhancedSuggestions = await Promise.all(
         sortedSuggestions.map(async (suggestion) => {
           try {
+            // Get products for all budget categories
             const realProducts = await findRealProducts(suggestion, duplicateItem, 'all');
             return {
               ...suggestion,
