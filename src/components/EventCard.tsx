@@ -22,7 +22,6 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
 
   const userDuplicates = duplicates.filter(dup => 
     dup.items.some(item => item.userId === currentUser?.id) ||
-    <span className="text-sm text-primary">Creador del Evento</span>
     (isCreator && dup.items.length > 0)
   );
 
