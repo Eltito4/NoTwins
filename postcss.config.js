@@ -1,6 +1,4 @@
-export default {
-  plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
-  },
+// PostCSS config disabled for deployment compatibility
+module.exports = {
+  plugins: []
 }

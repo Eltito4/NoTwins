@@ -3,8 +3,8 @@ services:
     name: unique-dress-api
     env: node
     region: oregon
-    buildCommand: npm install && npm run build:server
-    startCommand: npm run start:server
+    buildCommand: npm install
+    startCommand: node server/index.js
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
@@ -27,10 +27,3 @@ services:
         sync: false
       - key: GOOGLE_CLOUD_PRIVATE_KEY
         sync: false
-    buildFilter:
-      paths:
-        - server/**
-      ignoredPaths:
-        - src/**
-        - public/**
-        - dist/**
