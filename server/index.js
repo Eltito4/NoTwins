@@ -38,7 +38,12 @@ const port = process.env.PORT || 3001;
 
 // Configure CORS with specific options
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: [
+    'http://localhost:5173',
+    'https://notwins.netlify.app',
+    'https://notwins.onrender.com',
+    process.env.CORS_ORIGIN
+  ].filter(Boolean),
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
