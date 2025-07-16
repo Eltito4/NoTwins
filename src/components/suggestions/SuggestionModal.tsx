@@ -143,16 +143,16 @@ export function SuggestionModal({ dressId, dressName, onClose }: SuggestionModal
         <div className="p-6 border-b">
           <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 <Lightbulb className="w-6 h-6 text-yellow-500" />
-                Smart Suggestions
+                Sugerencias Inteligentes
               </h2>
               <p className="text-gray-600 mt-1">
-                AI-powered alternatives for "{dressName}"
+                Alternativas generadas por IA para "{dressName}"
               </p>
               {eventInfo && (
                 <p className="text-sm text-gray-500 mt-1">
-                  Event: {eventInfo.name} • {new Date(eventInfo.date).toLocaleDateString()}
+                  Evento: {eventInfo.name} • {new Date(eventInfo.date).toLocaleDateString('es-ES')}
                 </p>
               )}
             </div>
@@ -167,22 +167,22 @@ export function SuggestionModal({ dressId, dressName, onClose }: SuggestionModal
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                <p className="mt-4 text-gray-600">AI is analyzing your wardrobe...</p>
-                <p className="text-sm text-gray-500 mt-1">Generating personalized suggestions</p>
+                <p className="mt-4 text-gray-600">La IA está analizando tu guardarropa...</p>
+                <p className="text-sm text-gray-500 mt-1">Generando sugerencias personalizadas</p>
               </div>
             </div>
           ) : suggestions.length === 0 ? (
             <div className="text-center py-12">
               <Lightbulb className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg">No suggestions available</p>
-              <p className="text-gray-500 mt-1">Try adding more items to your wardrobe for better recommendations</p>
+              <p className="text-gray-600 text-lg">No hay sugerencias disponibles</p>
+              <p className="text-gray-500 mt-1">Intenta agregar más artículos a tu guardarropa para mejores recomendaciones</p>
             </div>
           ) : (
             <div className="space-y-6">
               {/* User's Other Items Context */}
               {userItems.length > 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-blue-900 mb-2">Your Other Items in This Event:</h3>
+                  <h3 className="font-semibold text-blue-900 mb-2">Tus Otros Artículos en Este Evento:</h3>
                   <div className="flex flex-wrap gap-2">
                     {userItems.map((item, index) => (
                       <span key={index} className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
@@ -220,10 +220,10 @@ export function SuggestionModal({ dressId, dressName, onClose }: SuggestionModal
                     <p className="text-gray-700 mb-4">{suggestion.description}</p>
 
                     <div className="bg-white rounded-lg p-4 mb-4 border">
-                      <h4 className="font-medium text-gray-900 mb-2">Suggested Item:</h4>
+                      <h4 className="font-medium text-gray-900 mb-2">Artículo Sugerido:</h4>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <span className="text-gray-500">Name:</span>
+                          <span className="text-gray-500">Nombre:</span>
                           <p className="font-medium">{suggestion.item.name}</p>
                         </div>
                         <div>
@@ -231,7 +231,7 @@ export function SuggestionModal({ dressId, dressName, onClose }: SuggestionModal
                           <p className="font-medium">{suggestion.item.color}</p>
                         </div>
                         <div>
-                          <span className="text-gray-500">Style:</span>
+                          <span className="text-gray-500">Estilo:</span>
                           <p className="font-medium">{suggestion.item.style}</p>
                         </div>
                         <div>
@@ -242,7 +242,7 @@ export function SuggestionModal({ dressId, dressName, onClose }: SuggestionModal
                     </div>
 
                     <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                      <h5 className="text-sm font-medium text-gray-700 mb-1">Why this works:</h5>
+                      <h5 className="text-sm font-medium text-gray-700 mb-1">Por qué funciona:</h5>
                       <p className="text-sm text-gray-600">{suggestion.reasoning}</p>
                     </div>
 
@@ -251,7 +251,7 @@ export function SuggestionModal({ dressId, dressName, onClose }: SuggestionModal
                       <div className="bg-white rounded-lg border-2 border-primary/20 p-4 mb-4">
                         <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                           <ShoppingBag className="w-5 h-5 text-primary" />
-                          Real Product Recommendations
+                          Recomendaciones de Productos Reales
                         </h4>
                         <div className="space-y-4">
                           {Object.entries(suggestion.realProducts).map(([category, categoryData]) => (
@@ -295,10 +295,10 @@ export function SuggestionModal({ dressId, dressName, onClose }: SuggestionModal
                                         <div className="flex items-center justify-between">
                                           <span className={`text-xs px-2 py-1 rounded-full ${
                                             product.inStock 
-                                              ? 'bg-green-100 text-green-700' 
+                                              ? 'bg-green-100 text-green-700'
                                               : 'bg-red-100 text-red-700'
                                           }`}>
-                                            {product.inStock ? 'In Stock' : 'Out of Stock'}
+                                            {product.inStock ? 'En Stock' : 'Agotado'}
                                           </span>
                                           <button
                                             onClick={() => {
@@ -309,7 +309,7 @@ export function SuggestionModal({ dressId, dressName, onClose }: SuggestionModal
                                             className="text-xs bg-primary text-white px-3 py-1 rounded hover:bg-primary-600 transition-colors flex items-center gap-1"
                                           >
                                             <ExternalLink className="w-3 h-3" />
-                                            View
+                                            Ver
                                           </button>
                                         </div>
                                       </div>
@@ -327,10 +327,10 @@ export function SuggestionModal({ dressId, dressName, onClose }: SuggestionModal
                       <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-3 mb-4">
                         <div className="flex items-center gap-2 text-purple-700">
                           <Sparkles className="w-4 h-4" />
-                          <span className="text-sm font-medium">Coming Soon: Sponsored Suggestions</span>
+                          <span className="text-sm font-medium">Próximamente: Sugerencias Patrocinadas</span>
                         </div>
                         <p className="text-xs text-purple-600 mt-1">
-                          We'll soon partner with brands to show you exactly where to buy these items!
+                          ¡Pronto nos asociaremos con marcas para mostrarte exactamente dónde comprar estos artículos!
                         </p>
                       </div>
                     )}
@@ -342,14 +342,14 @@ export function SuggestionModal({ dressId, dressName, onClose }: SuggestionModal
                           className="flex items-center gap-1 px-3 py-1 text-sm text-green-600 hover:bg-green-100 rounded-full transition-colors"
                         >
                           <ThumbsUp className="w-4 h-4" />
-                          Helpful
+                          Útil
                         </button>
                         <button
                           onClick={() => handleSuggestionAction(suggestion, 'dislike')}
                           className="flex items-center gap-1 px-3 py-1 text-sm text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
                         >
                           <ThumbsDown className="w-4 h-4" />
-                          Not helpful
+                          No útil
                         </button>
                       </div>
                       <button
@@ -357,7 +357,7 @@ export function SuggestionModal({ dressId, dressName, onClose }: SuggestionModal
                         className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors"
                       >
                         <ExternalLink className="w-4 h-4" />
-                        Search for this
+                        Buscar esto
                       </button>
                     </div>
                   </div>

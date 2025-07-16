@@ -21,17 +21,17 @@ export function DressCard({ dress, onDelete, isEventCreator, userName, compact =
     if (!onDelete || isDeleting) return;
 
     const confirmed = window.confirm(
-      'Are you sure you want to delete this item? This action cannot be undone.'
+      '¿Estás seguro de que quieres eliminar este artículo? Esta acción no se puede deshacer.'
     );
 
     if (confirmed) {
       setIsDeleting(true);
       try {
         await onDelete(dress._id);
-        toast.success('Item deleted successfully');
+        toast.success('Artículo eliminado exitosamente');
       } catch (error) {
         console.error('Error deleting item:', error);
-        toast.error('Failed to delete item');
+        toast.error('Error al eliminar artículo');
       } finally {
         setIsDeleting(false);
       }
@@ -71,7 +71,7 @@ export function DressCard({ dress, onDelete, isEventCreator, userName, compact =
                 {dress.name}
               </h3>
               {userName && (
-                <p className="text-sm text-gray-500 mt-0.5">Added by {userName}</p>
+                <p className="text-sm text-gray-500 mt-0.5">Agregado por {userName}</p>
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -80,7 +80,7 @@ export function DressCard({ dress, onDelete, isEventCreator, userName, compact =
                   onClick={handleDelete}
                   disabled={isDeleting}
                   className="p-1 text-red-500 hover:text-red-600 rounded hover:bg-red-50 transition-colors"
-                  title="Delete item"
+                  title="Eliminar artículo"
                 >
                   <Trash2 size={compact ? 16 : 18} />
                 </button>
@@ -96,17 +96,17 @@ export function DressCard({ dress, onDelete, isEventCreator, userName, compact =
           <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
             {dress.brand && (
               <div className="text-sm text-gray-600 truncate">
-                <span className="font-medium">Brand:</span> {dress.brand}
+                <span className="font-medium">Marca:</span> {dress.brand}
               </div>
             )}
             {dress.price && (
               <div className="text-sm text-gray-600 truncate">
-                <span className="font-medium">Price:</span> {formatPrice(dress.price)}
+                <span className="font-medium">Precio:</span> {formatPrice(dress.price)}
               </div>
             )}
             {dress.type && (
               <div className="text-sm text-gray-600 truncate">
-                <span className="font-medium">Type:</span> {dress.type.name}
+                <span className="font-medium">Tipo:</span> {dress.type.name}
               </div>
             )}
             {dress.color && (

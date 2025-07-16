@@ -181,11 +181,11 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
           <button
             onClick={onBack}
             className="p-2 hover:bg-gray-100 rounded-full"
-            title="Go back"
+            title="Volver"
           >
             <ArrowLeft size={20} />
           </button>
-          <h2 className="text-xl font-semibold">Upload Item Photo</h2>
+          <h2 className="text-xl font-semibold">Subir Foto del Artículo</h2>
         </div>
       </div>
 
@@ -193,13 +193,13 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
         {!imageUrl ? (
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+            className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
           >
             <Camera className="mx-auto h-12 w-12 text-gray-400" />
             <p className="mt-4 text-sm text-gray-600">
-              Click to upload a photo or drag and drop
+              Haz clic para subir una foto o arrastra y suelta
             </p>
-            <p className="mt-1 text-xs text-gray-500">PNG, JPG up to 10MB</p>
+            <p className="mt-1 text-xs text-gray-500">PNG, JPG hasta 10MB</p>
             <input
               ref={fileInputRef}
               type="file"
@@ -228,9 +228,9 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
                   <div className="text-white text-center">
                     <Loader2 className="mx-auto h-8 w-8 animate-spin" />
-                    <p className="mt-2 font-medium">{analyzing ? 'AI Analyzing Image...' : 'Processing Image...'}</p>
+                    <p className="mt-2 font-medium">{analyzing ? 'IA Analizando Imagen...' : 'Procesando Imagen...'}</p>
                     {analyzing && (
-                      <p className="mt-1 text-sm text-gray-300">Detecting clothing type, color, and brand</p>
+                      <p className="mt-1 text-sm text-gray-300">Detectando tipo de ropa, color y marca</p>
                     )}
                   </div>
                 </div>
@@ -239,7 +239,7 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Name</label>
+                <label className="block text-sm font-medium text-gray-700">Nombre</label>
                 <input
                   type="text"
                   value={formData.name}
@@ -250,7 +250,7 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Brand</label>
+                <label className="block text-sm font-medium text-gray-700">Marca</label>
                 <input
                   type="text"
                   value={formData.brand}
@@ -260,7 +260,7 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Category</label>
+                <label className="block text-sm font-medium text-gray-700">Categoría</label>
                 <select
                   value={formData.category}
                   onChange={e => setFormData(prev => ({ 
@@ -271,19 +271,19 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
                   required
                 >
-                  <option value="">Select category</option>
+                  <option value="">Seleccionar categoría</option>
                   {categories && categories.length > 0 ? categories.map(category => (
                     <option key={category.id} value={category.id}>
                       {category.name}
                     </option>
                   )) : (
-                    <option disabled>Loading categories...</option>
+                    <option disabled>Cargando categorías...</option>
                   )}
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Type</label>
+                <label className="block text-sm font-medium text-gray-700">Tipo</label>
                 <select
                   value={formData.subcategory}
                   onChange={e => setFormData(prev => ({ ...prev, subcategory: e.target.value }))}
@@ -291,7 +291,7 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
                   required
                   disabled={!formData.category}
                 >
-                  <option value="">Select type</option>
+                  <option value="">Seleccionar tipo</option>
                   {currentCategorySubcategories.map(sub => (
                       <option key={sub.id} value={sub.id}>
                         {sub.name}
@@ -308,19 +308,19 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
                   required
                 >
-                  <option value="">Select color</option>
+                  <option value="">Seleccionar color</option>
                   {AVAILABLE_COLORS && AVAILABLE_COLORS.length > 0 ? AVAILABLE_COLORS.map(color => (
                     <option key={color.name} value={color.name}>
                       {color.name}
                     </option>
                   )) : (
-                    <option disabled>Loading colors...</option>
+                    <option disabled>Cargando colores...</option>
                   )}
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Price</label>
+                <label className="block text-sm font-medium text-gray-700">Precio</label>
                 <input
                   type="number"
                   value={formData.price}
@@ -333,14 +333,14 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
                 />
                 {formData.price && (
                   <p className="mt-1 text-sm text-gray-600">
-                    Price: €{parseFloat(formData.price).toFixed(2)}
+                    Precio: €{parseFloat(formData.price).toFixed(2)}
                   </p>
                 )}
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Description</label>
+              <label className="block text-sm font-medium text-gray-700">Descripción</label>
               <textarea
                 value={formData.description}
                 onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
@@ -360,12 +360,12 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
                 }`}
               >
                 {isPrivate ? <EyeOff size={20} /> : <Eye size={20} />}
-                <span>{isPrivate ? 'Private' : 'Public'}</span>
+                <span>{isPrivate ? 'Privado' : 'Público'}</span>
               </button>
               <p className="text-sm text-gray-500">
                 {isPrivate
-                  ? 'Only visible to you' + (isEventCreator ? ' and you as event creator' : '')
-                  : 'Visible to all participants'}
+                  ? 'Solo visible para ti' + (isEventCreator ? ' y para ti como creador del evento' : '')
+                  : 'Visible para todos los participantes'}
               </p>
             </div>
           </form>
@@ -378,7 +378,7 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
           onClick={onClose}
           className="px-4 py-2 text-gray-600 hover:text-gray-800"
         >
-          Cancel
+          Cancelar
         </button>
         {imageUrl && (
           <button
@@ -386,7 +386,7 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
             onClick={handleSubmit}
             className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600"
           >
-            Add Item
+            Agregar Artículo
           </button>
         )}
       </div>

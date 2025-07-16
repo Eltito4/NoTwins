@@ -17,7 +17,7 @@ export function EventHistory({ dresses, participants }: EventHistoryProps) {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-gray-900">Activity History</h3>
+      <h3 className="text-lg font-semibold text-gray-900">Historial de Actividad</h3>
       <div className="flow-root">
         <ul className="-mb-8">
           {sortedDresses.map((dress, dressIdx) => {
@@ -43,7 +43,7 @@ export function EventHistory({ dresses, participants }: EventHistoryProps) {
                       <div className="text-sm">
                         <span className="font-medium text-gray-900">{user?.name || 'Unknown User'}</span>
                         <p className="mt-0.5 text-gray-500">
-                          Added "{dress.name}"
+                          Agregó "{dress.name}"
                           <span className="mx-1">·</span>
                           {timeAgo}
                         </p>
@@ -61,7 +61,7 @@ export function EventHistory({ dresses, participants }: EventHistoryProps) {
                         <div className="flex flex-col gap-1">
                           <div className="text-sm font-medium text-gray-900">{dress.name}</div>
                           {dress.brand && (
-                            <div className="text-sm text-gray-500">Brand: {dress.brand}</div>
+                            <div className="text-sm text-gray-500">Marca: {dress.brand}</div>
                           )}
                           {dress.color && (
                             <div className="flex items-center gap-2">
@@ -79,7 +79,7 @@ export function EventHistory({ dresses, participants }: EventHistoryProps) {
                               <Eye className="h-4 w-4" />
                             )}
                             <span className="text-sm">
-                              {dress.isPrivate ? 'Private' : 'Public'}
+                              {dress.isPrivate ? 'Privado' : 'Público'}
                             </span>
                           </div>
                         </div>

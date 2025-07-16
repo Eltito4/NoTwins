@@ -30,7 +30,7 @@ export function ParticipantsList({ participants, creatorId, compact = false }: P
     return (
       <div className="flex items-center gap-2 text-gray-600">
         <Users size={compact ? 16 : 18} />
-        <span>{Object.keys(participants).length} participants</span>
+        <span>{Object.keys(participants).length} participantes</span>
       </div>
     );
   }
@@ -43,10 +43,10 @@ export function ParticipantsList({ participants, creatorId, compact = false }: P
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 text-[#000000] hover:text-[#000000] transition-colors"
+        className="flex items-center gap-2 text-[#8D6E63] hover:text-[#D84315] transition-colors"
       >
         <Users size={compact ? 16 : 18} />
-        <span>{participantsList.length} participants</span>
+        <span>{participantsList.length} participantes</span>
         {isOpen ? (
           <ChevronUp size={16} className="text-gray-400" />
         ) : (
@@ -60,7 +60,7 @@ export function ParticipantsList({ participants, creatorId, compact = false }: P
             <div className="px-4 py-2 flex items-center gap-2 border-b border-gray-100">
               <Crown size={16} className="text-[#D84315]" />
               <span className="font-medium text-gray-900">{creator.name}</span>
-              <span className="text-xs text-[#D84315] ml-auto">Creator</span>
+              <span className="text-xs text-[#D84315] ml-auto">Creador</span>
             </div>
           )}
           <div className="max-h-48 overflow-y-auto">

@@ -72,7 +72,10 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-xl font-semibold">{event.name}</h2>
+          <div>
+            <h2 className="text-xl font-semibold">{event.name}</h2>
+            <p className="text-sm text-gray-500">{new Date(event.date).toLocaleDateString('es-ES')}</p>
+          </div>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full">
             <X className="w-6 h-6" />
           </button>
@@ -86,7 +89,7 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
             }`}
           >
             <Grid className="w-5 h-5" />
-            <span>Grid View</span>
+            <span>Vista de Cuadrícula</span>
           </button>
           <button
             onClick={() => setActiveView('trends')}
@@ -95,7 +98,7 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
             }`}
           >
             <BarChart className="w-5 h-5" />
-            <span>Trends</span>
+            <span>Tendencias</span>
           </button>
           {isEventCreator && (
             <button
@@ -105,16 +108,16 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
               }`}
             >
               <History className="w-5 h-5" />
-              <span>History</span>
+              <span>Historial</span>
             </button>
           )}
           <div className="flex-grow" />
           <button
             onClick={() => setShowAddItemModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
+            className="bg-primary text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-primary-600"
           >
             <PlusCircle className="w-5 h-5" />
-            <span>Add Item</span>
+            <span>Agregar Artículo</span>
           </button>
         </div>
 

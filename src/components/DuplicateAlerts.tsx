@@ -174,7 +174,7 @@ export function DuplicateAlerts({
                     className="flex items-center gap-2 px-3 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors text-sm"
                   >
                     <Lightbulb size={16} />
-                    <span>Get AI Suggestions</span>
+                    <span>Obtener Sugerencias IA</span>
                   </button>
                 </div>
               )}
@@ -192,7 +192,7 @@ export function DuplicateAlerts({
                     className="flex items-center gap-2 px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors text-sm"
                   >
                     <Users size={16} />
-                    <span>Message All Users</span>
+                    <span>Enviar Mensaje a Todos</span>
                   </button>
                 </div>
               )}

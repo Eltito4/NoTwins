@@ -68,10 +68,10 @@ export function BroadcastComposer({ eventId, eventName, participantCount, onClos
           <div>
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <Users size={20} />
-              Broadcast Message
+              Mensaje de Difusión
             </h2>
             <p className="text-sm text-gray-500">
-              Send to all {participantCount} participants in "{eventName}"
+              Enviar a todos los {participantCount} participantes en "{eventName}"
             </p>
           </div>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
@@ -82,35 +82,35 @@ export function BroadcastComposer({ eventId, eventName, participantCount, onClos
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Subject
+              Asunto
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary"
-              placeholder="Message subject"
+              placeholder="Asunto del mensaje"
               required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Message
+              Mensaje
             </label>
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary"
               rows={4}
-              placeholder="Your message to all participants..."
+              placeholder="Tu mensaje para todos los participantes..."
               required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Suggested Item (Optional)
+              Artículo Sugerido (Opcional)
             </label>
             <div className="flex gap-2">
               <input
@@ -129,7 +129,7 @@ export function BroadcastComposer({ eventId, eventName, participantCount, onClos
                 {scrapingUrl ? (
                   <Loader2 className="animate-spin" size={16} />
                 ) : (
-                  'Fetch'
+                  'Obtener'
                 )}
               </button>
             </div>
@@ -148,7 +148,7 @@ export function BroadcastComposer({ eventId, eventName, participantCount, onClos
                 />
                 <div className="flex flex-col gap-2">
                   {scrapedItem.brand && (
-                    <p className="text-sm text-gray-600">Brand: {scrapedItem.brand}</p>
+                    <p className="text-sm text-gray-600">Marca: {scrapedItem.brand}</p>
                   )}
                   {scrapedItem.price && (
                     <p className="text-sm text-gray-600">Price: €{scrapedItem.price}</p>
@@ -173,7 +173,7 @@ export function BroadcastComposer({ eventId, eventName, participantCount, onClos
               onClick={onClose}
               className="px-4 py-2 text-gray-600 hover:text-gray-800"
             >
-              Cancel
+              Cancelar
             </button>
             <button
               type="submit"
@@ -183,12 +183,12 @@ export function BroadcastComposer({ eventId, eventName, participantCount, onClos
               {loading ? (
                 <>
                   <Loader2 className="animate-spin" size={16} />
-                  Sending...
+                  Enviando...
                 </>
               ) : (
                 <>
                   <Users size={16} />
-                  Send to All
+                  Enviar a Todos
                 </>
               )}
             </button>

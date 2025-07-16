@@ -71,8 +71,8 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
   if (dresses.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500 text-lg">No data available for trends analysis</p>
-        <p className="text-gray-400 mt-2">Add some items to see the trends</p>
+        <p className="text-gray-500 text-lg">No hay datos disponibles para análisis de tendencias</p>
+        <p className="text-gray-400 mt-2">Agrega algunos artículos para ver las tendencias</p>
       </div>
     );
   }
@@ -206,7 +206,7 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
     <div className="space-y-12 p-6">
       {Object.keys(typeData).length > 0 && (
         <div className="bg-white p-8 rounded-lg shadow-sm">
-          <h3 className="text-xl font-semibold mb-6">Clothing Types</h3>
+          <h3 className="text-xl font-semibold mb-6">Tipos de Ropa</h3>
           <div className="h-[400px] relative">
             <Pie data={typeChartData} options={chartOptions} />
           </div>
@@ -215,7 +215,7 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
 
       {Object.keys(colorData).length > 0 && (
         <div className="bg-white p-8 rounded-lg shadow-sm">
-          <h3 className="text-xl font-semibold mb-6">Color Distribution</h3>
+          <h3 className="text-xl font-semibold mb-6">Distribución de Colores</h3>
           <div className="h-[400px] relative">
             <Pie data={colorChartData} options={chartOptions} />
           </div>
@@ -224,7 +224,7 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
 
       {Object.keys(brandData).length > 0 && (
         <div className="bg-white p-8 rounded-lg shadow-sm">
-          <h3 className="text-xl font-semibold mb-6">Popular Brands</h3>
+          <h3 className="text-xl font-semibold mb-6">Marcas Populares</h3>
           <div className="h-[400px] relative">
             <Bar data={brandChartData} options={barOptions} />
           </div>
