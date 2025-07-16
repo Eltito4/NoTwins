@@ -3,7 +3,6 @@ import { LogOut, User as UserIcon, Bell, Activity, Sparkles } from 'lucide-react
 import { useAuth } from '../contexts/AuthContext';
 import { useMessages } from '../contexts/MessageContext';
 import { MessageInbox } from './messages/MessageInbox';
-import { useVisionStatus } from '../hooks/useVisionStatus';
 
 export function UserMenu() {
   const { currentUser, signOut } = useAuth();
