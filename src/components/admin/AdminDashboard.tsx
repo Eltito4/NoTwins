@@ -123,13 +123,13 @@ export function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Super Admin Dashboard</h1>
-              <p className="text-gray-600">Complete system oversight and analytics</p>
+              <h1 className="text-3xl font-bold text-gray-900">Panel de Super Administrador</h1>
+              <p className="text-gray-600">Supervisión completa del sistema y análisis</p>
             </div>
             <div className="flex items-center gap-4">
               <button 
                 onClick={() => {
-                  if (window.confirm('Are you sure you want to logout?')) {
+                  if (window.confirm('¿Estás seguro de que quieres cerrar sesión?')) {
                     // Clear any admin state and logout
                     localStorage.removeItem('token');
                     localStorage.removeItem('user');
@@ -139,21 +139,21 @@ export function AdminDashboard() {
                 className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
               >
                 <LogOut size={20} />
-                Logout
+                Cerrar Sesión
               </button>
               <button className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-600">
                 <Download size={20} />
-                Export Data
+                Exportar Datos
               </button>
             </div>
           </div>
           
           <nav className="flex space-x-8">
             {[
-              { id: 'overview', label: 'Overview', icon: TrendingUp },
-              { id: 'users', label: 'Users', icon: Users },
-              { id: 'analytics', label: 'AI Analytics', icon: Brain },
-              { id: 'revenue', label: 'Revenue', icon: DollarSign }
+              { id: 'overview', label: 'Resumen', icon: TrendingUp },
+              { id: 'users', label: 'Usuarios', icon: Users },
+              { id: 'analytics', label: 'Análisis IA', icon: Brain },
+              { id: 'revenue', label: 'Ingresos', icon: DollarSign }
             ].map(tab => (
               <button
                 key={tab.id}

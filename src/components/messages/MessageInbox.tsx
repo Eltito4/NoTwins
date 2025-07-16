@@ -41,13 +41,13 @@ export function MessageInbox({ onClose }: MessageInboxProps) {
   const getMessageTypeLabel = (type: string) => {
     switch (type) {
       case 'event_broadcast':
-        return 'Event Broadcast';
+        return 'Difusión del Evento';
       case 'duplicate_alert':
-        return 'Duplicate Alert';
+        return 'Alerta de Duplicado';
       case 'direct_message':
-        return 'Direct Message';
+        return 'Mensaje Directo';
       default:
-        return 'Message';
+        return 'Mensaje';
     }
   };
 
@@ -55,7 +55,7 @@ export function MessageInbox({ onClose }: MessageInboxProps) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg w-full max-w-2xl max-h-[80vh] flex flex-col">
         <div className="p-4 border-b flex justify-between items-center">
-          <h2 className="text-xl font-bold">Messages</h2>
+          <h2 className="text-xl font-bold">Mensajes</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <X size={24} />
           </button>
@@ -64,7 +64,7 @@ export function MessageInbox({ onClose }: MessageInboxProps) {
         <div className="flex-1 overflow-y-auto">
           {messages.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              No messages yet
+              Aún no hay mensajes
             </div>
           ) : (
             <div className="divide-y">

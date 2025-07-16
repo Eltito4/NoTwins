@@ -10,16 +10,6 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '.env') });
 
-// Log environment variables (without sensitive data)
-logger.debug('Environment variables loaded:', {
-  nodeEnv: process.env.NODE_ENV,
-  hasMongoUri: !!process.env.MONGODB_URI,
-  hasJwtSecret: !!process.env.JWT_SECRET,
-  hasScraperApiKey: !!process.env.SCRAPER_API_KEY,
-  hasDeepSeekKey: !!process.env.DEEPSEEK_API_KEY,
-  corsOrigin: process.env.CORS_ORIGIN
-});
-
 // Validate required environment variables
 const requiredEnvVars = [
   'MONGODB_URI',
@@ -71,14 +61,7 @@ app.get('/api/health', (req, res) => {
     mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     environment: process.env.NODE_ENV,
     timestamp: new Date().toISOString(),
-    scraperApi: {
-      hasApiKey: !!process.env.SCRAPER_API_KEY
-    },
-    vision: {
-      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-      hasCredentials: !!process.env.GOOGLE_CLOUD_PRIVATE_KEY && 
-                     !!process.env.GOOGLE_CLOUD_CLIENT_EMAIL
-    }
+    services: 'operational'
   });
 });
 
@@ -124,10 +107,11 @@ mongoose.connect(process.env.MONGODB_URI)
       logger.success(`Server running on port ${port}`);
       logger.info('Environment:', process.env.NODE_ENV);
       logger.info('ScraperAPI status:', {
-        hasKey: !!process.env.SCRAPER_API_KEY
-      });
-    });
-  })
+        }      )
+    }
+    )
+  }
+  )
   .catch(err => {
     logger.error('MongoDB connection error:', err);
     process.exit(1);

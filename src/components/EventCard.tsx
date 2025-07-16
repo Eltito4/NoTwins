@@ -22,6 +22,7 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
 
   const userDuplicates = duplicates.filter(dup => 
     dup.items.some(item => item.userId === currentUser?.id) ||
+    <span className="text-sm text-primary">Creador del Evento</span>
     (isCreator && dup.items.length > 0)
   );
 
@@ -59,11 +60,11 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      toast.success('Link copied to clipboard!');
+      toast.success('¡Enlace copiado al portapapeles!');
       setShowShareSuccess(true);
       setTimeout(() => setShowShareSuccess(false), 2000);
     } catch (err) {
-      toast.error('Failed to copy link');
+      toast.error('Error al copiar enlace');
     }
   };
 
@@ -71,11 +72,11 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
     e.stopPropagation();
     try {
       await navigator.clipboard.writeText(event.shareId);
-      toast.success('Event ID copied to clipboard!');
+      toast.success('¡ID del evento copiado al portapapeles!');
       setShowCopySuccess(true);
       setTimeout(() => setShowCopySuccess(false), 2000);
     } catch (err) {
-      toast.error('Failed to copy event ID');
+      toast.error('Error al copiar ID del evento');
     }
   };
 
@@ -84,17 +85,17 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
     if (!onDelete || isDeleting) return;
 
     const confirmed = window.confirm(
-      'Are you sure you want to delete this event? This action cannot be undone.'
+      '¿Estás seguro de que quieres eliminar este evento? Esta acción no se puede deshacer.'
     );
 
     if (confirmed) {
       setIsDeleting(true);
       try {
         await onDelete(event.id);
-        toast.success('Event deleted successfully');
+        toast.success('Evento eliminado exitosamente');
       } catch (error) {
         console.error('Error deleting event:', error);
-        toast.error('Failed to delete event');
+        toast.error('Error al eliminar evento');
       } finally {
         setIsDeleting(false);
       }
@@ -134,7 +135,7 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
         <div>
           <h3 className="text-xl font-bold text-gray-800">{event.name}</h3>
           {isCreator && (
-            <span className="text-sm text-primary">Event Creator</span>
+            <span className="text-sm text-primary">Creador del Evento</span>
           )}
         </div>
 
@@ -144,7 +145,7 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
               onClick={handleDelete}
               disabled={isDeleting}
               className="p-2 text-red-600 hover:text-red-700 transition-colors rounded-lg hover:bg-red-50"
-              title="Delete event"
+              title="Eliminar evento"
             >
               <Trash2 size={20} />
             </button>
@@ -152,7 +153,7 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
           <button
             onClick={handleShare}
             className="p-2 text-primary hover:text-primary-600 transition-colors rounded-lg hover:bg-background/20"
-            title="Share event"
+            title="Compartir evento"
           >
             {showShareSuccess ? (
               <Check size={20} className="text-green-500" />
@@ -169,11 +170,11 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
             <div className="flex items-start gap-2 text-red-600">
               <Bell size={18} className="flex-shrink-0 mt-0.5 animate-[ring_4s_ease-in-out_infinite]" />
               <div>
-                <p className="font-medium">Exact duplicates found:</p>
+                <p className="font-medium">Duplicados exactos encontrados:</p>
                 <ul className="mt-1 space-y-1 text-sm">
                   {exactDuplicates.map(dup => (
                     <li key={dup.name}>
-                      "{dup.name}" ({dup.items.length} items, same color)
+                      "{dup.name}" ({dup.items.length} artículos, mismo color)
                       <ul className="ml-4 text-gray-600">
                         {dup.items.map(item => (
                           <li key={item.id}>{formatUserInfo(item)}</li>
@@ -190,11 +191,11 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
             <div className="flex items-start gap-2 text-amber-600 mt-3">
               <Bell size={18} className="flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium">Similar items found:</p>
+                <p className="font-medium">Artículos similares encontrados:</p>
                 <ul className="mt-1 space-y-1 text-sm">
                   {partialDuplicates.map(dup => (
                     <li key={dup.name}>
-                      "{dup.name}" ({dup.items.length} items, different colors)
+                      "{dup.name}" ({dup.items.length} artículos, colores diferentes)
                       <ul className="ml-4 text-gray-600">
                         {dup.items.map(item => (
                           <li key={item.id}>{formatUserInfo(item)}</li>
@@ -216,19 +217,19 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
         </div>
         <div className="flex items-center gap-2 text-gray-600">
           <MapPin size={18} />
-          <span>{event.location}</span>
+          <span>{event.participants.length} participantes</span>
         </div>
         <div className="flex items-center gap-4 text-gray-600">
           <div className="flex items-center gap-2">
             <Users size={18} />
-            <span>{event.participants.length} participants</span>
+            <span>{event.participants.length} participantes</span>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2" title="Public items">
+            <div className="flex items-center gap-2" title="Artículos públicos">
               <Eye size={18} className="text-green-500" />
               <span>{publicItems}</span>
             </div>
-            <div className="flex items-center gap-2" title="Private items">
+            <div className="flex items-center gap-2" title="Artículos privados">
               <Lock size={18} className="text-gray-400" />
               <span>{privateItems}</span>
             </div>
@@ -239,7 +240,7 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
         )}
         <div className="mt-4 pt-4 border-t border-gray-100">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-500">Event ID:</span>
+            <span className="text-sm font-medium text-gray-500">ID del Evento:</span>
             <button
               onClick={handleCopyId}
               className="flex items-center gap-2 px-2 py-1 rounded bg-background/50 hover:bg-background transition-colors group"

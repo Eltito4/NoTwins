@@ -27,7 +27,7 @@ export async function createEvent(event: Omit<Event, 'id' | '_id' | 'shareId' | 
     
     return response.data;
   } catch (error) {
-    handleError(error, 'Failed to create event');
+    handleError(error, 'Error al crear evento');
     return Promise.reject(error);
   }
 }
@@ -37,7 +37,7 @@ export async function getEventsByUser(): Promise<Event[]> {
     const response = await api.get('/events');
     return response.data;
   } catch (error) {
-    handleError(error, 'Failed to load events');
+    handleError(error, 'Error al cargar eventos');
     return Promise.reject(error);
   }
 }
@@ -45,9 +45,9 @@ export async function getEventsByUser(): Promise<Event[]> {
 export async function deleteEvent(eventId: string): Promise<void> {
   try {
     await api.delete(`/events/${eventId}`);
-    toast.success('Event deleted successfully');
+    toast.success('Evento eliminado exitosamente');
   } catch (error) {
-    handleError(error, 'Failed to delete event');
+    handleError(error, 'Error al eliminar evento');
     return Promise.reject(error);
   }
 }
@@ -59,10 +59,10 @@ export async function addDressToEvent(eventId: string, dress: Omit<Dress, '_id' 
       ...dress
     });
 
-    toast.success('Item added successfully');
+    toast.success('Artículo agregado exitosamente');
     return response.data;
   } catch (error) {
-    handleError(error, 'Failed to add item');
+    handleError(error, 'Error al agregar artículo');
     return Promise.reject(error);
   }
 }
@@ -74,7 +74,7 @@ export async function getEventDresses(eventId: string, includePrivate = false): 
     });
     return response.data;
   } catch (error) {
-    handleError(error, 'Failed to load items');
+    handleError(error, 'Error al cargar artículos');
     return Promise.reject(error);
   }
 }
@@ -85,19 +85,19 @@ export async function deleteDress(dressId: string): Promise<void> {
       throw new Error('Dress ID is required');
     }
     await api.delete(`/dresses/${dressId}`);
-    toast.success('Item deleted successfully');
+    toast.success('Artículo eliminado exitosamente');
   } catch (error) {
-    handleError(error, 'Failed to delete item');
+    handleError(error, 'Error al eliminar artículo');
   }
 }
 
 export async function joinEvent(shareId: string): Promise<Event> {
   try {
     const response = await api.post(`/events/join/${shareId}`);
-    toast.success('Successfully joined the event!');
+    toast.success('¡Te has unido al evento exitosamente!');
     return response.data;
   } catch (error) {
-    handleError(error, 'Failed to join event');
+    handleError(error, 'Error al unirse al evento');
     return Promise.reject(error);
   }
 }
@@ -107,7 +107,7 @@ export async function getEventParticipants(eventId: string): Promise<User[]> {
     const response = await api.get(`/events/${eventId}/participants`);
     return response.data;
   } catch (error) {
-    handleError(error, 'Failed to load participants');
+    handleError(error, 'Error al cargar participantes');
     return Promise.reject(error);
   }
 }

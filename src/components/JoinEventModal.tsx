@@ -34,7 +34,7 @@ export function JoinEventModal({ onClose, onJoin }: JoinEventModalProps) {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl max-w-md w-full p-6">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Join Event</h2>
+          <h2 className="text-2xl font-bold">Unirse a Evento</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <X size={24} />
           </button>
@@ -42,19 +42,19 @@ export function JoinEventModal({ onClose, onJoin }: JoinEventModalProps) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Event ID</label>
+            <label className="block text-sm font-medium text-gray-700">ID del Evento</label>
             <input
               type="text"
               value={shareId}
               onChange={(e) => setShareId(e.target.value.toUpperCase())}
-              placeholder="Enter event ID (e.g., ABC123)"
+              placeholder="Ingresa el ID del evento (ej. ABC123)"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 uppercase"
               maxLength={6}
               required
               disabled={loading}
             />
             <p className="mt-2 text-sm text-gray-500">
-              Enter the 6-character event ID shared with you
+              Ingresa el ID de 6 caracteres que te compartieron
             </p>
           </div>
 
@@ -65,7 +65,7 @@ export function JoinEventModal({ onClose, onJoin }: JoinEventModalProps) {
               className="text-gray-600 hover:text-gray-800"
               disabled={loading}
             >
-              Cancel
+              Cancelar
             </button>
             <button
               type="submit"
@@ -73,7 +73,7 @@ export function JoinEventModal({ onClose, onJoin }: JoinEventModalProps) {
               className="flex items-center gap-2 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
             >
               {loading && <Loader2 className="animate-spin" size={20} />}
-              <span>Join Event</span>
+              <span>Unirse al Evento</span>
             </button>
           </div>
         </form>

@@ -21,11 +21,11 @@ export function AuthForm() {
 
   const validateForm = () => {
     if (!formData.email || !formData.password) {
-      toast.error('Please fill in all required fields');
+      toast.error('Por favor, completa todos los campos requeridos');
       return false;
     }
     if (!isLogin && !formData.name) {
-      toast.error('Name is required for registration');
+      toast.error('El nombre es requerido para el registro');
       return false;
     }
     return true;
@@ -43,7 +43,7 @@ export function AuthForm() {
         await signUp(formData.email, formData.password, formData.name);
       }
     } catch {
-      // Errors are handled in AuthContext
+      // Los errores se manejan en AuthContext
     }
   };
 
@@ -51,14 +51,14 @@ export function AuthForm() {
     <div className="max-w-md mx-auto">
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold text-gray-800">NoTwins</h1>
-        <p className="text-gray-600 mt-2">Ensure your outfit stands out at every event</p>
+        <p className="text-gray-600 mt-2">Asegúrate de que tu outfit destaque en cada evento</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {!isLogin && (
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-              Name
+              Nombre
             </label>
             <input
               id="name"
@@ -74,7 +74,7 @@ export function AuthForm() {
         )}
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-            Email
+            Correo Electrónico
           </label>
           <input
             id="email"
@@ -89,7 +89,7 @@ export function AuthForm() {
         </div>
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-            Password
+            Contraseña
           </label>
           <input
             id="password"
@@ -110,12 +110,12 @@ export function AuthForm() {
           {loading ? (
             <>
               <Loader2 className="animate-spin" size={20} />
-              <span>Loading...</span>
+              <span>Cargando...</span>
             </>
           ) : (
             <>
               {isLogin ? <LogIn size={20} /> : <UserPlus size={20} />}
-              <span>{isLogin ? 'Sign In' : 'Sign Up'}</span>
+              <span>{isLogin ? 'Iniciar Sesión' : 'Registrarse'}</span>
             </>
           )}
         </button>
@@ -126,7 +126,7 @@ export function AuthForm() {
         disabled={loading}
         className="mt-4 w-full text-center text-sm text-primary hover:text-primary-700 disabled:opacity-50"
       >
-        {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
+        {isLogin ? "¿No tienes cuenta? Regístrate" : "¿Ya tienes cuenta? Inicia Sesión"}
       </button>
     </div>
   );

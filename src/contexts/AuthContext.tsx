@@ -50,7 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       setCurrentUser(data.user);
-      toast.success('Account created successfully!');
+      toast.success('¡Cuenta creada exitosamente!');
     } catch (error) {
       handleAuthError(error);
       throw error;
@@ -70,7 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       setCurrentUser(data.user);
-      toast.success('Welcome back!');
+      toast.success('¡Bienvenido de vuelta!');
     } catch (error) {
       handleAuthError(error);
       throw error;
@@ -83,7 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setCurrentUser(null);
-    toast.success('Logged out successfully');
+    toast.success('Sesión cerrada exitosamente');
   };
 
   const value = {

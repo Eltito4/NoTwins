@@ -28,7 +28,7 @@ export function CreateEventModal({ onClose, onSubmit }: CreateEventModalProps) {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl max-w-md w-full p-6">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Create New Event</h2>
+          <h2 className="text-2xl font-bold">Crear Nuevo Evento</h2>
           <button 
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -39,7 +39,7 @@ export function CreateEventModal({ onClose, onSubmit }: CreateEventModalProps) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Event Name</label>
+            <label className="block text-sm font-medium text-gray-700">Nombre del Evento</label>
             <input
               type="text"
               value={formData.name}
@@ -50,7 +50,7 @@ export function CreateEventModal({ onClose, onSubmit }: CreateEventModalProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Date</label>
+            <label className="block text-sm font-medium text-gray-700">Fecha</label>
             <input
               type="date"
               value={formData.date}
@@ -61,7 +61,7 @@ export function CreateEventModal({ onClose, onSubmit }: CreateEventModalProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Location</label>
+            <label className="block text-sm font-medium text-gray-700">Ubicación</label>
             <input
               type="text"
               value={formData.location}
@@ -72,7 +72,7 @@ export function CreateEventModal({ onClose, onSubmit }: CreateEventModalProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Description</label>
+            <label className="block text-sm font-medium text-gray-700">Descripción</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -88,13 +88,13 @@ export function CreateEventModal({ onClose, onSubmit }: CreateEventModalProps) {
               onClick={onClose}
               className="text-gray-600 hover:text-gray-800"
             >
-              Cancel
+              Cancelar
             </button>
             <button
               type="submit"
               className="bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
             >
-              Create Event
+              Crear Evento
             </button>
           </div>
         </form>

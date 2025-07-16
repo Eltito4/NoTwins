@@ -135,33 +135,33 @@ export function Dashboard() {
           className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
         >
           <UserPlus size={20} />
-          <span>Join Event</span>
+          <span>Unirse a Evento</span>
         </button>
         <button
           onClick={() => setShowCreateModal(true)}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors"
         >
           <PlusCircle size={20} />
-          <span>Create Event</span>
+          <span>Crear Evento</span>
         </button>
       </div>
 
       {events.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-600 mb-4">No events yet</p>
+          <p className="text-gray-600 mb-4">Aún no hay eventos</p>
           <div className="flex justify-center gap-4">
             <button
               onClick={() => setShowJoinModal(true)}
               className="text-primary hover:text-primary-600"
             >
-              Join an event
+              Unirse a un evento
             </button>
-            <span className="text-gray-400">or</span>
+            <span className="text-gray-400">o</span>
             <button
               onClick={() => setShowCreateModal(true)}
               className="text-primary hover:text-primary-600"
             >
-              Create your first event
+              Crear tu primer evento
             </button>
           </div>
         </div>
@@ -171,7 +171,7 @@ export function Dashboard() {
           {organizedEvents.upcoming.length > 0 && (
             <div>
               <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                🗓️ Upcoming Events ({organizedEvents.upcoming.length})
+                🗓️ Próximos Eventos ({organizedEvents.upcoming.length})
               </h2>
               <div className="grid gap-4">
                 {organizedEvents.upcoming.map((event) => (
@@ -191,7 +191,7 @@ export function Dashboard() {
           {organizedEvents.recent.length > 0 && (
             <div>
               <h2 className="text-xl font-semibold text-gray-600 mb-4 flex items-center gap-2">
-                📅 Recent Events ({organizedEvents.recent.length})
+                📅 Eventos Recientes ({organizedEvents.recent.length})
               </h2>
               <div className="grid gap-4">
                 {organizedEvents.recent.map((event) => (
@@ -211,7 +211,7 @@ export function Dashboard() {
           {organizedEvents.old.length > 0 && (
             <div>
               <h2 className="text-xl font-semibold text-gray-400 mb-4 flex items-center gap-2">
-                📁 Archive ({organizedEvents.old.length})
+                📁 Archivo ({organizedEvents.old.length})
               </h2>
               <div className="grid gap-4 opacity-75">
                 {organizedEvents.old.map((event) => (

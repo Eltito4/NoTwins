@@ -53,29 +53,12 @@ export default function App() {
         {currentUser && (
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Your Events</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Tus Eventos</h1>
               {checkingAdmin && (
-                <p className="text-sm text-gray-500">Checking admin access...</p>
-              )}
-              {currentUser && !checkingAdmin && !forceUserView && (
-                <p className="text-sm text-gray-500">
-                  Regular user access
-                </p>
-              )}
-              {isAdmin && !forceUserView && (
-                <button
-                  onClick={() => setForceUserView(false)}
-                  className="text-sm text-primary hover:text-primary-600 underline"
-                >
-                  Switch to Admin Dashboard
-                </button>
+                <p className="text-sm text-gray-500">Verificando acceso de administrador...</p>
               )}
             </div>
-            <UserMenu 
-              isAdmin={isAdmin} 
-              forceUserView={forceUserView}
-              onToggleView={() => setForceUserView(!forceUserView)}
-            />
+            <UserMenu />
           </div>
         )}
         <div className="mt-4">
