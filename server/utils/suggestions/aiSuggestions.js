@@ -33,11 +33,17 @@ function initializeDeepSeek() {
 
 export async function generateDuplicateSuggestions(duplicateItem, userOtherItems = [], eventContext = {}) {
   try {
+    logger.info('Generating duplicate suggestions for:', {
+      duplicateItem: duplicateItem.name,
+      userItemsCount: userOtherItems.length,
+      eventName: eventContext.name
+    });
+
     if (!deepseekClient) {
       deepseekClient = initializeDeepSeek();
       if (!deepseekClient) {
-        logger.warn('DeepSeek not available for suggestions');
-        return [];
+        logger.warn('DeepSeek not available, generating fallback suggestions');
+        return generateFallbackSuggestions(duplicateItem, userOtherItems, eventContext);
       }
     }
 
@@ -138,7 +144,7 @@ export async function generateDuplicateSuggestions(duplicateItem, userOtherItems
       // Sort by priority and limit to top 5
       const sortedSuggestions = suggestions
         .sort((a, b) => (b.priority || 0) - (a.priority || 0))
-        .slice(0, 5); // Keep all suggestions for budget categorization
+        .slice(0, 3); // Limit to 3 main suggestions
 
       // Add real product recommendations to each suggestion
       const enhancedSuggestions = await Promise.all(
@@ -166,15 +172,69 @@ export async function generateDuplicateSuggestions(duplicateItem, userOtherItems
       return enhancedSuggestions;
     }
 
-    return [];
+    logger.warn('No valid JSON found in DeepSeek response, using fallback');
+    return generateFallbackSuggestions(duplicateItem, userOtherItems, eventContext);
   } catch (error) {
     logger.error('AI suggestions generation error:', {
       error: error.message,
       duplicateItem: duplicateItem.name,
       userItemsCount: userOtherItems.length
     });
-    return []; // Fallback to no suggestions on error
+    return generateFallbackSuggestions(duplicateItem, userOtherItems, eventContext);
   }
+}
+
+function generateFallbackSuggestions(duplicateItem, userOtherItems, eventContext) {
+  logger.info('Generating fallback suggestions');
+  
+  const fallbackSuggestions = [
+    {
+      type: 'color_alternative',
+      title: `Alternativa de Color para ${duplicateItem.name}`,
+      description: `Considera el mismo estilo en un color diferente que complemente tu guardarropa existente.`,
+      item: {
+        name: duplicateItem.name.replace(duplicateItem.color || '', 'Azul'),
+        category: duplicateItem.type?.category || 'clothes',
+        subcategory: duplicateItem.type?.subcategory || 'dresses',
+        color: 'Azul',
+        style: 'Elegante'
+      },
+      reasoning: 'Un color diferente te permitirá evitar el conflicto manteniendo el estilo que te gusta.',
+      searchTerms: [duplicateItem.name, 'azul', 'alternativa'],
+      priority: 5
+    },
+    {
+      type: 'style_variation',
+      title: `Variación de Estilo Similar`,
+      description: `Busca un artículo similar pero con detalles diferentes que lo hagan único.`,
+      item: {
+        name: `${duplicateItem.name} con Detalles`,
+        category: duplicateItem.type?.category || 'clothes',
+        subcategory: duplicateItem.type?.subcategory || 'dresses',
+        color: duplicateItem.color || 'Negro',
+        style: 'Con detalles únicos'
+      },
+      reasoning: 'Pequeños detalles pueden hacer que un artículo similar se vea completamente diferente.',
+      searchTerms: [duplicateItem.name, 'detalles', 'único'],
+      priority: 4
+    }
+  ];
+
+  // Add real products to fallback suggestions
+  return Promise.all(
+    fallbackSuggestions.map(async (suggestion) => {
+      try {
+        const realProducts = await findRealProducts(suggestion, duplicateItem, 'all');
+        return {
+          ...suggestion,
+          realProducts: realProducts
+        };
+      } catch (error) {
+        logger.warn('Failed to find real products for fallback suggestion:', error);
+        return suggestion;
+      }
+    })
+  );
 }
 
 export async function generateSponsorSuggestions(suggestions, eventContext = {}) {

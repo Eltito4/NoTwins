@@ -9,42 +9,7 @@ import api from './lib/api';
 
 export default function App() {
   const { currentUser } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [checkingAdmin, setCheckingAdmin] = useState(false);
-  const [forceUserView, setForceUserView] = useState(false);
-
-  useEffect(() => {
-    // Check if current user is admin
-    if (currentUser) {
-      checkAdminStatus();
-    } else {
-      setIsAdmin(false);
-      setCheckingAdmin(false);
-      setForceUserView(false);
-    }
-  }, [currentUser]);
-
-  const checkAdminStatus = async () => {
-    try {
-      setCheckingAdmin(true);
-      const response = await api.get('/admin/dashboard');
-      setIsAdmin(true);
-    } catch (error) {
-      setIsAdmin(false);
-    } finally {
-      setCheckingAdmin(false);
-    }
-  };
-
-  // Show admin dashboard if user is logged in and is admin
-  if (currentUser && isAdmin && !checkingAdmin && !forceUserView) {
-    return (
-      <div className="min-h-screen">
-        <AdminDashboard />
-        <Toaster position="bottom-right" />
-      </div>
-    );
-  }
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
 
   // Show regular app for normal users or non-admin users
   return (
@@ -54,17 +19,21 @@ export default function App() {
           <div className="flex justify-between items-center mb-8">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Tus Eventos</h1>
-              {checkingAdmin && (
-                <p className="text-sm text-gray-500">Verificando acceso de administrador...</p>
-              )}
             </div>
-            <UserMenu />
+            <UserMenu onShowAdmin={() => setShowAdminDashboard(true)} />
           </div>
         )}
         <div className="mt-4">
           {currentUser ? <Dashboard /> : <AuthForm />}
         </div>
       </div>
+      
+      {showAdminDashboard && (
+        <div className="fixed inset-0 bg-black/50 z-50">
+          <AdminDashboard onClose={() => setShowAdminDashboard(false)} />
+        </div>
+      )}
+      
       <Toaster position="bottom-right" />
     </div>
   );

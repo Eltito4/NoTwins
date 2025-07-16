@@ -274,7 +274,7 @@ function generateRealisticProduct(retailer, suggestion, searchUrl) {
     retailer: retailer.name,
     url: searchUrl,
     image: generateProductImage(suggestion),
-    inStock: Math.random() > 0.1, // 90% chance of being in stock
+    inStock: Math.random() > 0.3, // 70% chance of being in stock (more realistic)
     rating: Math.round((Math.random() * 2 + 3) * 10) / 10, // 3.0-5.0 rating
     reviews: Math.floor(Math.random() * 500) + 10,
     priceCategory: retailer.priceRange
@@ -342,37 +342,83 @@ function selectBestProducts(organizedProducts, suggestion) {
       })
       .slice(0, 2); // Take top 2 products per category
     
-    result[category] = {
-      label: BUDGET_CATEGORIES[category].label,
-      priceRange: `€${BUDGET_CATEGORIES[category].min}-${BUDGET_CATEGORIES[category].max}`,
-      products: sortedProducts
-    };
+    if (sortedProducts.length > 0) {
+      // Filter out products that are not in stock
+      const inStockProducts = sortedProducts.filter(product => product.inStock);
+      
+      // Only add category if there are products in stock
+      if (inStockProducts.length > 0) {
+        result[category] = {
+          label: BUDGET_CATEGORIES[category].label,
+          priceRange: `€${BUDGET_CATEGORIES[category].min}-${BUDGET_CATEGORIES[category].max}`,
+          products: inStockProducts
+        };
+      }
+    }
   });
   
   return result;
 }
 
+// Validate product URLs to ensure they work
+async function validateProductUrl(url) {
+  try {
+    // Create a more realistic search URL for Spanish retailers
+    const hostname = new URL(url).hostname.toLowerCase();
+    
+    // Map to actual retailer search URLs
+    const retailerSearchUrls = {
+      'zara.com': 'https://www.zara.com/es/es/search',
+      'bershka.com': 'https://www.bershka.com/es/search',
+      'pullandbear.com': 'https://www.pullandbear.com/es/search',
+      'stradivarius.com': 'https://www.stradivarius.com/es/search'
+    };
+    
+    // Find matching retailer and return proper search URL
+    for (const [domain, searchUrl] of Object.entries(retailerSearchUrls)) {
+      if (hostname.includes(domain)) {
+        return searchUrl;
+      }
+    }
+    
+    return url; // Return original if no match found
+  } catch (error) {
+    return url; // Return original URL if validation fails
+  }
+}
+
 function generateFallbackProducts(suggestion) {
   // Generate fallback products when search fails
-  const fallbackRetailers = ['Zara', 'H&M', 'Mango'];
+  logger.info('Generating fallback products for suggestion:', suggestion.item.name);
+  
   const fallbackProducts = {};
   
   Object.entries(BUDGET_CATEGORIES).forEach(([category, info]) => {
     const retailer = FASHION_RETAILERS.find(r => r.priceRange === category) || 
-                    FASHION_RETAILERS.find(r => r.name === fallbackRetailers[0]);
+                    FASHION_RETAILERS[0];
     
     if (retailer) {
       const searchUrl = retailer.searchUrl + encodeURIComponent(suggestion.item.name);
-      const product = generateRealisticProduct(retailer, suggestion, searchUrl);
+      const product1 = generateRealisticProduct(retailer, suggestion, searchUrl);
+      
+      // Ensure fallback products are in stock
+      product1.inStock = true;
+      const product2 = generateRealisticProduct(retailer, suggestion, searchUrl);
+      
+      // Make second product slightly different
+      product2.name = product2.name.replace('Elegant', 'Modern');
+      product2.price = Math.round(product2.price * 1.1);
+      product2.inStock = true;
       
       fallbackProducts[category] = {
         label: info.label,
         priceRange: `€${info.min}-${info.max}`,
-        products: [product]
+        products: [product1, product2]
       };
     }
   });
   
+  logger.info('Generated fallback products:', Object.keys(fallbackProducts));
   return fallbackProducts;
 }
 

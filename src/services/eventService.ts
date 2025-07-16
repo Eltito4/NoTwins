@@ -79,6 +79,17 @@ export async function getEventDresses(eventId: string, includePrivate = false): 
   }
 }
 
+export async function updateDress(dressId: string, updatedData: Partial<Dress>): Promise<Dress> {
+  try {
+    const response = await api.put(`/dresses/${dressId}`, updatedData);
+    toast.success('Artículo actualizado exitosamente');
+    return response.data;
+  } catch (error) {
+    handleError(error, 'Error al actualizar artículo');
+    return Promise.reject(error);
+  }
+}
+
 export async function deleteDress(dressId: string): Promise<void> {
   try {
     if (!dressId) {

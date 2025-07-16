@@ -1,6 +1,4 @@
-<parameter name="filePath">server/utils/duplicates/aiSimilarity.js</parameter>
-<parameter name="contentType">content</parameter>
-<parameter name="content">import axios from 'axios';
+import axios from 'axios';
 import { logger } from '../logger.js';
 
 let deepseekClient = null;
@@ -144,6 +142,170 @@ export async function analyzeSimilarItems(newItemName, existingItems) {
   }
 }
 
+export async function detectSmartDuplicates(newItem, existingItems) {
+  try {
+    if (!deepseekClient) {
+      deepseekClient = initializeDeepSeek();
+      if (!deepseekClient) {
+        logger.warn('DeepSeek not available for smart duplicate detection');
+        return [];
+      }
+    }
+
+    // Filter items that could be duplicates based on basic criteria
+    const potentialDuplicates = existingItems.filter(item => {
+      // Same brand and color
+      if (item.brand && newItem.brand && item.color && newItem.color) {
+        if (item.brand.toLowerCase() === newItem.brand.toLowerCase() && 
+            item.color.toLowerCase() === newItem.color.toLowerCase()) {
+          return true;
+        }
+      }
+      
+      // Same type and color
+      if (item.type?.subcategory && newItem.type?.subcategory && item.color && newItem.color) {
+        if (item.type.subcategory === newItem.type.subcategory && 
+            item.color.toLowerCase() === newItem.color.toLowerCase()) {
+          return true;
+        }
+      }
+      
+      // Similar names (basic check)
+      const similarity = calculateNameSimilarity(newItem.name, item.name);
+      return similarity > 0.6;
+    });
+
+    if (potentialDuplicates.length === 0) {
+      return [];
+    }
+
+    const messages = [
+      {
+        role: "system",
+        content: `You are a fashion duplicate detector. Analyze if items are the same product with different names.
+
+        CRITICAL RULES:
+        1. Same brand + same color + same type = LIKELY DUPLICATE
+        2. Different languages for same item = DUPLICATE ("Vestido Negro" = "Black Dress")
+        3. Different descriptions for same item = DUPLICATE ("Formal Dress" = "Vestido Formal")
+        4. Same visual appearance = DUPLICATE
+        5. Different sizes of same item = DUPLICATE
+        6. Different styling of same name = DUPLICATE
+
+        EXAMPLES:
+        - "Vestido Formal Negro" vs "Black Formal Dress" = DUPLICATE (same item, different language)
+        - "Carolina Herrera Black Dress" vs "Vestido Negro Carolina Herrera" = DUPLICATE
+        - "Red Zara Shirt" vs "Blue Zara Shirt" = NOT DUPLICATE (different colors)
+        - "Nike Sneakers White" vs "Adidas Sneakers White" = NOT DUPLICATE (different brands)
+
+        Return confidence score 0.0-1.0:
+        - 0.9-1.0 = Definitely same item
+        - 0.7-0.89 = Very likely same item  
+        - 0.5-0.69 = Possibly same item
+        - 0.0-0.49 = Different items`
+      },
+      {
+        role: "user",
+        content: `Analyze if these items are duplicates:
+
+        NEW ITEM:
+        - Name: "${newItem.name}"
+        - Brand: "${newItem.brand || 'Unknown'}"
+        - Color: "${newItem.color || 'Unknown'}"
+        - Type: "${newItem.type?.name || 'Unknown'}"
+        - Category: "${newItem.type?.category || 'Unknown'}"
+
+        EXISTING ITEMS TO COMPARE:
+        ${potentialDuplicates.map((item, index) => `
+        ${index + 1}. "${item.name}"
+           - Brand: "${item.brand || 'Unknown'}"
+           - Color: "${item.color || 'Unknown'}"
+           - Type: "${item.type?.name || 'Unknown'}"
+           - User: "${item.userName || 'Unknown'}"
+        `).join('')}
+
+        Return JSON array with duplicate analysis:
+        [
+          {
+            "itemIndex": 1,
+            "itemName": "existing item name",
+            "confidence": 0.95,
+            "isDuplicate": true,
+            "reason": "Same Carolina Herrera black formal dress, just different language",
+            "type": "exact"
+          }
+        ]
+
+        Only include items with confidence >= 0.7`
+      }
+    ];
+
+    const response = await deepseekClient.post('/chat/completions', {
+      model: "deepseek-chat",
+      messages,
+      temperature: 0.2,
+      max_tokens: 800
+    });
+
+    if (!response.data?.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response from DeepSeek API');
+    }
+
+    const text = response.data.choices[0].message.content;
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    
+    if (jsonMatch) {
+      const duplicates = JSON.parse(jsonMatch[0]);
+      
+      // Map back to original items and filter by confidence
+      const detectedDuplicates = duplicates
+        .filter(dup => dup.confidence >= 0.7 && dup.isDuplicate)
+        .map(dup => ({
+          ...potentialDuplicates[dup.itemIndex - 1],
+          confidence: dup.confidence,
+          reason: dup.reason,
+          duplicateType: dup.confidence >= 0.9 ? 'exact' : 'similar'
+        }));
+
+      logger.info('Smart duplicate detection completed:', {
+        newItem: newItem.name,
+        potentialCount: potentialDuplicates.length,
+        detectedCount: detectedDuplicates.length,
+        duplicates: detectedDuplicates.map(d => ({
+          name: d.name,
+          confidence: d.confidence,
+          type: d.duplicateType
+        }))
+      });
+
+      return detectedDuplicates;
+    }
+
+    return [];
+  } catch (error) {
+    logger.error('Smart duplicate detection error:', {
+      error: error.message,
+      newItem: newItem.name,
+      potentialCount: potentialDuplicates?.length || 0
+    });
+    return []; // Fallback to no duplicates on error
+  }
+}
+
+function calculateNameSimilarity(name1, name2) {
+  const normalize = (str) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const n1 = normalize(name1);
+  const n2 = normalize(name2);
+  
+  // Jaccard similarity
+  const set1 = new Set(n1.split(''));
+  const set2 = new Set(n2.split(''));
+  const intersection = new Set([...set1].filter(x => set2.has(x)));
+  const union = new Set([...set1, ...set2]);
+  
+  return intersection.size / union.size;
+}
+
 export async function findAllDuplicates(dresses) {
   try {
     const duplicates = [];
@@ -238,5 +400,4 @@ export async function findAllDuplicates(dresses) {
     logger.error('Error finding all duplicates:', error);
     return [];
   }
-}</parameter>
-</invoke>
+}

@@ -20,6 +20,7 @@ interface EventDetailsModalProps {
 
 export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, onDressAdded, participants }) => {
   const [showAddItemModal, setShowAddItemModal] = useState(false);
+  const [editingDress, setEditingDress] = useState<Dress | null>(null);
   const [activeView, setActiveView] = useState<'grid' | 'trends' | 'history'>('grid');
   const [dresses, setDresses] = useState<Dress[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +54,34 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
     } catch (error) {
       console.error('Error adding dress:', error);
       toast.error('Failed to add item');
+    }
+  };
+
+  const handleEditDress = (dress: Dress) => {
+    setEditingDress(dress);
+  };
+
+  const handleUpdateDress = async (updatedData: Partial<Dress>) => {
+    if (!editingDress) return;
+    
+    try {
+      // Update dress via API
+      await updateDress(editingDress._id, updatedData);
+      
+      // Update dress in local state
+      setDresses(prevDresses => 
+        prevDresses.map(dress => 
+          dress._id === editingDress._id 
+            ? { ...dress, ...updatedData }
+            : dress
+        )
+      );
+      setEditingDress(null);
+      onDressAdded(); // Refresh parent component
+      toast.success('Item updated successfully!');
+    } catch (error) {
+      console.error('Error updating dress:', error);
+      toast.error('Failed to update item');
     }
   };
 
@@ -136,6 +165,7 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
                     key={dress._id}
                     dress={dress}
                     onDelete={handleDeleteDress}
+                    onEdit={handleEditDress}
                     isEventCreator={isEventCreator}
                     userName={participants[dress.userId]?.name}
                     compact={true}
@@ -159,6 +189,14 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
           onClose={() => setShowAddItemModal(false)}
           onSubmit={handleAddDress}
           isEventCreator={isEventCreator}
+        />
+      )}
+
+      {editingDress && (
+        <EditItemModal
+          dress={editingDress}
+          onClose={() => setEditingDress(null)}
+          onSubmit={handleUpdateDress}
         />
       )}
     </div>

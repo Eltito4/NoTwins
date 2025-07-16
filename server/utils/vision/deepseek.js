@@ -244,42 +244,97 @@ async function interpretVisionResults(visionResults) {
     const categories = getAllCategories();
     const colors = AVAILABLE_COLORS.map(c => c.name);
 
+    // Spanish fashion brands to recognize
+    const spanishBrands = [
+      'Bimani', 'Bruna', 'Coosy', 'Lady Pipa', 'Redondo Brand', 'Miphai',
+      'Mariquita Trasquilá', 'Vogana', 'Matilde Cano', 'Violeta Vergara',
+      'Cayro Woman', 'La Croixé', 'Aware Barcelona', 'Cardié Moda',
+      'Güendolina', 'Mattui', 'THE-ARE', 'Mannit', 'Mimoki', 'Panambi',
+      'Carolina Herrera', 'CH', 'Zara', 'Mango', 'Massimo Dutti'
+    ];
     const messages = [
       {
         role: "system",
-        content: `You are a fashion image analyzer. Extract product details from Vision API results.
+        content: `You are a Spanish fashion expert and image analyzer. Extract product details from Vision API results with focus on Spanish fashion brands and accurate product categorization.
         
         CRITICAL INSTRUCTIONS:
-        1. Categories must be one of: clothes, accessories
-        2. For clothes, subcategories must be: tops, bottoms, dresses, outerwear
-        3. For accessories, subcategories must be: shoes, bags, jewelry, other
+        1. PRODUCT TYPE DETECTION:
+           - SHOES: Any footwear including boots, heels, sneakers, sandals, flats
+           - DRESSES: Any one-piece garment including vestidos, robes
+           - TOPS: Shirts, blouses, sweaters, t-shirts
+           - BOTTOMS: Pants, skirts, shorts, trousers
+           - BAGS: Handbags, purses, backpacks, clutches
+           - JEWELRY: Necklaces, earrings, bracelets, rings
+           - OTHER: Belts, scarves, hats, accessories
+        
+        2. BRAND DETECTION - Look for these Spanish brands:
+           ${spanishBrands.join(', ')}
+           Also check for: CH, Carolina Herrera logos, text on packaging
+        
+        3. COLOR DETECTION:
+           - Analyze the ACTUAL color of the item, not packaging
+           - Purple/Violet items should be "Purple" 
+           - Pink items should be "Pink"
+           - Look at the main color of the product itself
+        
+        4. ENHANCED ANALYSIS:
+           - Look at logos, text, packaging, labels
+           - Consider product shape and design
+           - Analyze materials and textures
+           - Check for brand signatures or distinctive features
         
         Available categories: ${categories.map(c => c.name).join(', ')}
-        Available colors: ${colors.join(', ')}`
+        Available colors: ${colors.join(', ')}
+        
+        EXAMPLES:
+        - High-heeled boots = category: "accessories", subcategory: "shoes"
+        - Purple/violet colored item = color: "Purple"
+        - CH logo or Carolina Herrera text = brand: "Carolina Herrera"
+        - Shoe-shaped item = category: "accessories", subcategory: "shoes"`
       },
       {
         role: "user",
-        content: `Analyze these Vision API results:
+        content: `Analyze these Vision API results for a Spanish fashion item:
 
         Labels: ${JSON.stringify(visionResults.labelAnnotations)}
         Objects: ${JSON.stringify(visionResults.localizedObjectAnnotations)}
         Colors: ${JSON.stringify(visionResults.imageProperties?.dominantColors)}
         Web Entities: ${JSON.stringify(visionResults.webDetection?.webEntities)}
+        Logos: ${JSON.stringify(visionResults.logoAnnotations)}
         
-        Return a JSON object with:
+        CRITICAL ANALYSIS POINTS:
+        1. Look for shoe-like shapes, heel structures, boot designs
+        2. Check for Spanish brand names in text/logos
+        3. Analyze the actual product color (not packaging)
+        4. Identify product category based on shape and function
+        
+        Return a JSON object with accurate detection:
         - name: Product name based on detected objects and labels
-        - color: Main color from available colors list
-        - brand: Brand name if detected
-        - type: Object with category and subcategory from available categories
-        - description: Generated description of the item`
+        - color: Main color from available colors list (analyze actual product)
+        - brand: Brand name if detected (check Spanish brands list)
+        - type: Object with category and subcategory (shoes go to accessories/shoes)
+        - description: Generated description of the item
+        
+        EXAMPLE for shoes:
+        {
+          "name": "Purple High-Heeled Boots",
+          "color": "Purple",
+          "brand": "Carolina Herrera",
+          "type": {
+            "category": "accessories",
+            "subcategory": "shoes",
+            "name": "Shoes"
+          },
+          "description": "Stylish purple high-heeled boots with sophisticated design"
+        }`
       }
     ];
 
     const response = await deepseekClient.post('/chat/completions', {
       model: "deepseek-chat",
       messages,
-      temperature: 0.3,
-      max_tokens: 500
+      temperature: 0.2,
+      max_tokens: 800
     });
 
     if (!response.data?.choices?.[0]?.message?.content) {
@@ -290,6 +345,31 @@ async function interpretVisionResults(visionResults) {
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const result = JSON.parse(jsonMatch[0]);
+      
+      // Post-process results for better accuracy
+      if (result.type && !result.type.category) {
+        // If type detection failed, try to infer from name
+        const name = (result.name || '').toLowerCase();
+        if (name.includes('shoe') || name.includes('boot') || name.includes('heel')) {
+          result.type = {
+            category: 'accessories',
+            subcategory: 'shoes',
+            name: 'Shoes'
+          };
+        }
+      }
+      
+      // Enhance brand detection
+      if (!result.brand) {
+        const allText = JSON.stringify(visionResults).toLowerCase();
+        for (const brand of spanishBrands) {
+          if (allText.includes(brand.toLowerCase()) || allText.includes('ch') || allText.includes('carolina herrera')) {
+            result.brand = brand === 'CH' ? 'Carolina Herrera' : brand;
+            break;
+          }
+        }
+      }
+      
       logger.debug('Parsed vision results:', result);
       return result;
     }
@@ -297,7 +377,34 @@ async function interpretVisionResults(visionResults) {
     throw new Error('No valid JSON found in DeepSeek response');
   } catch (error) {
     logger.error('DeepSeek vision analysis error:', error);
-    return null;
+    
+    // Enhanced fallback analysis
+    const fallbackResult = {
+      name: 'Fashion Item',
+      color: null,
+      brand: null,
+      type: {
+        category: 'accessories',
+        subcategory: 'other',
+        name: 'Other'
+      },
+      description: 'Fashion item detected from image'
+    };
+    
+    // Try to detect shoes from vision results
+    if (visionResults.labelAnnotations) {
+      const labels = visionResults.labelAnnotations.map(l => l.description.toLowerCase());
+      if (labels.some(l => l.includes('shoe') || l.includes('boot') || l.includes('footwear') || l.includes('heel'))) {
+        fallbackResult.type = {
+          category: 'accessories',
+          subcategory: 'shoes',
+          name: 'Shoes'
+        };
+        fallbackResult.name = 'Fashion Shoes';
+      }
+    }
+    
+    return fallbackResult;
   }
 }
 

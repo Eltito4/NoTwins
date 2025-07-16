@@ -45,7 +45,11 @@ interface DashboardData {
   };
 }
 
-export function AdminDashboard() {
+interface AdminDashboardProps {
+  onClose?: () => void;
+}
+
+export function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -92,7 +96,7 @@ export function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-white">
         <div className="text-center">
           <Loader2 className="animate-spin h-12 w-12 border-b-2 border-primary mx-auto" />
           <p className="mt-4 text-gray-600">Loading admin dashboard...</p>
@@ -103,7 +107,7 @@ export function AdminDashboard() {
 
   if (!dashboardData) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-white">
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <p className="text-gray-600">Failed to load dashboard data</p>
@@ -118,7 +122,15 @@ export function AdminDashboard() {
     );
   }
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 relative">
+      {onClose && (
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 p-2 bg-white rounded-full shadow-lg hover:bg-gray-50"
+        >
+          <X size={20} />
+        </button>
+      )}
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
@@ -127,20 +139,6 @@ export function AdminDashboard() {
               <p className="text-gray-600">Supervisión completa del sistema y análisis</p>
             </div>
             <div className="flex items-center gap-4">
-              <button 
-                onClick={() => {
-                  if (window.confirm('¿Estás seguro de que quieres cerrar sesión?')) {
-                    // Clear any admin state and logout
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
-                    window.location.reload();
-                  }
-                }}
-                className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-              >
-                <LogOut size={20} />
-                Cerrar Sesión
-              </button>
               <button className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-600">
                 <Download size={20} />
                 Exportar Datos

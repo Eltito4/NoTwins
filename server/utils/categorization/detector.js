@@ -44,10 +44,12 @@ export function detectProductType(text) {
     'zapato', 'zapatos', 'sandalia', 'sandalias', 'bota', 'botas',
     'zapatilla', 'zapatillas', 'tacón', 'tacones', 'bailarina', 'bailarinas',
     'mocasín', 'mocasines', 'alpargata', 'alpargatas', 'deportiva', 'deportivas',
+    'botín', 'botines', 'stiletto', 'stilettos', 'plataforma', 'plataformas',
     // English shoe terms
     'shoe', 'shoes', 'boot', 'boots', 'sandal', 'sandals', 'sneaker', 'sneakers',
     'heel', 'heels', 'flat', 'flats', 'loafer', 'loafers', 'pump', 'pumps',
-    'ballet flat', 'ballet flats', 'espadrille', 'espadrilles'
+    'ballet flat', 'ballet flats', 'espadrille', 'espadrilles', 'high-heel',
+    'high-heeled', 'ankle boot', 'ankle boots', 'stiletto', 'platform'
   ];
 
   const bagKeywords = [

@@ -4,16 +4,35 @@ import { useAuth } from '../contexts/AuthContext';
 import { useMessages } from '../contexts/MessageContext';
 import { MessageInbox } from './messages/MessageInbox';
 
-export function UserMenu() {
+interface UserMenuProps {
+  onShowAdmin?: () => void;
+}
+
+export function UserMenu({ onShowAdmin }: UserMenuProps) {
   const { currentUser, signOut } = useAuth();
   const { hasUnreadMessages } = useMessages();
   const [showInbox, setShowInbox] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
+  useEffect(() => {
+    // Check admin status silently
+    if (currentUser && onShowAdmin) {
+      checkAdminStatus();
+    }
+  }, [currentUser, onShowAdmin]);
+
+  const checkAdminStatus = async () => {
+    try {
+      await api.get('/admin/dashboard');
+      setIsAdmin(true);
+    } catch (error) {
+      setIsAdmin(false);
+    }
+  };
 
   const handleSignOut = () => {
     signOut();
   };
-
 
   return (
     <div className="flex items-center gap-4">
@@ -27,6 +46,16 @@ export function UserMenu() {
           <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full" />
         )}
       </button>
+
+      {isAdmin && onShowAdmin && (
+        <button
+          onClick={onShowAdmin}
+          className="flex items-center gap-2 px-3 py-1.5 text-purple-600 hover:text-purple-800 rounded-lg hover:bg-purple-50 text-sm font-medium"
+        >
+          <Activity size={16} />
+          Admin
+        </button>
+      )}
 
       <div className="flex items-center gap-2 text-gray-700">
         <UserIcon size={20} className="text-gray-500" />

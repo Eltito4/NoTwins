@@ -6,6 +6,7 @@ import { logger } from '../utils/logger.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { eventLimiter } from '../middleware/rateLimiter.js';
 import { cacheMiddleware } from '../middleware/cache.js';
+import { detectSmartDuplicates } from '../utils/duplicates/aiSimilarity.js';
 
 const router = express.Router();
 
@@ -71,6 +72,31 @@ router.post('/', async (req, res) => {
     event.dresses.push(savedItem._id);
     await event.save();
 
+    // Check for smart duplicates with AI
+    try {
+      const eventDresses = await Dress.find({ eventId }).populate('userId', 'name');
+      const existingItems = eventDresses
+        .filter(d => d._id.toString() !== savedItem._id.toString())
+        .map(d => ({
+          ...d.toObject(),
+          userName: d.userId?.name || 'Unknown User'
+        }));
+      
+      const duplicates = await detectSmartDuplicates(savedItem.toObject(), existingItems);
+      
+      if (duplicates.length > 0) {
+        logger.info('Smart duplicates detected:', {
+          newItem: savedItem.name,
+          duplicates: duplicates.map(d => ({ name: d.name, confidence: d.confidence }))
+        });
+        
+        // TODO: Send notifications to users about potential duplicates
+        // This could be implemented as real-time notifications or messages
+      }
+    } catch (error) {
+      logger.error('Smart duplicate detection failed:', error);
+      // Don't fail the item creation if duplicate detection fails
+    }
     // Get user info
     const user = await User.findById(req.user.id);
     const itemWithUser = {
@@ -132,6 +158,48 @@ router.get('/event/:eventId', cacheMiddleware(30), async (req, res) => {
   } catch (error) {
     logger.error('Error fetching items:', error);
     res.status(500).json({ error: 'Failed to fetch items' });
+  }
+});
+
+// Update an item
+router.put('/:dressId', async (req, res) => {
+  try {
+    const { dressId } = req.params;
+    const updates = req.body;
+
+    if (!dressId) {
+      return res.status(400).json({ error: 'Dress ID is required' });
+    }
+
+    const dress = await Dress.findById(dressId);
+    
+    if (!dress) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    // Check if user owns the dress
+    if (dress.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Update the dress
+    const updatedDress = await Dress.findByIdAndUpdate(
+      dressId,
+      { ...updates, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    );
+
+    // Get user info
+    const user = await User.findById(req.user.id);
+    const dressWithUser = {
+      ...updatedDress.toObject(),
+      userName: user ? user.name : 'Unknown User'
+    };
+
+    res.json(dressWithUser);
+  } catch (error) {
+    logger.error('Error updating item:', error);
+    res.status(500).json({ error: 'Failed to update item' });
   }
 });
 

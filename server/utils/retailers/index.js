@@ -35,7 +35,24 @@ const BRAND_MAPPINGS = {
   'bimani.com': 'BIMANI',
   'miphai.com': 'Miphai',
   'mariquitatrasquila.com': 'Mariquita Trasquila',
-  'matildecano.es': 'Matilde Cano'
+  'matildecano.es': 'Matilde Cano',
+  // Spanish fashion brands
+  'bruna.es': 'Bruna',
+  'coosy.es': 'Coosy',
+  'ladypipa.com': 'Lady Pipa',
+  'redondobrand.com': 'Redondo Brand',
+  'vogana.es': 'Vogana',
+  'violetavergara.com': 'Violeta Vergara',
+  'cayrowoman.com': 'Cayro Woman',
+  'lacroixe.com': 'La Croixé',
+  'awarebarcelona.com': 'Aware Barcelona',
+  'cardiemoda.com': 'Cardié Moda',
+  'guendolina.com': 'Güendolina',
+  'mattui.com': 'Mattui',
+  'the-are.com': 'THE-ARE',
+  'mannit.com': 'Mannit',
+  'mimoki.com': 'Mimoki',
+  'panambi.com': 'Panambi'
 };
 
 // Get retailer configuration

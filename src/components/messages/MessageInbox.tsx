@@ -2,6 +2,7 @@ import React from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { ExternalLink, X, Trash2, Bell, MessageSquare, Users } from 'lucide-react';
 import { useMessages } from '../../contexts/MessageContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { deleteMessage } from '../../services/messageService';
 import toast from 'react-hot-toast';
 
@@ -11,6 +12,7 @@ interface MessageInboxProps {
 
 export function MessageInbox({ onClose }: MessageInboxProps) {
   const { messages, markAsRead, loadMessages } = useMessages();
+  const { currentUser } = useAuth();
 
   const handleDelete = async (messageId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -23,6 +25,11 @@ export function MessageInbox({ onClose }: MessageInboxProps) {
       console.error('Error deleting message:', error);
       toast.error('Failed to delete message');
     }
+  };
+
+  const canDeleteMessage = (message: any) => {
+    // User can delete messages they received or sent
+    return message.toUserId === currentUser?.id || message.fromUserId === currentUser?.id;
   };
 
   const getMessageIcon = (type: string) => {
@@ -96,13 +103,15 @@ export function MessageInbox({ onClose }: MessageInboxProps) {
                       <span className="text-sm text-gray-500 whitespace-nowrap">
                         {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
                       </span>
-                      <button
-                        onClick={(e) => handleDelete(message.id, e)}
-                        className="p-1 text-red-500 hover:text-red-600 rounded hover:bg-red-50"
-                        title="Delete message"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {canDeleteMessage(message) && (
+                        <button
+                          onClick={(e) => handleDelete(message.id, e)}
+                          className="p-1 text-red-500 hover:text-red-600 rounded hover:bg-red-50"
+                          title="Delete message"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </div>
                   
