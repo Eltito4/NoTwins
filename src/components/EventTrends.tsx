@@ -1,6 +1,7 @@
 import { FC, useMemo } from 'react';
 import { Dress } from '../types';
 import { getCategoryName, getSubcategoryName } from '../utils/categorization';
+import { getColorValue } from '../utils/colors';
 import {
   Chart as ChartJS,
   ArcElement,
@@ -22,6 +23,108 @@ ChartJS.register(
   Tooltip,
   Legend
 );
+
+// Function to get the correct color for chart segments
+function getColorForChart(colorName: string): string {
+  const normalizedColor = colorName.toLowerCase();
+  
+  // Enhanced color mapping with proper hex values
+  const colorMap: Record<string, string> = {
+    // Basic colors
+    'black': '#000000',
+    'white': '#FFFFFF',
+    'red': '#FF0000',
+    'blue': '#0000FF',
+    'green': '#008000',
+    'yellow': '#FFD700',
+    'purple': '#800080',
+    'pink': '#FFC0CB',
+    'orange': '#FFA500',
+    'brown': '#8B4513',
+    'gray': '#808080',
+    'grey': '#808080',
+    
+    // Metallic colors - IMPORTANT: These should look metallic
+    'gold': '#FFD700',
+    'golden': '#FFD700',
+    'dorado': '#FFD700',
+    'silver': '#C0C0C0',
+    'plateado': '#C0C0C0',
+    'bronze': '#CD7F32',
+    'bronce': '#CD7F32',
+    
+    // Extended colors
+    'navy': '#000080',
+    'navy blue': '#000080',
+    'azul marino': '#000080',
+    'burgundy': '#800020',
+    'burdeos': '#800020',
+    'maroon': '#800000',
+    'granate': '#800000',
+    'teal': '#008080',
+    'olive': '#808000',
+    'oliva': '#808000',
+    'khaki': '#F0E68C',
+    'caqui': '#F0E68C',
+    'beige': '#F5F5DC',
+    'cream': '#FFFDD0',
+    'crema': '#FFFDD0',
+    'ivory': '#FFFFF0',
+    'marfil': '#FFFFF0',
+    
+    // Light variations
+    'light blue': '#ADD8E6',
+    'azul claro': '#ADD8E6',
+    'dark blue': '#00008B',
+    'azul oscuro': '#00008B',
+    'light green': '#90EE90',
+    'verde claro': '#90EE90',
+    'dark green': '#006400',
+    'verde oscuro': '#006400',
+    'light pink': '#FFB6C1',
+    'rosa claro': '#FFB6C1',
+    'hot pink': '#FF69B4',
+    'rosa fuerte': '#FF69B4',
+    'light gray': '#D3D3D3',
+    'gris claro': '#D3D3D3',
+    'dark gray': '#A9A9A9',
+    'gris oscuro': '#A9A9A9',
+    
+    // Patterns and prints
+    'leopard': '#D2691E',
+    'leopardo': '#D2691E',
+    'tiger': '#FF8C00',
+    'tigre': '#FF8C00',
+    'zebra': '#000000',
+    'cebra': '#000000',
+    'animal print': '#8B4513',
+    'estampado animal': '#8B4513',
+    'floral': '#FF69B4',
+    'floral print': '#FF69B4',
+    'estampado floral': '#FF69B4'
+  };
+  
+  // Try exact match first
+  if (colorMap[normalizedColor]) {
+    return colorMap[normalizedColor];
+  }
+  
+  // Try partial matches
+  for (const [key, value] of Object.entries(colorMap)) {
+    if (normalizedColor.includes(key) || key.includes(normalizedColor)) {
+      return value;
+    }
+  }
+  
+  // Try to get color from utils
+  const utilColor = getColorValue(colorName);
+  if (utilColor && utilColor !== 'pattern-animal') {
+    return utilColor;
+  }
+  
+  // Default fallback
+  return '#CCCCCC';
+}
 
 interface EventTrendsProps {
   dresses: Dress[];
@@ -81,22 +184,7 @@ export const EventTrends: FC<EventTrendsProps> = ({ dresses }) => {
     labels: Object.keys(colorData).map(color => color.charAt(0).toUpperCase() + color.slice(1)),
     datasets: [{
       data: Object.values(colorData),
-      backgroundColor: Object.keys(colorData).map(color => {
-        // Use the actual color value for the chart segments
-        if (color.toLowerCase().includes('black')) return '#000000';
-        if (color.toLowerCase().includes('white')) return '#FFFFFF';
-        if (color.toLowerCase().includes('red')) return '#FF0000';
-        if (color.toLowerCase().includes('blue')) return '#0000FF';
-        if (color.toLowerCase().includes('green')) return '#008000';
-        if (color.toLowerCase().includes('yellow')) return '#FFD700';
-        if (color.toLowerCase().includes('purple')) return '#800080';
-        if (color.toLowerCase().includes('pink')) return '#FFC0CB';
-        if (color.toLowerCase().includes('orange')) return '#FFA500';
-        if (color.toLowerCase().includes('brown')) return '#8B4513';
-        if (color.toLowerCase().includes('gray')) return '#808080';
-        if (color.toLowerCase().includes('leopard')) return '#D2691E';
-        return '#CCCCCC'; // Default color
-      }),
+      backgroundColor: Object.keys(colorData).map(color => getColorForChart(color)),
       borderColor: '#ffffff',
       borderWidth: 2
     }]

@@ -95,3 +95,28 @@ export async function exportData(type: string, params: any = {}) {
     throw error;
   }
 }
+
+export async function getPreferredRetailers() {
+  try {
+    const response = await api.get('/admin/retailers');
+    return response.data;
+  } catch (error) {
+    console.error('Error getting preferred retailers:', error);
+    // Return default retailers if API fails
+    return {
+      retailers: []
+    };
+  }
+}
+
+export async function updatePreferredRetailers(retailers: any[]) {
+  try {
+    const response = await api.put('/admin/retailers', { retailers });
+    toast.success('Preferred retailers updated successfully');
+    return response.data;
+  } catch (error) {
+    console.error('Error updating preferred retailers:', error);
+    toast.error('Failed to update preferred retailers');
+    throw error;
+  }
+}

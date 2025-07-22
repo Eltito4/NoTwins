@@ -3,6 +3,7 @@ import { LogOut, User as UserIcon, Bell, Activity, Sparkles } from 'lucide-react
 import { useAuth } from '../contexts/AuthContext';
 import { useMessages } from '../contexts/MessageContext';
 import { MessageInbox } from './messages/MessageInbox';
+import api from '../lib/api';
 
 interface UserMenuProps {
   onShowAdmin?: () => void;
@@ -23,9 +24,12 @@ export function UserMenu({ onShowAdmin }: UserMenuProps) {
 
   const checkAdminStatus = async () => {
     try {
+      console.log('Checking admin status...');
       await api.get('/admin/dashboard');
+      console.log('Admin status confirmed');
       setIsAdmin(true);
     } catch (error) {
+      console.log('Not an admin user:', error.response?.status);
       setIsAdmin(false);
     }
   };

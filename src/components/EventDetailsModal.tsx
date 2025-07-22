@@ -7,7 +7,11 @@ import { EventTrends } from './EventTrends';
 import { EventHistory } from './EventHistory';
 import { DuplicateAlerts } from './DuplicateAlerts';
 import { ParticipantsList } from './ParticipantsList';
+import { EditItemModal } from './EditItemModal';
+import { SuggestionModal } from './suggestions/SuggestionModal';
+import { MessageComposer } from './messages/MessageComposer';
 import { addDressToEvent, getEventDresses, deleteDress } from '../services/eventService';
+import { updateDress } from '../services/eventService';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -23,6 +27,9 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
   const [editingDress, setEditingDress] = useState<Dress | null>(null);
   const [activeView, setActiveView] = useState<'grid' | 'trends' | 'history'>('grid');
   const [dresses, setDresses] = useState<Dress[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState<{dressId: string, dressName: string} | null>(null);
+  const [messageToUser, setMessageToUser] = useState<{userId: string, userName: string} | null>(null);
+  const [messageToMultiple, setMessageToMultiple] = useState<Array<{userId: string, userName: string}> | null>(null);
   const [loading, setLoading] = useState(true);
   const { currentUser } = useAuth();
   const isEventCreator = currentUser?.id === event.creatorId;
@@ -158,6 +165,9 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
                 participants={participants}
                 currentUserId={currentUser?.id}
                 isEventCreator={isEventCreator}
+                onShowSuggestions={setShowSuggestions}
+                onMessageUser={setMessageToUser}
+                onMessageMultiple={setMessageToMultiple}
               />
               <div className="mt-4 space-y-3">
                 {dresses.map(dress => (
@@ -197,6 +207,33 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
           dress={editingDress}
           onClose={() => setEditingDress(null)}
           onSubmit={handleUpdateDress}
+        />
+      )}
+
+      {showSuggestions && (
+        <SuggestionModal
+          dressId={showSuggestions.dressId}
+          dressName={showSuggestions.dressName}
+          onClose={() => setShowSuggestions(null)}
+        />
+      )}
+
+      {messageToUser && (
+        <MessageComposer
+          toUserId={messageToUser.userId}
+          userName={messageToUser.userName}
+          eventId={event.id}
+          onClose={() => setMessageToUser(null)}
+        />
+      )}
+
+      {messageToMultiple && (
+        <MessageComposer
+          toUserId=""
+          userName=""
+          eventId={event.id}
+          multipleUsers={messageToMultiple}
+          onClose={() => setMessageToMultiple(null)}
         />
       )}
     </div>

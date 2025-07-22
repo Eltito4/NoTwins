@@ -432,4 +432,111 @@ router.get('/export/:type', requirePermission('export_data'), async (req, res) =
   }
 });
 
+// Get Preferred Retailers
+router.get('/retailers', requirePermission('view_analytics'), async (req, res) => {
+  try {
+    // For now, return default retailers
+    // In the future, this would come from database
+    const defaultRetailers = [
+      {
+        id: '1',
+        name: 'Zara',
+        domain: 'zara.com',
+        searchUrl: 'https://www.zara.com/es/es/search?searchTerm=',
+        priceRange: 'mid',
+        priority: 10,
+        isActive: true,
+        commissionRate: 8,
+        countries: ['ES', 'US', 'FR', 'IT'],
+        description: 'Fast fashion leader with trendy designs'
+      },
+      {
+        id: '2',
+        name: 'Mango',
+        domain: 'mango.com',
+        searchUrl: 'https://shop.mango.com/es/search?q=',
+        priceRange: 'mid',
+        priority: 9,
+        isActive: true,
+        commissionRate: 7,
+        countries: ['ES', 'US', 'FR'],
+        description: 'Contemporary fashion with Mediterranean style'
+      },
+      {
+        id: '3',
+        name: 'H&M',
+        domain: 'hm.com',
+        searchUrl: 'https://www2.hm.com/es_es/search-results.html?q=',
+        priceRange: 'budget',
+        priority: 8,
+        isActive: true,
+        commissionRate: 6,
+        countries: ['ES', 'US', 'FR', 'IT'],
+        description: 'Affordable fashion for everyone'
+      },
+      {
+        id: '4',
+        name: 'Massimo Dutti',
+        domain: 'massimodutti.com',
+        searchUrl: 'https://www.massimodutti.com/es/search?q=',
+        priceRange: 'premium',
+        priority: 7,
+        isActive: true,
+        commissionRate: 10,
+        countries: ['ES', 'US', 'FR', 'IT'],
+        description: 'Premium fashion with sophisticated designs'
+      },
+      {
+        id: '5',
+        name: 'ASOS',
+        domain: 'asos.com',
+        searchUrl: 'https://www.asos.com/es/search/?q=',
+        priceRange: 'mid',
+        priority: 6,
+        isActive: true,
+        commissionRate: 5,
+        countries: ['ES', 'US', 'UK', 'FR'],
+        description: 'Online fashion destination for young adults'
+      }
+    ];
+
+    res.json({
+      retailers: defaultRetailers,
+      total: defaultRetailers.length,
+      active: defaultRetailers.filter(r => r.isActive).length
+    });
+  } catch (error) {
+    logger.error('Get retailers error:', error);
+    res.status(500).json({ error: 'Failed to get retailers' });
+  }
+});
+
+// Update Preferred Retailers
+router.put('/retailers', requirePermission('manage_ai_settings'), async (req, res) => {
+  try {
+    const { retailers } = req.body;
+    
+    if (!Array.isArray(retailers)) {
+      return res.status(400).json({ error: 'Retailers must be an array' });
+    }
+
+    // TODO: Save to database
+    // For now, just validate and return success
+    logger.info('Retailers updated:', {
+      count: retailers.length,
+      active: retailers.filter(r => r.isActive).length,
+      updatedBy: req.user.id
+    });
+
+    res.json({
+      success: true,
+      message: 'Retailers updated successfully',
+      retailers: retailers
+    });
+  } catch (error) {
+    logger.error('Update retailers error:', error);
+    res.status(500).json({ error: 'Failed to update retailers' });
+  }
+});
+
 export default router;

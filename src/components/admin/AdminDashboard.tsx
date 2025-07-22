@@ -13,12 +13,15 @@ import {
   Search,
   Filter,
   Loader2,
-  LogOut
+  LogOut,
+  Settings,
+  X
 } from 'lucide-react';
 import { getAdminDashboard, getAdminUsers, getUserDetail } from '../../services/adminService';
 import { UserDetailModal } from './UserDetailModal';
 import { AnalyticsCharts } from './AnalyticsCharts';
 import { RevenueAnalytics } from './RevenueAnalytics';
+import { PreferredRetailers } from './PreferredRetailers';
 import toast from 'react-hot-toast';
 
 interface DashboardData {
@@ -151,7 +154,8 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
               { id: 'overview', label: 'Resumen', icon: TrendingUp },
               { id: 'users', label: 'Usuarios', icon: Users },
               { id: 'analytics', label: 'Análisis IA', icon: Brain },
-              { id: 'revenue', label: 'Ingresos', icon: DollarSign }
+              { id: 'revenue', label: 'Ingresos', icon: DollarSign },
+              { id: 'retailers', label: 'Retailers Preferidos', icon: Settings }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -405,6 +409,7 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
 
         {activeTab === 'analytics' && <AnalyticsCharts />}
         {activeTab === 'revenue' && <RevenueAnalytics />}
+        {activeTab === 'retailers' && <PreferredRetailers />}
       </div>
 
       {selectedUser && (

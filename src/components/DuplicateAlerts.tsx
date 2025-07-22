@@ -10,6 +10,9 @@ interface DuplicateAlertsProps {
   currentUserId?: string;
   isEventCreator: boolean;
   compact?: boolean;
+  onShowSuggestions?: (data: {dressId: string, dressName: string}) => void;
+  onMessageUser?: (user: {userId: string, userName: string}) => void;
+  onMessageMultiple?: (users: Array<{userId: string, userName: string}>) => void;
 }
 
 export function DuplicateAlerts({ 
@@ -17,10 +20,11 @@ export function DuplicateAlerts({
   participants, 
   currentUserId, 
   isEventCreator,
-  compact = false 
+  compact = false,
+  onShowSuggestions,
+  onMessageUser,
+  onMessageMultiple
 }: DuplicateAlertsProps) {
-  const [messageToUser, setMessageToUser] = React.useState<{userId: string, userName: string} | null>(null);
-  const [messageToMultiple, setMessageToMultiple] = React.useState<Array<{userId: string, userName: string}> | null>(null);
   const [showSuggestions, setShowSuggestions] = React.useState<{dressId: string, dressName: string} | null>(null);
 
   const findDuplicates = () => {
@@ -105,32 +109,14 @@ export function DuplicateAlerts({
           compact={compact}
           currentUserId={currentUserId}
           isEventCreator={isEventCreator}
-          onMessageUser={setMessageToUser}
-          onMessageMultiple={setMessageToMultiple}
-          onShowSuggestions={setShowSuggestions}
+          onMessageUser={onMessageUser}
+          onMessageMultiple={onMessageMultiple}
+          onShowSuggestions={onShowSuggestions || setShowSuggestions}
         />
       ))}
 
-      {messageToUser && (
-        <MessageComposer
-          toUserId={messageToUser.userId}
-          userName={messageToUser.userName}
-          eventId={dresses[0]?.eventId || ''}
-          onClose={() => setMessageToUser(null)}
-        />
-      )}
 
-      {messageToMultiple && (
-        <MessageComposer
-          toUserId=""
-          userName=""
-          eventId={dresses[0]?.eventId || ''}
-          multipleUsers={messageToMultiple}
-          onClose={() => setMessageToMultiple(null)}
-        />
-      )}
-
-      {showSuggestions && (
+      {showSuggestions && !onShowSuggestions && (
         <SuggestionModal
           dressId={showSuggestions.dressId}
           dressName={showSuggestions.dressName}
@@ -148,7 +134,7 @@ interface DuplicateAlertProps {
   isEventCreator: boolean;
   onMessageUser: (user: {userId: string, userName: string}) => void;
   onMessageMultiple: (users: Array<{userId: string, userName: string}>) => void;
-  onShowSuggestions: (data: {dressId: string, dressName: string}) => void;
+  onShowSuggestions?: (data: {dressId: string, dressName: string}) => void;
 }
 
 function DuplicateAlert({ 
@@ -244,7 +230,7 @@ function DuplicateAlert({
                 
                 {isEventCreator && item.userId !== currentUserId && (
                   <button
-                    onClick={() => onMessageUser({ userId: item.userId, userName: item.userName })}
+                    onClick={() => onMessageUser && onMessageUser({ userId: item.userId, userName: item.userName })}
                     className="p-2 text-primary hover:text-primary-600 hover:bg-white/70 rounded-lg transition-colors"
                     title="Enviar mensaje"
                   >
@@ -257,11 +243,26 @@ function DuplicateAlert({
           
           {/* Action buttons */}
           <div className="flex flex-wrap gap-3">
+            {onShowSuggestions && (
             <button
               onClick={() => {
+               console.log('AI Suggestions button clicked!');
+               console.log('Group items:', group.items);
+               console.log('Current user ID:', currentUserId);
+               
                 const userItem = group.items.find((item: any) => item.userId === currentUserId);
+               console.log('Found user item:', userItem);
+               
                 if (userItem) {
+                 console.log('Opening suggestions for:', { dressId: userItem.id, dressName: group.name });
                   onShowSuggestions({ dressId: userItem.id, dressName: group.name });
+               } else {
+                 console.log('User item not found, using first item as fallback');
+                 const firstItem = group.items[0];
+                 if (firstItem) {
+                   console.log('Using fallback item:', firstItem);
+                   onShowSuggestions({ dressId: firstItem.id, dressName: group.name });
+                 }
                 }
               }}
               className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:from-yellow-600 hover:to-orange-600 transition-all shadow-md font-medium"
@@ -269,14 +270,29 @@ function DuplicateAlert({
               <Lightbulb size={16} />
               <span>Obtener Sugerencias IA</span>
             </button>
+            )}
             
             {isEventCreator && group.items.length > 1 && (
               <button
                 onClick={() => {
-                  const usersToMessage = group.items
-                    .filter((item: any) => item.userId !== currentUserId)
-                    .map((item: any) => ({ userId: item.userId, userName: item.userName }));
-                  onMessageMultiple(usersToMessage);
+                 console.log('Send message to all button clicked!');
+                 console.log('Group items:', group.items);
+                 
+                 // Filter out current user from recipients
+                 const recipients = group.items
+                   .filter((item: any) => item.userId !== currentUserId)
+                   .map((item: any) => ({
+                     userId: item.userId,
+                     userName: item.userName
+                   }));
+                 
+                 console.log('Recipients:', recipients);
+                 
+                 if (recipients.length > 0) {
+                   onMessageMultiple && onMessageMultiple(recipients);
+                 } else {
+                   console.log('No recipients found');
+                 }
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-blue-600 text-white rounded-lg hover:from-primary-600 hover:to-blue-700 transition-all shadow-md font-medium"
               >

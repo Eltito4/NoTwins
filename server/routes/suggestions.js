@@ -2,7 +2,7 @@ import express from 'express';
 import Dress from '../models/Dress.js';
 import Event from '../models/Event.js';
 import User from '../models/User.js';
-import { generateDuplicateSuggestions, generateSponsorSuggestions, trackSuggestionInteraction } from '../utils/suggestions/aiSuggestions.js';
+import { generateDuplicateSuggestions, trackSuggestionInteraction } from '../utils/suggestions/aiSuggestions.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { logger } from '../utils/logger.js';
 
@@ -14,24 +14,40 @@ router.use(authMiddleware);
 router.post('/duplicate/:dressId', async (req, res) => {
   try {
     const { dressId } = req.params;
-    const { includeSponsors = false } = req.body;
+
+    logger.info('Getting suggestions for dress:', { dressId, userId: req.user.id });
 
     // Get the duplicate item
     const duplicateItem = await Dress.findById(dressId);
     if (!duplicateItem) {
+      logger.error('Dress not found:', { dressId });
       return res.status(404).json({ error: 'Item not found' });
     }
+
+    logger.info('Found duplicate item:', { 
+      name: duplicateItem.name, 
+      userId: duplicateItem.userId,
+      eventId: duplicateItem.eventId 
+    });
 
     // Get the event context
     const event = await Event.findById(duplicateItem.eventId);
     if (!event) {
+      logger.error('Event not found:', { eventId: duplicateItem.eventId });
       return res.status(404).json({ error: 'Event not found' });
     }
 
     // Check if user has access to this event
     if (!event.participants.includes(req.user.id)) {
+      logger.error('Access denied to event:', { 
+        eventId: event._id, 
+        userId: req.user.id,
+        participants: event.participants 
+      });
       return res.status(403).json({ error: 'Access denied' });
     }
+
+    logger.info('Event access verified:', { eventName: event.name });
 
     // Get user's other items in this event
     const userOtherItems = await Dress.find({
@@ -40,7 +56,10 @@ router.post('/duplicate/:dressId', async (req, res) => {
       _id: { $ne: dressId } // Exclude the duplicate item
     });
 
+    logger.info('Found user other items:', { count: userOtherItems.length });
+
     // Generate AI suggestions
+    logger.info('Generating AI suggestions...');
     const suggestions = await generateDuplicateSuggestions(
       duplicateItem,
       userOtherItems,
@@ -52,11 +71,7 @@ router.post('/duplicate/:dressId', async (req, res) => {
       }
     );
 
-    // Add sponsor suggestions if requested (future feature)
-    let finalSuggestions = suggestions;
-    if (includeSponsors) {
-      finalSuggestions = await generateSponsorSuggestions(suggestions, event);
-    }
+    logger.info('AI suggestions generated:', { count: suggestions.length });
 
     // Track that suggestions were viewed
     await trackSuggestionInteraction('batch', 'viewed', req.user.id);
@@ -79,8 +94,8 @@ router.post('/duplicate/:dressId', async (req, res) => {
         color: item.color,
         type: item.type
       })),
-      suggestions: finalSuggestions,
-      suggestionsCount: finalSuggestions.length
+      suggestions: suggestions,
+      suggestionsCount: suggestions.length
     });
   } catch (error) {
     logger.error('Error generating suggestions:', error);

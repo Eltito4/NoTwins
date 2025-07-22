@@ -3,13 +3,15 @@ import toast from 'react-hot-toast';
 
 export async function getSuggestionsForDuplicate(dressId: string, includeSponsors = false) {
   try {
+    console.log('Getting suggestions for dress:', dressId);
     const response = await api.post(`/suggestions/duplicate/${dressId}`, {
       includeSponsors
     });
+    console.log('Suggestions response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error getting suggestions:', error);
-    toast.error('Failed to get suggestions');
+    toast.error('Error al obtener sugerencias de IA');
     throw error;
   }
 }

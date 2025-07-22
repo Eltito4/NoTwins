@@ -49,13 +49,16 @@ export function SuggestionModal({ dressId, dressName, onClose }: SuggestionModal
   const [userItems, setUserItems] = useState<any[]>([]);
 
   useEffect(() => {
+    console.log('SuggestionModal mounted with dressId:', dressId);
     loadSuggestions();
   }, [dressId]);
 
   const loadSuggestions = async () => {
     try {
       setLoading(true);
+      console.log('Loading suggestions for dress:', dressId);
       const data = await getSuggestionsForDuplicate(dressId);
+      console.log('Received suggestions data:', data);
       setSuggestions(data.suggestions || []);
       setEventInfo(data.event);
       setUserItems(data.userOtherItems || []);

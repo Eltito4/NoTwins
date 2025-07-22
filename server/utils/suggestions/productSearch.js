@@ -10,61 +10,93 @@ const SEARCH_ENGINES = {
 };
 
 // Popular fashion retailers with their search patterns
-const FASHION_RETAILERS = [
+let FASHION_RETAILERS = [
   {
+    id: '1',
     name: 'Zara',
     domain: 'zara.com',
     searchUrl: 'https://www.zara.com/es/es/search?searchTerm=',
     priceRange: 'mid',
+    priority: 10,
+    isActive: true,
+    commissionRate: 8,
     countries: ['ES', 'US', 'FR', 'IT']
   },
   {
+    id: '2',
     name: 'H&M',
     domain: 'hm.com',
     searchUrl: 'https://www2.hm.com/es_es/search-results.html?q=',
     priceRange: 'budget',
+    priority: 8,
+    isActive: true,
+    commissionRate: 6,
     countries: ['ES', 'US', 'FR', 'IT']
   },
   {
+    id: '3',
     name: 'Mango',
     domain: 'mango.com',
     searchUrl: 'https://shop.mango.com/es/search?q=',
     priceRange: 'mid',
+    priority: 9,
+    isActive: true,
+    commissionRate: 7,
     countries: ['ES', 'US', 'FR']
   },
   {
+    id: '4',
     name: 'Massimo Dutti',
     domain: 'massimodutti.com',
     searchUrl: 'https://www.massimodutti.com/es/search?q=',
     priceRange: 'premium',
+    priority: 7,
+    isActive: true,
+    commissionRate: 10,
     countries: ['ES', 'US', 'FR', 'IT']
   },
   {
+    id: '5',
     name: 'ASOS',
     domain: 'asos.com',
     searchUrl: 'https://www.asos.com/es/search/?q=',
     priceRange: 'mid',
+    priority: 6,
+    isActive: true,
+    commissionRate: 5,
     countries: ['ES', 'US', 'UK', 'FR']
   },
   {
+    id: '6',
     name: 'Pull & Bear',
     domain: 'pullandbear.com',
     searchUrl: 'https://www.pullandbear.com/es/search?q=',
     priceRange: 'budget',
+    priority: 5,
+    isActive: true,
+    commissionRate: 6,
     countries: ['ES', 'US', 'FR']
   },
   {
+    id: '7',
     name: 'Bershka',
     domain: 'bershka.com',
     searchUrl: 'https://www.bershka.com/es/search?q=',
     priceRange: 'budget',
+    priority: 5,
+    isActive: true,
+    commissionRate: 6,
     countries: ['ES', 'US', 'FR']
   },
   {
+    id: '8',
     name: 'Stradivarius',
     domain: 'stradivarius.com',
     searchUrl: 'https://www.stradivarius.com/es/search?q=',
     priceRange: 'budget',
+    priority: 5,
+    isActive: true,
+    commissionRate: 6,
     countries: ['ES', 'US', 'FR']
   }
 ];
@@ -124,10 +156,14 @@ export async function findRealProducts(suggestion, originalItem, budget = 'all')
 
 function generateSearchTerms(suggestion) {
   const baseTerms = [
-    suggestion.item.name,
+    suggestion.item.name, // This is now a DIFFERENT item name, not the duplicate
     `${suggestion.item.color} ${suggestion.item.subcategory}`,
     `${suggestion.item.style} ${suggestion.item.subcategory}`,
-    suggestion.searchTerms?.join(' ') || ''
+    suggestion.searchTerms?.join(' ') || '',
+    // Add style-based terms instead of exact name matches
+    `${suggestion.item.color} ${suggestion.item.category}`,
+    `elegant ${suggestion.item.subcategory}`,
+    `stylish ${suggestion.item.color}`
   ];
 
   // Add Spanish translations for better local results
@@ -141,13 +177,30 @@ function translateToSpanish(item) {
     // Categories
     'dress': 'vestido',
     'dresses': 'vestidos',
+    'jumpsuit': 'mono',
+    'romper': 'pelele',
+    'two-piece': 'conjunto',
     'shoes': 'zapatos',
+    'flats': 'bailarinas',
+    'boots': 'botas',
+    'sandals': 'sandalias',
+    'wedges': 'cuñas',
     'bag': 'bolso',
     'bags': 'bolsos',
+    'clutch': 'clutch',
+    'crossbody': 'bandolera',
+    'tote': 'tote',
     'top': 'blusa',
     'tops': 'blusas',
+    'blouse': 'blusa',
+    'sweater': 'jersey',
+    'cardigan': 'cardigan',
+    'tank top': 'camiseta sin mangas',
     'pants': 'pantalones',
+    'culottes': 'culottes',
+    'palazzo': 'palazzo',
     'skirt': 'falda',
+    'shorts': 'shorts',
     'jacket': 'chaqueta',
     
     // Colors
@@ -194,14 +247,20 @@ function translateToSpanish(item) {
   
   if (colorSpanish && categorySpanish) {
     spanishTerms.push(`${categorySpanish} ${colorSpanish}`);
+    spanishTerms.push(`${colorSpanish} ${categorySpanish}`);
   }
 
   return spanishTerms;
 }
 
 function getRetailersForBudget(budget) {
+  // Filter by active retailers first, then sort by priority
+  const activeRetailers = FASHION_RETAILERS
+    .filter(retailer => retailer.isActive)
+    .sort((a, b) => (b.priority || 0) - (a.priority || 0));
+
   if (budget === 'all') {
-    return FASHION_RETAILERS;
+    return activeRetailers;
   }
   
   const budgetMap = {
@@ -211,7 +270,7 @@ function getRetailersForBudget(budget) {
   };
   
   const targetRanges = budgetMap[budget] || ['budget', 'mid'];
-  return FASHION_RETAILERS.filter(retailer => 
+  return activeRetailers.filter(retailer => 
     targetRanges.includes(retailer.priceRange)
   );
 }
@@ -254,14 +313,31 @@ function generateRealisticProduct(retailer, suggestion, searchUrl) {
   // Adjust price based on item type
   const typeMultipliers = {
     'dresses': 1.2,
+    'jumpsuit': 1.3,
+    'romper': 1.0,
+    'two-piece': 1.4,
     'shoes': 1.1,
+    'flats': 0.9,
+    'boots': 1.2,
+    'sandals': 1.0,
+    'wedges': 1.1,
     'bags': 1.3,
+    'clutch': 1.1,
+    'crossbody': 1.2,
+    'tote': 1.3,
     'jackets': 1.4,
     'tops': 0.8,
+    'blouse': 0.9,
+    'sweater': 1.1,
+    'cardigan': 1.0,
     'pants': 1.0
   };
   
-  const multiplier = typeMultipliers[suggestion.item.subcategory] || 1.0;
+  // Check both subcategory and item name for multiplier
+  const itemType = suggestion.item.name.toLowerCase();
+  const multiplier = typeMultipliers[suggestion.item.subcategory] || 
+                    typeMultipliers[itemType.split(' ').pop()] || 
+                    1.0;
   const finalPrice = Math.round(basePrice * multiplier);
   
   // Generate realistic product name
@@ -358,6 +434,44 @@ function selectBestProducts(organizedProducts, suggestion) {
   });
   
   return result;
+}
+
+// Function to update retailers from admin panel
+export function updateRetailersConfiguration(newRetailers) {
+  try {
+    // Validate retailers
+    if (!Array.isArray(newRetailers)) {
+      throw new Error('Retailers must be an array');
+    }
+
+    // Update the global retailers list
+    FASHION_RETAILERS = newRetailers.map(retailer => ({
+      ...retailer,
+      priority: retailer.priority || 1,
+      isActive: retailer.isActive !== false,
+      commissionRate: retailer.commissionRate || 5
+    }));
+
+    logger.info('Retailers configuration updated:', {
+      total: FASHION_RETAILERS.length,
+      active: FASHION_RETAILERS.filter(r => r.isActive).length,
+      highPriority: FASHION_RETAILERS.filter(r => r.priority >= 8).length
+    });
+
+    return true;
+  } catch (error) {
+    logger.error('Error updating retailers configuration:', error);
+    return false;
+  }
+}
+
+// Function to get current retailers configuration
+export function getRetailersConfiguration() {
+  return {
+    retailers: FASHION_RETAILERS,
+    total: FASHION_RETAILERS.length,
+    active: FASHION_RETAILERS.filter(r => r.isActive).length
+  };
 }
 
 // Validate product URLs to ensure they work
