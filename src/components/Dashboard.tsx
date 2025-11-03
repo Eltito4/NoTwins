@@ -1,15 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useMemo } from 'react';
 import { PlusCircle, UserPlus } from 'lucide-react';
 import { Event, User } from '../types';
 import { EventCard } from './EventCard';
-import { CreateEventModal } from './CreateEventModal';
-import { JoinEventModal } from './JoinEventModal';
-import { EventDetailsModal } from './EventDetailsModal';
 import { useAuth } from '../contexts/AuthContext';
-import { createEvent, getEventsByUser, joinEvent, getEventParticipants, deleteEvent } from '../services/eventService';
+import { createEvent, getEventsByUser, joinEvent, deleteEvent } from '../services/eventService';
 import toast from 'react-hot-toast';
 import { isAfter, isBefore, subMonths, parseISO } from 'date-fns';
+
+// Lazy load modals to reduce initial bundle size
+const CreateEventModal = lazy(() => import('./CreateEventModal').then(module => ({ default: module.CreateEventModal })));
+const JoinEventModal = lazy(() => import('./JoinEventModal').then(module => ({ default: module.JoinEventModal })));
+const EventDetailsModal = lazy(() => import('./EventDetailsModal').then(module => ({ default: module.EventDetailsModal })));
 
 export function Dashboard() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -21,18 +23,19 @@ export function Dashboard() {
 
   const loadEvents = async () => {
     try {
-      const userEvents = await getEventsByUser();
+      // Fetch events with participants in a single API call (eliminates N+1 queries)
+      const userEvents = await getEventsByUser(true);
       setEvents(userEvents);
 
+      // Extract participants from events (they're now included in the response)
       const participantsMap: Record<string, User> = {};
-      await Promise.all(
-        userEvents.map(async (event) => {
-          const eventParticipants = await getEventParticipants(event.id);
-          eventParticipants.forEach((participant) => {
+      userEvents.forEach((event: any) => {
+        if (event.participantDetails) {
+          event.participantDetails.forEach((participant: User) => {
             participantsMap[participant.id] = participant;
           });
-        })
-      );
+        }
+      });
       setParticipants(participantsMap);
     } catch (error) {
       console.error('Error loading events:', error);
@@ -230,26 +233,32 @@ export function Dashboard() {
       )}
 
       {showCreateModal && (
-        <CreateEventModal
-          onClose={() => setShowCreateModal(false)}
-          onSubmit={handleCreateEvent}
-        />
+        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="text-white">Loading...</div></div>}>
+          <CreateEventModal
+            onClose={() => setShowCreateModal(false)}
+            onSubmit={handleCreateEvent}
+          />
+        </Suspense>
       )}
 
       {showJoinModal && (
-        <JoinEventModal
-          onClose={() => setShowJoinModal(false)}
-          onJoin={handleJoinEvent}
-        />
+        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="text-white">Loading...</div></div>}>
+          <JoinEventModal
+            onClose={() => setShowJoinModal(false)}
+            onJoin={handleJoinEvent}
+          />
+        </Suspense>
       )}
 
       {selectedEvent && (
-        <EventDetailsModal
-          event={selectedEvent}
-          onClose={() => setSelectedEvent(null)}
-          onDressAdded={() => loadEvents()}
-          participants={participants}
-        />
+        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="text-white">Loading...</div></div>}>
+          <EventDetailsModal
+            event={selectedEvent}
+            onClose={() => setSelectedEvent(null)}
+            onDressAdded={() => loadEvents()}
+            participants={participants}
+          />
+        </Suspense>
       )}
     </div>
   );

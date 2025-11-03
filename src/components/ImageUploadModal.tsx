@@ -76,9 +76,15 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
   const analyzeImage = async (url: string) => {
     setAnalyzing(true);
     try {
+      console.log('Starting image analysis...');
       const analysis = await analyzeGarmentImage(url);
       
       console.log('Analysis result:', analysis);
+      
+      // Validate analysis result
+      if (!analysis || typeof analysis !== 'object') {
+        throw new Error('Invalid analysis result received');
+      }
       
       // Update form data with analysis results
       setFormData(prev => ({
@@ -89,18 +95,29 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
         description: analysis.description || '',
         category: analysis.type?.category || '',
         subcategory: analysis.type?.subcategory || '',
-        price: analysis.price ? analysis.price.toString() : ''
+        price: analysis.price && !isNaN(analysis.price) ? analysis.price.toString() : ''
       }));
 
       // Set confidence score
       if (analysis.confidence?.overall) {
         setConfidence(analysis.confidence.overall);
+      } else {
+        setConfidence(0.8); // Default confidence
       }
 
       toast.success('Image analyzed successfully!');
     } catch (error) {
       console.error('Analysis error:', error);
-      toast.error('Failed to analyze image');
+      toast.error('Failed to analyze image: ' + (error.message || 'Unknown error'));
+      
+      // Set basic fallback data so form isn't empty
+      setFormData(prev => ({
+        ...prev,
+        name: prev.name || 'Fashion Item',
+        category: prev.category || 'clothes',
+        subcategory: prev.subcategory || 'dresses'
+      }));
+      setConfidence(0.5);
     } finally {
       setAnalyzing(false);
     }
@@ -215,6 +232,8 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
                 src={imageUrl}
                 alt="Preview"
                 className="w-full h-full object-cover rounded-lg"
+                onError={() => setImageError(true)}
+                onLoad={() => setImageError(false)}
               />
               {confidence !== null && (
                 <div className={`absolute top-2 right-2 px-3 py-1.5 rounded-full border ${getConfidenceColor(confidence)} flex items-center gap-1.5 shadow-lg backdrop-blur-sm`}>
@@ -222,6 +241,19 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
                   <span className="text-sm font-medium">
                     {Math.round(confidence * 100)}%
                   </span>
+                </div>
+              )}
+              {imageError && (
+                <div className="absolute inset-0 bg-gray-100 flex items-center justify-center rounded-lg">
+                  <div className="text-center text-gray-500">
+                    <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center mb-3 mx-auto">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <p className="text-sm font-medium">Error al cargar imagen</p>
+                    <p className="text-xs mt-1">La imagen no se pudo mostrar correctamente</p>
+                  </div>
                 </div>
               )}
               {(loading || analyzing) && (

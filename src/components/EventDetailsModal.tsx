@@ -1,4 +1,4 @@
-import { FC, useState, useEffect } from 'react';
+import { FC, useState, useEffect, useCallback } from 'react';
 import { Event, Dress, User } from '../types';
 import { PlusCircle, X, Grid, BarChart, Lock, Eye, History } from 'lucide-react';
 import { DressCard } from './DressCard';
@@ -34,7 +34,7 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
   const { currentUser } = useAuth();
   const isEventCreator = currentUser?.id === event.creatorId;
 
-  const loadDresses = async () => {
+  const loadDresses = useCallback(async () => {
     try {
       setLoading(true);
       const fetchedDresses = await getEventDresses(event.id, true);
@@ -45,13 +45,13 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
     } finally {
       setLoading(false);
     }
-  };
+  }, [event.id]);
 
   useEffect(() => {
     loadDresses();
-  }, [event.id]);
+  }, [loadDresses]);
 
-  const handleAddDress = async (dressData: Omit<Dress, '_id' | 'id' | 'userId' | 'eventId'>) => {
+  const handleAddDress = useCallback(async (dressData: Omit<Dress, '_id' | 'id' | 'userId' | 'eventId'>) => {
     try {
       const newDress = await addDressToEvent(event.id, dressData);
       setDresses(prevDresses => [...prevDresses, newDress]);
@@ -62,23 +62,23 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
       console.error('Error adding dress:', error);
       toast.error('Failed to add item');
     }
-  };
+  }, [event.id, onDressAdded]);
 
-  const handleEditDress = (dress: Dress) => {
+  const handleEditDress = useCallback((dress: Dress) => {
     setEditingDress(dress);
-  };
+  }, []);
 
-  const handleUpdateDress = async (updatedData: Partial<Dress>) => {
+  const handleUpdateDress = useCallback(async (updatedData: Partial<Dress>) => {
     if (!editingDress) return;
-    
+
     try {
       // Update dress via API
       await updateDress(editingDress._id, updatedData);
-      
+
       // Update dress in local state
-      setDresses(prevDresses => 
-        prevDresses.map(dress => 
-          dress._id === editingDress._id 
+      setDresses(prevDresses =>
+        prevDresses.map(dress =>
+          dress._id === editingDress._id
             ? { ...dress, ...updatedData }
             : dress
         )
@@ -90,9 +90,9 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
       console.error('Error updating dress:', error);
       toast.error('Failed to update item');
     }
-  };
+  }, [editingDress, onDressAdded]);
 
-  const handleDeleteDress = async (dressId: string) => {
+  const handleDeleteDress = useCallback(async (dressId: string) => {
     try {
       await deleteDress(dressId);
       setDresses(prevDresses => prevDresses.filter(d => d._id !== dressId));
@@ -102,7 +102,7 @@ export const EventDetailsModal: FC<EventDetailsModalProps> = ({ event, onClose, 
       toast.error('Failed to delete item');
       throw error;
     }
-  };
+  }, []);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">

@@ -3,42 +3,9 @@ import { logger } from '../logger.js';
 import { AVAILABLE_COLORS } from '../colors/constants.js';
 import { getAllCategories } from '../categorization/index.js';
 import { findRealProducts } from './productSearch.js';
+import { initializeGrok, checkGrokStatus } from '../vision/grok.js';
 
-let deepseekClient = null;
-
-function initializeDeepSeek() {
-  const API_KEY = process.env.DEEPSEEK_API_KEY;
-  
-  if (!API_KEY) {
-    logger.error('Missing DEEPSEEK_API_KEY environment variable for suggestions');
-    logger.info('Available env vars:', Object.keys(process.env).filter(key => key.includes('DEEP')));
-    return null;
-  }
-
-  logger.info('Initializing DeepSeek client with API key:', {
-    hasKey: !!API_KEY,
-    keyLength: API_KEY.length,
-    keyPreview: API_KEY.substring(0, 10) + '...'
-  });
-
-  try {
-    deepseekClient = axios.create({
-      baseURL: 'https://api.deepseek.com/v1',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`
-      },
-      timeout: 30000
-    });
-
-    logger.info('DeepSeek client created successfully');
-    return deepseekClient;
-  } catch (error) {
-    logger.error('Failed to initialize DeepSeek for suggestions:', error);
-    return null;
-  }
-}
+let grokClient = null;
 
 export async function generateDuplicateSuggestions(duplicateItem, userOtherItems = [], eventContext = {}) {
   try {
@@ -48,14 +15,14 @@ export async function generateDuplicateSuggestions(duplicateItem, userOtherItems
       eventName: eventContext.name
     });
 
-    if (!deepseekClient) {
-      logger.info('Initializing DeepSeek client...');
-      deepseekClient = initializeDeepSeek();
-      if (!deepseekClient) {
-        logger.warn('DeepSeek not available, generating fallback suggestions');
+    if (!grokClient) {
+      logger.info('Initializing Grok client...');
+      grokClient = initializeGrok();
+      if (!grokClient) {
+        logger.warn('Grok not available, generating fallback suggestions');
         return generateFallbackSuggestions(duplicateItem, userOtherItems, eventContext);
       }
-      logger.info('DeepSeek client initialized successfully');
+      logger.info('Grok client initialized successfully');
     }
 
     const categories = getAllCategories();
@@ -71,119 +38,122 @@ export async function generateDuplicateSuggestions(duplicateItem, userOtherItems
     const messages = [
       {
         role: "system",
-        content: `You are a fashion stylist AI that helps users avoid outfit conflicts by suggesting alternative items.
+        content: `Eres una IA estilista de moda que ayuda a los usuarios a evitar conflictos de vestuario sugiriendo artículos alternativos.
 
-        CRITICAL INSTRUCTIONS:
-        1. Analyze the duplicate item and suggest 3-5 alternatives
-        2. Consider the user's other items to ensure coordination
-        3. Suggest items that complement their existing wardrobe
-        4. Provide specific, actionable suggestions with reasoning
-        5. Include color alternatives and style variations
-        6. Consider the event context (formal, casual, etc.)
+        INSTRUCCIONES CRÍTICAS:
+        1. Analiza el artículo duplicado y sugiere 3-5 alternativas
+        2. Considera los otros artículos del usuario para asegurar coordinación
+        3. Sugiere artículos que complementen su guardarropa existente
+        4. Proporciona sugerencias específicas y accionables con razonamiento
+        5. Incluye alternativas de color y variaciones de estilo
+        6. Considera el contexto del evento (formal, casual, etc.)
         
-        SUGGESTION TYPES:
-        1. COLOR ALTERNATIVES - Same item, different colors
-        2. STYLE VARIATIONS - DIFFERENT items with similar aesthetic/vibe
-        3. COMPLEMENTARY ITEMS - Items that work well together but are DIFFERENT
-        4. ALTERNATIVE STYLES - Completely different items that achieve same look
+        TIPOS DE SUGERENCIAS:
+        1. ALTERNATIVAS DE COLOR - Mismo artículo, diferentes colores
+        2. VARIACIONES DE ESTILO - Artículos DIFERENTES con estética/vibra similar
+        3. ARTÍCULOS COMPLEMENTARIOS - Artículos que funcionan bien juntos pero son DIFERENTES
+        4. ESTILOS ALTERNATIVOS - Artículos completamente diferentes que logran el mismo look
         
-        Available categories: ${categories.map(c => c.name).join(', ')}
-        Available colors: ${colors.join(', ')}
+        Categorías disponibles: ${categories.map(c => c.name).join(', ')}
+        Colores disponibles: ${colors.join(', ')}
         
-        CRITICAL: DO NOT suggest the same item name in different stores!
-        Instead, suggest DIFFERENT items that achieve a similar style/aesthetic.
+        CRÍTICO: ¡NO sugieras el mismo nombre de artículo en diferentes tiendas!
+        En su lugar, sugiere artículos DIFERENTES que logren un estilo/estética similar.
         
-        EXAMPLES:
-        - Instead of "Black Dress" → suggest "Black Jumpsuit", "Black Skirt + Top", "Black Romper"
-        - Instead of "Red Heels" → suggest "Red Flats", "Red Boots", "Red Sandals"
-        - Instead of "Blue Shirt" → suggest "Blue Blouse", "Blue Sweater", "Blue Tank Top"
+        EJEMPLOS:
+        - En lugar de "Vestido Negro" → sugiere "Mono Negro", "Falda Negra + Top", "Pelele Negro"
+        - En lugar de "Tacones Rojos" → sugiere "Bailarinas Rojas", "Botas Rojas", "Sandalias Rojas"
+        - En lugar de "Camisa Azul" → sugiere "Blusa Azul", "Jersey Azul", "Camiseta Sin Mangas Azul"
         
-        RESPONSE FORMAT:
-        Return a JSON array of suggestions with this structure:
+        FORMATO DE RESPUESTA:
+        Devuelve un array JSON de sugerencias con esta estructura:
         [
           {
-            "type": "style_alternative|color_variation|complementary|alternative_style",
-            "title": "Suggestion title",
-            "description": "Why this DIFFERENT item achieves the same style",
+            "type": "alternativa_estilo|variacion_color|complementario|estilo_alternativo",
+            "title": "Título de la sugerencia",
+            "description": "Por qué este artículo DIFERENTE logra el mismo estilo",
             "item": {
-              "name": "DIFFERENT item name (not the same as duplicate)",
-              "category": "category",
+              "name": "Nombre del artículo DIFERENTE (no el mismo que el duplicado)",
+              "category": "categoría",
               "subcategory": "subcategory", 
-              "color": "suggested color",
-              "style": "style description that matches the original vibe"
+              "color": "color sugerido",
+              "style": "descripción de estilo que coincida con la vibra original"
             },
-            "reasoning": "Why this DIFFERENT item works as an alternative",
-            "searchTerms": ["different", "item", "terms"],
+            "reasoning": "Por qué este artículo DIFERENTE funciona como alternativa",
+            "searchTerms": ["términos", "de", "búsqueda"],
             "priority": 1-5
           }
         ]`
       },
       {
         role: "user",
-        content: `STYLE-BASED ALTERNATIVE NEEDED:
+        content: `ALTERNATIVA BASADA EN ESTILO NECESARIA:
 
-        DUPLICATE ITEM (DO NOT suggest same name):
-        - Name: "${duplicateItem.name}"
-        - Color: "${duplicateItem.color || 'Unknown'}"
-        - Brand: "${duplicateItem.brand || 'Unknown'}"
-        - Type: "${duplicateItem.type?.name || 'Unknown'}"
-        - Category: "${duplicateItem.type?.category || 'Unknown'}"
+        ARTÍCULO DUPLICADO (NO sugieras el mismo nombre):
+        - Nombre: "${duplicateItem.name}"
+        - Color: "${duplicateItem.color || 'Desconocido'}"
+        - Marca: "${duplicateItem.brand || 'Desconocida'}"
+        - Tipo: "${duplicateItem.type?.name || 'Desconocido'}"
+        - Categoría: "${duplicateItem.type?.category || 'Desconocida'}"
 
-        USER'S OTHER ITEMS:
+        OTROS ARTÍCULOS DEL USUARIO:
         ${userOtherItems.length > 0 ? userOtherItems.map((item, index) => 
-          `${index + 1}. "${item.name}" - ${item.color || 'No color'} - ${item.type?.name || 'Unknown type'}`
-        ).join('\n') : 'No other items in wardrobe'}
+          `${index + 1}. "${item.name}" - ${item.color || 'Sin color'} - ${item.type?.name || 'Tipo desconocido'}`
+        ).join('\n') : 'No hay otros artículos en el guardarropa'}
 
-        EVENT CONTEXT:
-        - Event: "${eventContext.name || 'Unknown event'}"
-        - Date: "${eventContext.date || 'Unknown date'}"
-        - Location: "${eventContext.location || 'Unknown location'}"
-        - Description: "${eventContext.description || 'No description'}"
+        CONTEXTO DEL EVENTO:
+        - Evento: "${eventContext.name || 'Evento desconocido'}"
+        - Fecha: "${eventContext.date || 'Fecha desconocida'}"
+        - Ubicación: "${eventContext.location || 'Ubicación desconocida'}"
+        - Descripción: "${eventContext.description || 'Sin descripción'}"
 
-        CRITICAL TASK: Generate 3-5 DIFFERENT items (NOT the same name) that achieve a similar style/aesthetic.
+        TAREA CRÍTICA: Genera 3-5 artículos DIFERENTES (NO el mismo nombre) que logren un estilo/estética similar.
 
-        STRICT REQUIREMENTS:
-        1. NEVER suggest the same item name ("${duplicateItem.name}")
-        2. Suggest DIFFERENT items that achieve similar style/vibe
-        3. Consider the event formality and context
-        4. Coordinate with user's existing wardrobe
-        5. Provide truly alternative options, not just color changes
-        
-        EXAMPLES of GOOD suggestions for "${duplicateItem.name}":
-        - If it's a dress → suggest jumpsuit, skirt+top combo, romper
-        - If it's heels → suggest flats, boots, sandals, wedges
-        - If it's a shirt → suggest blouse, sweater, tank top, cardigan
-        - If it's pants → suggest skirt, shorts, leggings, culottes`
+        REQUISITOS ESTRICTOS:
+        1. NUNCA sugieras el mismo nombre de artículo ("${duplicateItem.name}")
+        2. Sugiere artículos DIFERENTES que logren estilo/vibra/silueta similar
+        3. Considera la formalidad del evento y contexto ("${eventContext.name}" - "${eventContext.description}")
+        4. Coordina con los artículos existentes del guardarropa del usuario
+        5. Enfócate en ALTERNATIVAS DE ESTILO, no variaciones de nombre
+        6. Piensa en lograr el mismo look general con piezas diferentes`
       }
     ];
 
-    logger.info('Sending request to DeepSeek API...');
+    logger.info('Sending request to Grok API...');
 
-    const response = await deepseekClient.post('/chat/completions', {
-      model: "deepseek-chat",
+    const response = await grokClient.post('/chat/completions', {
+      model: "grok-4-latest",
       messages,
       temperature: 0.7,
-      max_tokens: 1000
+      stream: false,
+      max_tokens: 2000
     });
 
-    logger.info('DeepSeek API response received:', {
+    logger.info('Grok API response received:', {
       hasResponse: !!response.data,
       hasChoices: !!response.data?.choices,
-      choicesLength: response.data?.choices?.length || 0
+      choicesLength: response.data?.choices?.length || 0,
+      responseContent: response.data?.choices?.[0]?.message?.content?.substring(0, 100) || 'No content'
     });
 
     if (!response.data?.choices?.[0]?.message?.content) {
-      logger.error('Invalid response from DeepSeek API:', response.data);
-      throw new Error('Invalid response from DeepSeek API');
+      logger.error('Invalid response from Grok API:', response.data);
+      throw new Error('Invalid response from Grok API');
     }
 
     const text = response.data.choices[0].message.content;
-    logger.info('DeepSeek response text:', { textLength: text.length, preview: text.substring(0, 200) });
+    logger.info('Grok response received successfully:', { 
+      textLength: text.length, 
+      preview: text.substring(0, 200),
+      hasJsonMatch: text.includes('[') && text.includes(']')
+    });
     
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     
     if (jsonMatch) {
-      logger.info('Found JSON in response, parsing...');
+      logger.info('Found JSON in Grok response, parsing...', { 
+        jsonLength: jsonMatch[0].length 
+      });
       const suggestions = JSON.parse(jsonMatch[0]);
       
       // Sort by priority and limit to top 5
@@ -191,7 +161,11 @@ export async function generateDuplicateSuggestions(duplicateItem, userOtherItems
         .sort((a, b) => (b.priority || 0) - (a.priority || 0))
         .slice(0, 3); // Limit to 3 main suggestions
 
-      logger.info('Parsed suggestions:', { count: sortedSuggestions.length });
+      logger.info('Grok suggestions parsed successfully:', { 
+        count: sortedSuggestions.length,
+        types: sortedSuggestions.map(s => s.type),
+        titles: sortedSuggestions.map(s => s.title)
+      });
 
       // Add real product recommendations to each suggestion
       const enhancedSuggestions = await Promise.all(
@@ -210,7 +184,7 @@ export async function generateDuplicateSuggestions(duplicateItem, userOtherItems
         })
       );
       
-      logger.info('AI suggestions generated:', {
+      logger.info('Grok AI suggestions generated successfully:', {
         duplicateItem: duplicateItem.name,
         suggestionsCount: enhancedSuggestions.length,
         types: enhancedSuggestions.map(s => s.type),
@@ -220,16 +194,26 @@ export async function generateDuplicateSuggestions(duplicateItem, userOtherItems
       return enhancedSuggestions;
     }
 
-    logger.warn('No valid JSON found in DeepSeek response:', { text });
-    logger.warn('No valid JSON found in DeepSeek response, using fallback');
+    logger.warn('No valid JSON found in Grok response, using fallback:', { 
+      textPreview: text.substring(0, 500),
+      hasArray: text.includes('['),
+      hasBrace: text.includes('{')
+    });
     return generateFallbackSuggestions(duplicateItem, userOtherItems, eventContext);
   } catch (error) {
-    logger.error('AI suggestions generation error:', {
+    logger.error('Grok AI suggestions generation error:', {
       error: error.message,
       stack: error.stack,
       duplicateItem: duplicateItem.name,
-      userItemsCount: userOtherItems.length
+      userItemsCount: userOtherItems.length,
+      isTimeout: error.message.includes('timeout'),
+      isNetworkError: error.code === 'ECONNRESET' || error.code === 'ENOTFOUND'
     });
+    
+    if (error.message.includes('timeout')) {
+      logger.error('Grok API timeout - consider increasing timeout or checking API status');
+    }
+    
     return generateFallbackSuggestions(duplicateItem, userOtherItems, eventContext);
   }
 }
@@ -243,21 +227,21 @@ async function generateFallbackSuggestions(duplicateItem, userOtherItems, eventC
     const subcategory = originalItem.type?.subcategory || 'other';
     
     const alternatives = {
-      'dresses': ['jumpsuit', 'skirt and top combo', 'romper', 'two-piece set'],
-      'tops': ['blouse', 'sweater', 'cardigan', 'tank top', 'bodysuit'],
-      'bottoms': ['skirt', 'shorts', 'culottes', 'palazzo pants'],
-      'shoes': ['flats', 'boots', 'sandals', 'wedges', 'sneakers'],
-      'bags': ['clutch', 'crossbody bag', 'tote bag', 'backpack']
+      'dresses': ['mono', 'conjunto falda y top', 'pelele', 'conjunto de dos piezas'],
+      'tops': ['blusa', 'jersey', 'cardigan', 'camiseta sin mangas', 'body'],
+      'bottoms': ['falda', 'shorts', 'culottes', 'pantalones palazzo'],
+      'shoes': ['bailarinas', 'botas', 'sandalias', 'cuñas', 'zapatillas'],
+      'bags': ['clutch', 'bolso bandolera', 'bolso tote', 'mochila']
     };
     
-    return alternatives[subcategory] || ['alternative style item', 'different option'];
+    return alternatives[subcategory] || ['artículo de estilo alternativo', 'opción diferente'];
   };
   
   const alternativeItems = getAlternativeItems(duplicateItem);
   
   const fallbackSuggestions = [
     {
-      type: 'style_alternative',
+      type: 'alternativa_estilo',
       title: `Alternativa de Estilo: ${alternativeItems[0]}`,
       description: `En lugar de "${duplicateItem.name}", considera un ${alternativeItems[0]} que logre un look similar.`,
       item: {
@@ -265,25 +249,25 @@ async function generateFallbackSuggestions(duplicateItem, userOtherItems, eventC
         category: duplicateItem.type?.category || 'clothes',
         subcategory: duplicateItem.type?.subcategory || 'dresses',
         color: duplicateItem.color || 'Black',
-        style: 'Similar aesthetic, different item'
+        style: 'Estética similar, artículo diferente'
       },
       reasoning: `Un ${alternativeItems[0]} te dará un look similar sin el conflicto de duplicados.`,
-      searchTerms: [alternativeItems[0], duplicateItem.color || 'elegant', 'alternative'],
+      searchTerms: [alternativeItems[0], duplicateItem.color || 'elegante', 'alternativa'],
       priority: 5
     },
     {
-      type: 'alternative_style',
+      type: 'estilo_alternativo',
       title: `Opción Diferente: ${alternativeItems[1] || 'Alternative Style'}`,
       description: `Prueba con un ${alternativeItems[1] || 'different style'} para lograr un look único y evitar duplicados.`,
       item: {
         name: `${duplicateItem.color || 'Stylish'} ${alternativeItems[1] || 'Alternative'}`,
         category: duplicateItem.type?.category || 'clothes',
         subcategory: duplicateItem.type?.subcategory || 'dresses',
-        color: duplicateItem.color || 'Negro',
-        style: 'Different but coordinated'
+        color: duplicateItem.color || 'Black',
+        style: 'Diferente pero coordinado'
       },
       reasoning: `Un ${alternativeItems[1] || 'different style'} te permitirá mantener la elegancia sin duplicar artículos.`,
-      searchTerms: [alternativeItems[1] || 'alternative', duplicateItem.color || 'elegant', 'different'],
+      searchTerms: [alternativeItems[1] || 'alternativa', duplicateItem.color || 'elegante', 'diferente'],
       priority: 4
     }
   ];

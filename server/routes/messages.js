@@ -14,20 +14,21 @@ router.use(authMiddleware);
 // Get messages for current user
 router.get('/', async (req, res) => {
   try {
+    // Use .populate() to fetch related user and event data in a single query
     const messages = await Message.find({
       toUserId: req.user.id
     })
+    .populate('fromUserId', 'name email')
+    .populate('toUserId', 'name email')
     .populate('eventId', 'name')
-    .sort({ createdAt: -1 });
+    .sort({ createdAt: -1 })
+    .lean(); // Use lean() for better performance (returns plain JS objects)
 
-    // Get user info for message senders
-    const userIds = [...new Set(messages.map(m => m.fromUserId))];
-    const users = await User.find({ _id: { $in: userIds } });
-    const userMap = Object.fromEntries(users.map(u => [u._id.toString(), u]));
-
+    // Format response with populated fields
     const messagesWithUsers = messages.map(msg => ({
-      ...msg.toObject(),
-      from: userMap[msg.fromUserId],
+      ...msg,
+      from: msg.fromUserId,
+      to: msg.toUserId,
       event: msg.eventId
     }));
 

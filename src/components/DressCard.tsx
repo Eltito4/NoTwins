@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Eye, EyeOff, Trash2, Lock, Edit } from 'lucide-react';
 import { Dress } from '../types';
 import { formatPrice } from '../utils/currency';
@@ -14,7 +14,7 @@ interface DressCardProps {
   compact?: boolean;
 }
 
-export function DressCard({ dress, onDelete, onEdit, isEventCreator, userName, compact = false }: DressCardProps) {
+const DressCardComponent = ({ dress, onDelete, onEdit, isEventCreator, userName, compact = false }: DressCardProps) => {
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [imageError, setImageError] = React.useState(false);
   const { currentUser } = useAuth();
@@ -165,4 +165,7 @@ export function DressCard({ dress, onDelete, onEdit, isEventCreator, userName, c
       </div>
     </div>
   );
-}
+};
+
+// Memoize component to prevent unnecessary re-renders
+export const DressCard = memo(DressCardComponent);

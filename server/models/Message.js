@@ -1,13 +1,15 @@
 import mongoose from 'mongoose';
 
 const messageSchema = new mongoose.Schema({
-  fromUserId: { 
-    type: String, 
-    required: true 
+  fromUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
-  toUserId: { 
-    type: String, 
-    required: true 
+  toUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
   eventId: {
     type: mongoose.Schema.Types.ObjectId,

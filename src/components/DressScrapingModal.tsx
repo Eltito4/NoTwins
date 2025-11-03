@@ -213,20 +213,19 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, onBack }
 
         {scrapedData && (
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="relative aspect-square w-full max-w-md mx-auto rounded-lg overflow-hidden bg-gray-100 border-2 border-dashed border-gray-300">
-              {scrapedData.imageUrl && !scrapedData.imageUrl.includes('placeholder') ? (
+            <div className="relative aspect-square w-full max-w-md mx-auto rounded-lg overflow-hidden bg-gray-100 border-2 border-gray-200">
+              {scrapedData.imageUrl && !imageError ? (
                 <img
                   src={scrapedData.imageUrl}
                   alt={scrapedData.name}
-                  className="w-full h-full object-cover rounded-lg"
-                  crossOrigin="anonymous"
-                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover"
                   onError={handleImageError}
-                  onLoad={() => setImageError(false)}
+                  onLoad={() => {
+                    setImageError(false);
+                    console.log('Image loaded successfully:', scrapedData.imageUrl);
+                  }}
                 />
-              ) : null}
-              
-              {(imageError || !scrapedData.imageUrl || scrapedData.imageUrl.includes('placeholder')) && (
+              ) : (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500">
                   <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center mb-3">
                     <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -234,21 +233,24 @@ export function DressScrapingModal({ onClose, onSubmit, isEventCreator, onBack }
                     </svg>
                   </div>
                   <p className="text-sm font-medium">
-                    {imageError ? 'Image failed to load' : 'No image available'}
+                    {imageError ? 'Error al cargar imagen' : 'Cargando imagen...'}
                   </p>
                   <p className="text-xs text-center mt-1">
                     {imageError 
-                      ? 'The image URL was found but failed to load'
-                      : 'Product details extracted successfully but image could not be retrieved'
+                      ? 'Intenta abrir la imagen en una nueva pestaña'
+                      : 'Los detalles del producto se extrajeron correctamente'
                     }
                   </p>
                   {scrapedData.imageUrl && (
                     <button
                       type="button"
-                      onClick={() => window.open(scrapedData.imageUrl, '_blank')}
-                      className="mt-2 text-xs text-primary hover:text-primary-600 underline"
+                      onClick={() => {
+                        console.log('Opening image URL:', scrapedData.imageUrl);
+                        window.open(scrapedData.imageUrl, '_blank');
+                      }}
+                      className="mt-3 px-3 py-1 bg-primary text-white text-xs rounded hover:bg-primary-600 transition-colors"
                     >
-                      Try opening image in new tab
+                      Ver Imagen Original
                     </button>
                   )}
                 </div>

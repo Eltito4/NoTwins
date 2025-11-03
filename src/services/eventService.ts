@@ -1,18 +1,7 @@
-import axios from 'axios';
 import { Event, Dress, User } from '../types';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
-
-const handleError = (error: unknown, customMessage: string) => {
-  console.error(`${customMessage}:`, error);
-  if (axios.isAxiosError(error)) {
-    const message = error.response?.data?.error || error.message;
-    toast.error(message);
-  } else {
-    toast.error(customMessage);
-  }
-  throw error;
-};
+import { handleApiError } from '../utils/errorHandler';
 
 export async function createEvent(event: Omit<Event, 'id' | '_id' | 'shareId' | 'dresses'>): Promise<Event> {
   try {
@@ -24,21 +13,21 @@ export async function createEvent(event: Omit<Event, 'id' | '_id' | 'shareId' | 
       creatorId: event.creatorId,
       participants: event.participants
     });
-    
+
     return response.data;
   } catch (error) {
-    handleError(error, 'Error al crear evento');
-    return Promise.reject(error);
+    handleApiError(error, { customMessage: 'Error al crear evento' });
   }
 }
 
-export async function getEventsByUser(): Promise<Event[]> {
+export async function getEventsByUser(includeParticipants = false): Promise<Event[]> {
   try {
-    const response = await api.get('/events');
+    const response = await api.get('/events', {
+      params: { includeParticipants }
+    });
     return response.data;
   } catch (error) {
-    handleError(error, 'Error al cargar eventos');
-    return Promise.reject(error);
+    handleApiError(error, { customMessage: 'Error al cargar eventos' });
   }
 }
 
@@ -47,8 +36,7 @@ export async function deleteEvent(eventId: string): Promise<void> {
     await api.delete(`/events/${eventId}`);
     toast.success('Evento eliminado exitosamente');
   } catch (error) {
-    handleError(error, 'Error al eliminar evento');
-    return Promise.reject(error);
+    handleApiError(error, { customMessage: 'Error al eliminar evento' });
   }
 }
 
@@ -62,8 +50,7 @@ export async function addDressToEvent(eventId: string, dress: Omit<Dress, '_id' 
     toast.success('Artículo agregado exitosamente');
     return response.data;
   } catch (error) {
-    handleError(error, 'Error al agregar artículo');
-    return Promise.reject(error);
+    handleApiError(error, { customMessage: 'Error al agregar artículo' });
   }
 }
 
@@ -74,8 +61,7 @@ export async function getEventDresses(eventId: string, includePrivate = false): 
     });
     return response.data;
   } catch (error) {
-    handleError(error, 'Error al cargar artículos');
-    return Promise.reject(error);
+    handleApiError(error, { customMessage: 'Error al cargar artículos' });
   }
 }
 
@@ -85,8 +71,7 @@ export async function updateDress(dressId: string, updatedData: Partial<Dress>):
     toast.success('Artículo actualizado exitosamente');
     return response.data;
   } catch (error) {
-    handleError(error, 'Error al actualizar artículo');
-    return Promise.reject(error);
+    handleApiError(error, { customMessage: 'Error al actualizar artículo' });
   }
 }
 
@@ -98,7 +83,7 @@ export async function deleteDress(dressId: string): Promise<void> {
     await api.delete(`/dresses/${dressId}`);
     toast.success('Artículo eliminado exitosamente');
   } catch (error) {
-    handleError(error, 'Error al eliminar artículo');
+    handleApiError(error, { customMessage: 'Error al eliminar artículo' });
   }
 }
 
@@ -108,8 +93,7 @@ export async function joinEvent(shareId: string): Promise<Event> {
     toast.success('¡Te has unido al evento exitosamente!');
     return response.data;
   } catch (error) {
-    handleError(error, 'Error al unirse al evento');
-    return Promise.reject(error);
+    handleApiError(error, { customMessage: 'Error al unirse al evento' });
   }
 }
 
@@ -118,7 +102,6 @@ export async function getEventParticipants(eventId: string): Promise<User[]> {
     const response = await api.get(`/events/${eventId}/participants`);
     return response.data;
   } catch (error) {
-    handleError(error, 'Error al cargar participantes');
-    return Promise.reject(error);
+    handleApiError(error, { customMessage: 'Error al cargar participantes' });
   }
 }

@@ -91,13 +91,13 @@ export function SuggestionModal({ dressId, dressName, onClose }: SuggestionModal
 
   const getSuggestionTypeLabel = (type: string) => {
     switch (type) {
-      case 'color_alternative':
+      case 'variacion_color':
         return 'Alternativa de Color';
-      case 'style_variation':
+      case 'alternativa_estilo':
         return 'Variación de Estilo';
-      case 'complementary':
+      case 'complementario':
         return 'Artículo Complementario';
-      case 'coordination':
+      case 'estilo_alternativo':
         return 'Coordinación de Guardarropa';
       default:
         return 'Sugerencia';
@@ -106,13 +106,13 @@ export function SuggestionModal({ dressId, dressName, onClose }: SuggestionModal
 
   const getSuggestionColor = (type: string) => {
     switch (type) {
-      case 'color_alternative':
+      case 'variacion_color':
         return 'bg-purple-50 border-purple-200';
-      case 'style_variation':
+      case 'alternativa_estilo':
         return 'bg-blue-50 border-blue-200';
-      case 'complementary':
+      case 'complementario':
         return 'bg-pink-50 border-pink-200';
-      case 'coordination':
+      case 'estilo_alternativo':
         return 'bg-green-50 border-green-200';
       default:
         return 'bg-gray-50 border-gray-200';

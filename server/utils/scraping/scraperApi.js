@@ -46,17 +46,17 @@ export async function scrapeWithScraperApi(url) {
     const params = {
       api_key: SCRAPER_API_KEY,
       url: url,
-      render_js: 'true',
+      render: 'true',
       country_code: 'es',
-      device: 'desktop',
-      premium: 'true',
-      keep_headers: 'true'
+      device_type: 'desktop',
+      premium: 'true'
     };
 
-    // Add specific parameters for certain retailers
-    if (url.includes('massimodutti.com')) {
+    // Add specific parameters for Zara
+    if (url.includes('zara.com')) {
       params.session_number = Math.floor(Math.random() * 1000);
-      params.residential = 'true';
+      params.autoparse = 'false';
+      params.ultra_premium = 'true';
     }
 
     // Make the request with retry logic
@@ -143,6 +143,9 @@ export async function scrapeWithScraperApi(url) {
     logger.error('ScraperAPI request failed:', {
       error: error.message,
       url,
+      dataLength: response.data?.length || 0,
+      hasTitle: response.data?.includes('<title') || false,
+      hasImages: response.data?.includes('<img') || false,
       timestamp: new Date().toISOString()
     });
 

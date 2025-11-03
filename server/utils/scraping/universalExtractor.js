@@ -580,16 +580,31 @@ function makeAbsoluteUrl(url, baseUrl = '') {
   if (url.startsWith('data:')) return url;
   
   try {
+    // Handle protocol-relative URLs
     if (url.startsWith('//')) {
       return `https:${url}`;
     }
     
+    // Handle relative URLs
     if (!url.startsWith('http')) {
-      return new URL(url, baseUrl || 'https://').toString();
+      const base = baseUrl || 'https://example.com';
+      return new URL(url, base).toString();
     }
     
-    return url.replace(/^http:/, 'https:');
+    // Ensure HTTPS and handle special cases
+    let cleanUrl = url.replace(/^http:/, 'https:');
+    
+    // For Zara images, ensure proper format
+    if (cleanUrl.includes('zara.net') || cleanUrl.includes('zara.com')) {
+      // Zara images often need specific parameters
+      if (!cleanUrl.includes('?')) {
+        cleanUrl += '?ts=' + Date.now();
+      }
+    }
+    
+    return cleanUrl;
   } catch (error) {
+    logger.warn('URL processing error:', { url, baseUrl, error: error.message });
     return null;
   }
 }

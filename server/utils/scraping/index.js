@@ -16,7 +16,7 @@ export async function scrapeProduct(url) {
       throw new Error('Invalid URL format');
     }
 
-    // Get retailer config from predefined configurations
+    // Get retailer config
     const retailerConfig = await getRetailerConfig(validatedUrl);
     if (!retailerConfig) {
       throw new Error('This retailer is not supported. Please try a different store.');
@@ -24,12 +24,19 @@ export async function scrapeProduct(url) {
 
     logger.debug('Fetching page:', validatedUrl);
     
-    // Use adaptive extraction to get product details
+    // Use adaptive extraction with ScraperAPI priority
     const productDetails = await adaptiveExtract(validatedUrl, retailerConfig);
 
     if (!productDetails.name || !productDetails.imageUrl) {
       throw new Error('Could not extract required product details');
     }
+
+    logger.info('Successfully extracted product data:', {
+      hasName: !!productDetails.name,
+      hasImage: !!productDetails.imageUrl,
+      hasPrice: !!productDetails.price,
+      hasColor: !!productDetails.color
+    });
 
     return productDetails;
   } catch (error) {

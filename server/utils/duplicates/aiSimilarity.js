@@ -1,39 +1,15 @@
 import axios from 'axios';
 import { logger } from '../logger.js';
+import { initializeGrok, checkGrokStatus } from '../vision/grok.js';
 
-let deepseekClient = null;
-
-function initializeDeepSeek() {
-  const API_KEY = process.env.DEEPSEEK_API_KEY;
-  
-  if (!API_KEY) {
-    logger.error('Missing DEEPSEEK_API_KEY environment variable');
-    return null;
-  }
-
-  try {
-    deepseekClient = axios.create({
-      baseURL: 'https://api.deepseek.com/v1',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`
-      }
-    });
-
-    return deepseekClient;
-  } catch (error) {
-    logger.error('Failed to initialize DeepSeek for similarity:', error);
-    return null;
-  }
-}
+let grokClient = null;
 
 export async function analyzeSimilarItems(newItemName, existingItems) {
   try {
-    if (!deepseekClient) {
-      deepseekClient = initializeDeepSeek();
-      if (!deepseekClient) {
-        logger.warn('DeepSeek not available for similarity analysis');
+    if (!grokClient) {
+      grokClient = initializeGrok();
+      if (!grokClient) {
+        logger.warn('Grok not available for similarity analysis');
         return [];
       }
     }
@@ -93,15 +69,15 @@ export async function analyzeSimilarItems(newItemName, existingItems) {
       }
     ];
 
-    const response = await deepseekClient.post('/chat/completions', {
-      model: "deepseek-chat",
+    const response = await grokClient.post('/chat/completions', {
+      model: "grok-4-latest",
       messages,
       temperature: 0.3,
-      max_tokens: 800
+      stream: false
     });
 
     if (!response.data?.choices?.[0]?.message?.content) {
-      throw new Error('Invalid response from DeepSeek API');
+      throw new Error('Invalid response from Grok API');
     }
 
     const text = response.data.choices[0].message.content;
@@ -144,10 +120,10 @@ export async function analyzeSimilarItems(newItemName, existingItems) {
 
 export async function detectSmartDuplicates(newItem, existingItems) {
   try {
-    if (!deepseekClient) {
-      deepseekClient = initializeDeepSeek();
-      if (!deepseekClient) {
-        logger.warn('DeepSeek not available for smart duplicate detection');
+    if (!grokClient) {
+      grokClient = initializeGrok();
+      if (!grokClient) {
+        logger.warn('Grok not available for smart duplicate detection');
         return [];
       }
     }
@@ -240,15 +216,16 @@ export async function detectSmartDuplicates(newItem, existingItems) {
       }
     ];
 
-    const response = await deepseekClient.post('/chat/completions', {
-      model: "deepseek-chat",
+    const response = await grokClient.post('/chat/completions', {
+      model: "grok-4-latest",
       messages,
       temperature: 0.2,
-      max_tokens: 800
+      stream: false,
+      max_tokens: 1500
     });
 
     if (!response.data?.choices?.[0]?.message?.content) {
-      throw new Error('Invalid response from DeepSeek API');
+      throw new Error('Invalid response from Grok API');
     }
 
     const text = response.data.choices[0].message.content;
@@ -283,7 +260,7 @@ export async function detectSmartDuplicates(newItem, existingItems) {
 
     return [];
   } catch (error) {
-    logger.error('Smart duplicate detection error:', {
+    logger.error('Grok smart duplicate detection error:', {
       error: error.message,
       newItem: newItem.name,
       potentialCount: potentialDuplicates?.length || 0

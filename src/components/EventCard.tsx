@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { Calendar, MapPin, Users, Share2, Check, Copy, Trash2, Bell, Eye, Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Event, DuplicateInfo, User } from '../types';
@@ -12,7 +12,7 @@ interface EventCardProps {
   participants: Record<string, User>;
 }
 
-export function EventCard({ event, onClick, onDelete, duplicates = [], participants }: EventCardProps) {
+const EventCardComponent = ({ event, onClick, onDelete, duplicates = [], participants }: EventCardProps) => {
   const [showShareSuccess, setShowShareSuccess] = useState(false);
   const [showCopySuccess, setShowCopySuccess] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -256,4 +256,7 @@ export function EventCard({ event, onClick, onDelete, duplicates = [], participa
       </div>
     </div>
   );
-}
+};
+
+// Memoize component to prevent unnecessary re-renders
+export const EventCard = memo(EventCardComponent);

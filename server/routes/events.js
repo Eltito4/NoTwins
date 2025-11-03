@@ -15,12 +15,55 @@ router.use(eventLimiter);
 // Get all events for a user
 router.get('/', cacheMiddleware(30), async (req, res) => {
   try {
+    const includeParticipants = req.query.includeParticipants === 'true';
+
     const events = await Event.find({
       $or: [
         { creatorId: req.user.id },
         { participants: req.user.id }
       ]
     }).sort({ createdAt: -1 });
+
+    // If includeParticipants is true, fetch all participants in a single query
+    if (includeParticipants && events.length > 0) {
+      // Get all unique participant IDs across all events
+      const allParticipantIds = [...new Set(events.flatMap(e => e.participants))];
+
+      // Fetch all users in a single query
+      const users = await User.find({
+        _id: { $in: allParticipantIds }
+      }).select('_id name email').lean();
+
+      // Create a map for quick lookup
+      const userMap = {};
+      users.forEach(user => {
+        userMap[user._id.toString()] = {
+          id: user._id,
+          name: user.name,
+          email: user.email
+        };
+      });
+
+      // Attach participant details to each event
+      const eventsWithParticipants = events.map(event => {
+        const eventObj = event.toObject();
+        eventObj.participantDetails = event.participants
+          .map(participantId => {
+            const user = userMap[participantId.toString()];
+            if (user) {
+              return {
+                ...user,
+                isCreator: event.creatorId === participantId.toString()
+              };
+            }
+            return null;
+          })
+          .filter(Boolean);
+        return eventObj;
+      });
+
+      return res.json(eventsWithParticipants);
+    }
 
     res.json(events);
   } catch (error) {

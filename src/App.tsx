@@ -1,11 +1,11 @@
 import { useAuth } from './contexts/AuthContext';
 import { AuthForm } from './components/AuthForm';
 import { Dashboard } from './components/Dashboard';
-import { AdminDashboard } from './components/admin/AdminDashboard';
 import { UserMenu } from './components/UserMenu';
-import { Toaster } from 'react-hot-toast';
-import { useEffect, useState } from 'react';
-import api from './lib/api';
+import { lazy, Suspense, useState } from 'react';
+
+// Lazy load admin dashboard to reduce initial bundle size
+const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
 
 export default function App() {
   const { currentUser } = useAuth();
@@ -30,11 +30,15 @@ export default function App() {
       
       {showAdminDashboard && (
         <div className="fixed inset-0 bg-black/50 z-50">
-          <AdminDashboard onClose={() => setShowAdminDashboard(false)} />
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-full">
+              <div className="text-white text-lg">Loading admin dashboard...</div>
+            </div>
+          }>
+            <AdminDashboard onClose={() => setShowAdminDashboard(false)} />
+          </Suspense>
         </div>
       )}
-      
-      <Toaster position="bottom-right" />
     </div>
   );
 }
