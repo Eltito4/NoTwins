@@ -1,25 +1,26 @@
+// MIGRATED TO CLAUDE - Now uses Claude AI instead of DeepSeek for product interpretation
 import { load } from 'cheerio';
 import { logger } from '../logger.js';
 import { scrapeWithScraperApi } from './scraperApi.js';
 import { findClosestNamedColor } from '../colors/utils.js';
 import { detectProductType } from '../categorization/detector.js';
-import { interpretScrapedProduct } from '../vision/deepseek.js'; // DeepSeek for scraping
+import { interpretScrapedProduct } from '../claude/index.js'; // Claude for scraping interpretation
 
 export async function adaptiveExtract(url, retailerConfig) {
   try {
-    logger.info('Starting adaptive extraction for:', { 
-      url, 
+    logger.info('Starting adaptive extraction for:', {
+      url,
       retailer: retailerConfig.name,
       hasScraperKey: !!process.env.SCRAPER_API_KEY,
-      hasDeepSeekKey: !!process.env.DEEPSEEK_API_KEY
+      hasClaudeKey: !!process.env.ANTHROPIC_API_KEY
     });
 
-    // PRIORITY 1: ScraperAPI + DeepSeek AI (most reliable)
+    // PRIORITY 1: ScraperAPI + Claude AI (most reliable)
     try {
-      logger.debug('Using ScraperAPI + DeepSeek extraction');
-      const result = await extractWithScraperApiAndDeepSeek(url, retailerConfig);
+      logger.debug('Using ScraperAPI + Claude extraction');
+      const result = await extractWithScraperApiAndClaude(url, retailerConfig);
       if (result && result.name && result.imageUrl) {
-        logger.info('ScraperAPI + DeepSeek extraction successful:', { 
+        logger.info('ScraperAPI + Claude extraction successful:', {
           hasName: !!result.name,
           hasImage: !!result.imageUrl,
           hasPrice: !!result.price,
@@ -28,22 +29,22 @@ export async function adaptiveExtract(url, retailerConfig) {
         return result;
       }
     } catch (error) {
-      logger.error('ScraperAPI + DeepSeek extraction failed:', {
+      logger.error('ScraperAPI + Claude extraction failed:', {
         error: error.message,
         stack: error.stack
       });
     }
 
-    // PRIORITY 2: Direct request + DeepSeek AI
+    // PRIORITY 2: Direct request + Claude AI
     try {
-      logger.debug('Trying direct request + DeepSeek extraction');
-      const result = await extractWithDirectRequestAndDeepSeek(url, retailerConfig);
+      logger.debug('Trying direct request + Claude extraction');
+      const result = await extractWithDirectRequestAndClaude(url, retailerConfig);
       if (result && result.name) {
-        logger.info('Direct request + DeepSeek extraction successful');
+        logger.info('Direct request + Claude extraction successful');
         return result;
       }
     } catch (error) {
-      logger.error('Direct request + DeepSeek extraction failed:', error.message);
+      logger.error('Direct request + Claude extraction failed:', error.message);
     }
 
     // PRIORITY 3: Basic extraction with manual parsing
@@ -69,18 +70,18 @@ export async function adaptiveExtract(url, retailerConfig) {
   }
 }
 
-async function extractWithScraperApiAndDeepSeek(url, retailerConfig) {
+async function extractWithScraperApiAndClaude(url, retailerConfig) {
   try {
     if (!process.env.SCRAPER_API_KEY) {
       throw new Error('SCRAPER_API_KEY not configured');
     }
 
     const { html } = await scrapeWithScraperApi(url);
-    
+
     if (!html || html.length < 1000) {
       throw new Error('ScraperAPI returned insufficient HTML content');
     }
-    
+
     logger.debug('ScraperAPI HTML received:', {
       htmlLength: html.length,
       hasTitle: html.includes('<title'),
@@ -88,12 +89,12 @@ async function extractWithScraperApiAndDeepSeek(url, retailerConfig) {
       hasProduct: html.toLowerCase().includes('product'),
       titleContent: html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1] || 'No title found'
     });
-    
+
     const $ = load(html);
-    
+
     // Extract basic info first
     const basicInfo = extractBasicInfo($, retailerConfig, url);
-    
+
     logger.debug('Basic info extracted:', {
       hasName: !!basicInfo.name,
       hasImage: !!basicInfo.imageUrl,
@@ -101,24 +102,24 @@ async function extractWithScraperApiAndDeepSeek(url, retailerConfig) {
       name: basicInfo.name?.substring(0, 50),
       imageUrl: basicInfo.imageUrl?.substring(0, 100)
     });
-    
-    // Use DeepSeek AI to enhance the extracted data
+
+    // Use Claude AI to enhance the extracted data
     try {
-      logger.debug('Enhancing with DeepSeek AI...');
+      logger.debug('Enhancing with Claude AI...');
       const enhancedData = await interpretScrapedProduct({
-        html: html.substring(0, 3000), // Send first 3000 chars to DeepSeek
+        html: html.substring(0, 3000), // Send first 3000 chars to Claude
         basicInfo,
         url
       });
-      
-      logger.debug('DeepSeek enhancement completed:', {
+
+      logger.debug('Claude enhancement completed:', {
         hasName: !!enhancedData.name,
         hasImage: !!enhancedData.imageUrl,
         hasPrice: !!enhancedData.price,
         hasColor: !!enhancedData.color,
         hasType: !!enhancedData.type
       });
-      
+
       // Merge enhanced data with basic info
       const finalData = {
         name: enhancedData.name || basicInfo.name,
@@ -129,12 +130,12 @@ async function extractWithScraperApiAndDeepSeek(url, retailerConfig) {
         description: enhancedData.description || basicInfo.description,
         type: enhancedData.type || detectProductType(enhancedData.name || basicInfo.name)
       };
-      
+
       if (finalData.name && finalData.imageUrl) {
         return finalData;
       }
-    } catch (deepseekError) {
-      logger.warn('DeepSeek enhancement failed, using basic extraction:', deepseekError.message);
+    } catch (claudeError) {
+      logger.warn('Claude enhancement failed, using basic extraction:', claudeError.message);
     }
     
     // Fallback to manual enhancement if DeepSeek fails
@@ -164,13 +165,13 @@ async function extractWithScraperApiAndDeepSeek(url, retailerConfig) {
   }
 }
 
-async function extractWithDirectRequestAndDeepSeek(url, retailerConfig) {
+async function extractWithDirectRequestAndClaude(url, retailerConfig) {
   try {
     const axios = (await import('axios')).default;
     const https = (await import('https')).default;
-    
+
     logger.debug('Making direct request to:', url);
-    
+
     const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36',
@@ -194,15 +195,15 @@ async function extractWithDirectRequestAndDeepSeek(url, retailerConfig) {
 
     const $ = load(response.data);
     const basicInfo = extractBasicInfo($, retailerConfig, url);
-    
-    // Use DeepSeek to enhance
+
+    // Use Claude to enhance
     try {
       const enhancedData = await interpretScrapedProduct({
         html: response.data.substring(0, 3000),
         basicInfo,
         url
       });
-      
+
       return {
         name: enhancedData.name || basicInfo.name,
         imageUrl: enhancedData.imageUrl || basicInfo.imageUrl,
@@ -212,8 +213,8 @@ async function extractWithDirectRequestAndDeepSeek(url, retailerConfig) {
         description: enhancedData.description || basicInfo.description,
         type: enhancedData.type || detectProductType(enhancedData.name || basicInfo.name)
       };
-    } catch (deepseekError) {
-      logger.warn('DeepSeek enhancement failed in direct request:', deepseekError.message);
+    } catch (claudeError) {
+      logger.warn('Claude enhancement failed in direct request:', claudeError.message);
       
       // Fallback to manual enhancement
       enhanceForSpecificRetailers($, url, basicInfo);
