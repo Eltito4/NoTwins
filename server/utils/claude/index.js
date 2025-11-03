@@ -3,10 +3,15 @@ import { logger } from '../logger.js';
 import { AVAILABLE_COLORS } from '../colors/constants.js';
 import { getAllCategories } from '../categorization/index.js';
 import axios from 'axios';
+import NodeCache from 'node-cache';
 
 let claudeClient = null;
 let lastHealthCheck = 0;
 const HEALTH_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+// Cache for storing analysis results (24 hours TTL)
+const analysisCache = new NodeCache({ stdTTL: 86400, checkperiod: 3600 });
+const crypto = await import('crypto');
 
 /**
  * Initialize Claude client
@@ -39,6 +44,14 @@ function initializeClaude() {
 export async function analyzeGarmentImage(imageUrl) {
   try {
     logger.info('Starting Claude image analysis:', { imageUrl });
+
+    // Check cache first (saves 100% on repeated images)
+    const cacheKey = `image:${crypto.default.createHash('md5').update(imageUrl).digest('hex')}`;
+    const cached = analysisCache.get(cacheKey);
+    if (cached) {
+      logger.info('Cache HIT - returning cached image analysis', { imageUrl: imageUrl.substring(0, 50) });
+      return cached;
+    }
 
     if (!claudeClient) {
       claudeClient = initializeClaude();
@@ -99,70 +112,34 @@ export async function analyzeGarmentImage(imageUrl) {
     }
 
     // Spanish fashion brands to recognize
-    const spanishBrands = [
-      'Bimani', 'Bruna', 'Coosy', 'Lady Pipa', 'Redondo Brand', 'Miphai',
-      'Mariquita Trasquilá', 'Vogana', 'Matilde Cano', 'Violeta Vergara',
-      'Cayro Woman', 'La Croixé', 'Aware Barcelona', 'Cardié Moda',
-      'Güendolina', 'Mattui', 'THE-ARE', 'Mannit', 'Mimoki', 'Panambi',
-      'Carolina Herrera', 'CH', 'Zara', 'Mango', 'Massimo Dutti'
-    ];
+    const spanishBrands = ['Bimani', 'Bruna', 'Coosy', 'Lady Pipa', 'Redondo Brand', 'Miphai',
+      'Mariquita Trasquilá', 'Vogana', 'Matilde Cano', 'Violeta Vergara', 'Cayro Woman',
+      'La Croixé', 'Aware Barcelona', 'Cardié Moda', 'Güendolina', 'Mattui', 'THE-ARE',
+      'Mannit', 'Mimoki', 'Panambi', 'Carolina Herrera', 'CH', 'Zara', 'Mango', 'Massimo Dutti'];
 
+    // COST OPTIMIZATION: System prompt with cache_control (70-90% cost reduction)
     const response = await claudeClient.messages.create({
       model: "claude-3-5-sonnet-20241022",
-      max_tokens: 1024,
+      max_tokens: 512, // Reduced from 1024 (50% cost saving on output)
+      system: [
+        {
+          type: "text",
+          text: `Experto moda ES. Analiza imagen y extrae:
+- Tipo: zapatos/vestido/top/bottom/bolso/joyería/otro
+- Color de lista: ${colors.join(', ')}
+- Marca (si visible): ${spanishBrands.join(', ')}
+- Categorías: ${categories.map(c => c.name).join(', ')}
+  * Ropa: tops/bottoms/dresses/outerwear
+  * Accesorios: shoes/bags/jewelry/other
+
+Devuelve JSON: {"name":"Nombre ES","color":"Color","brand":"Marca|null","type":{"category":"clothes|accessories","subcategory":"...","name":"..."},"description":"...","confidence":0.95}`,
+          cache_control: { type: "ephemeral" } // ⭐ PROMPT CACHING - 70-90% savings
+        }
+      ],
       messages: [
         {
           role: "user",
-          content: [
-            imageContent,
-            {
-              type: "text",
-              text: `Eres un experto en moda española. Analiza esta imagen de una prenda de ropa y extrae la siguiente información:
-
-INSTRUCCIONES CRÍTICAS:
-1. DETECCIÓN DE TIPO DE PRODUCTO:
-   - ZAPATOS: Cualquier calzado incluyendo botas, tacones, zapatillas, sandalias
-   - VESTIDOS: Cualquier prenda de una pieza incluyendo vestidos, túnicas
-   - TOPS: Camisas, blusas, suéteres, camisetas
-   - BOTTOMS: Pantalones, faldas, shorts
-   - BOLSOS: Carteras, mochilas, clutches
-   - JOYERÍA: Collares, pendientes, pulseras, anillos
-   - OTROS: Cinturones, bufandas, sombreros, accesorios
-
-2. DETECCIÓN DE MARCA - Busca estas marcas españolas:
-   ${spanishBrands.join(', ')}
-   También busca: logos CH, texto Carolina Herrera, etiquetas visibles
-
-3. DETECCIÓN DE COLOR:
-   - Analiza el color REAL del artículo, no el empaque
-   - Colores disponibles: ${colors.join(', ')}
-   - Usa el color más cercano de la lista
-
-4. CATEGORIZACIÓN:
-   - Categorías disponibles: ${categories.map(c => c.name).join(', ')}
-   - Para ropa: subcategorías: tops, bottoms, dresses, outerwear
-   - Para accesorios: subcategorías: shoes, bags, jewelry, other
-
-EJEMPLOS:
-- Botas de tacón moradas = category: "accessories", subcategory: "shoes", color: "Purple"
-- Logo CH = brand: "Carolina Herrera"
-- Vestido negro formal = category: "clothes", subcategory: "dresses", color: "Black"
-
-Devuelve SOLO un objeto JSON con esta estructura exacta:
-{
-  "name": "Nombre descriptivo del producto en español",
-  "color": "Color de la lista",
-  "brand": "Marca si es visible, sino null",
-  "type": {
-    "category": "clothes o accessories",
-    "subcategory": "subcategoría apropiada",
-    "name": "Nombre legible de la subcategoría"
-  },
-  "description": "Descripción detallada del artículo",
-  "confidence": 0.95
-}`
-            }
-          ]
+          content: [imageContent]
         }
       ]
     });
@@ -186,7 +163,7 @@ Devuelve SOLO un objeto JSON con esta estructura exacta:
       confidence: analysis.confidence
     });
 
-    return {
+    const result = {
       name: analysis.name || 'Fashion Item',
       brand: analysis.brand || null,
       color: analysis.color || null,
@@ -201,6 +178,12 @@ Devuelve SOLO un objeto JSON con esta estructura exacta:
         overall: analysis.confidence || 0.85
       }
     };
+
+    // Store in cache for 24 hours (100% cost saving on repeated images)
+    analysisCache.set(cacheKey, result);
+    logger.debug('Result cached for future requests');
+
+    return result;
   } catch (error) {
     logger.error('Claude image analysis error:', {
       error: error.message,
@@ -216,6 +199,15 @@ Devuelve SOLO un objeto JSON con esta estructura exacta:
  */
 export async function analyzeSimilarItems(newItemName, existingItems) {
   try {
+    // Check cache first
+    const itemNames = existingItems.map(i => i.name).sort().join('|');
+    const cacheKey = `similarity:${crypto.default.createHash('md5').update(newItemName + itemNames).digest('hex')}`;
+    const cached = analysisCache.get(cacheKey);
+    if (cached) {
+      logger.info('Cache HIT - returning cached similarity analysis');
+      return cached;
+    }
+
     if (!claudeClient) {
       claudeClient = initializeClaude();
       if (!claudeClient) {
@@ -233,49 +225,30 @@ export async function analyzeSimilarItems(newItemName, existingItems) {
       return [];
     }
 
+    // COST OPTIMIZATION: Use Haiku (80% cheaper) for simple comparisons
     const response = await claudeClient.messages.create({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 2000,
-      temperature: 0.3,
+      model: "claude-3-haiku-20240307", // 80% cheaper than Sonnet
+      max_tokens: 800, // Reduced from 2000
+      temperature: 0.2,
+      system: [
+        {
+          type: "text",
+          text: `Analiza similitud de moda. Reglas:
+- Mismo tipo + descripción diferente = SIMILAR
+- Marca/estilo igual + color diferente = SIMILAR
+- Tipo diferente = NO SIMILAR
+- ES/EN/FR/IT: mismo significado = SIMILAR
+
+Score 0-1: 0.8-1.0=muy similar, 0.6-0.79=algo similar, <0.6=diferente. JSON: [{"itemIndex":N,"itemName":"...","similarity":0.85,"reason":"..."}]. Solo >= 0.6`,
+          cache_control: { type: "ephemeral" } // ⭐ PROMPT CACHING
+        }
+      ],
       messages: [
         {
           role: "user",
-          content: `Eres un analizador de similitud de moda. Compara nombres de prendas para encontrar artículos similares que podrían causar conflictos.
-
-REGLAS DE SIMILITUD:
-1. Mismo tipo de ropa con diferentes descripciones = SIMILAR
-2. Misma marca/estilo con diferentes colores/tallas = SIMILAR
-3. Diferentes tipos de ropa = NO SIMILAR
-4. Accesorios vs ropa = NO SIMILAR
-5. Considera nombres en español, inglés, francés, italiano
-
-EJEMPLOS:
-- "Vestido rojo largo" vs "Red maxi dress" = SIMILAR (mismo tipo)
-- "Zapatos negros tacón" vs "Black high heels" = SIMILAR (mismo tipo de zapato)
-- "Vestido" vs "Pantalón" = NO SIMILAR (diferentes tipos)
-- "Dress" vs "Bag" = NO SIMILAR (diferentes categorías)
-
-ARTÍCULO NUEVO: "${newItemName}"
-
-ARTÍCULOS EXISTENTES:
-${differentItems.map((item, index) => `${index + 1}. "${item.name}"`).join('\n')}
-
-Devuelve un array JSON con puntuaciones de similitud de 0.0 a 1.0:
-- 0.8-1.0 = Muy similar (probablemente mismo tipo)
-- 0.6-0.79 = Algo similar (artículos relacionados)
-- 0.0-0.59 = No similar
-
-Formato:
-[
-  {
-    "itemIndex": 1,
-    "itemName": "nombre del artículo existente",
-    "similarity": 0.85,
-    "reason": "Ambos son vestidos largos, mismo estilo"
-  }
-]
-
-Solo incluye artículos con similitud >= 0.6`
+          content: `Nuevo: "${newItemName}"
+Existentes:
+${differentItems.map((item, index) => `${index + 1}. "${item.name}"`).join('\n')}`
         }
       ]
     });
@@ -300,6 +273,9 @@ Solo incluye artículos con similitud >= 0.6`
         foundSimilar: similarItems.length
       });
 
+      // Store in cache
+      analysisCache.set(cacheKey, similarItems);
+
       return similarItems;
     }
 
@@ -319,6 +295,16 @@ Solo incluye artículos con similitud >= 0.6`
  */
 export async function detectSmartDuplicates(newItem, existingItems) {
   try {
+    // Check cache first
+    const itemData = JSON.stringify({n: newItem.name, b: newItem.brand, c: newItem.color, t: newItem.type?.subcategory});
+    const existingData = existingItems.map(i => ({n:i.name, b:i.brand, c:i.color})).sort((a,b) => a.n.localeCompare(b.n));
+    const cacheKey = `duplicates:${crypto.default.createHash('md5').update(itemData + JSON.stringify(existingData)).digest('hex')}`;
+    const cached = analysisCache.get(cacheKey);
+    if (cached) {
+      logger.info('Cache HIT - returning cached duplicate detection');
+      return cached;
+    }
+
     if (!claudeClient) {
       claudeClient = initializeClaude();
       if (!claudeClient) {
@@ -350,51 +336,30 @@ export async function detectSmartDuplicates(newItem, existingItems) {
       return [];
     }
 
+    // COST OPTIMIZATION: Reduced prompt + cache_control
     const response = await claudeClient.messages.create({
       model: "claude-3-5-sonnet-20241022",
-      max_tokens: 1500,
+      max_tokens: 800, // Reduced from 1500
       temperature: 0.2,
+      system: [
+        {
+          type: "text",
+          text: `Detector duplicados moda. Reglas:
+- Marca + color + tipo = DUPLICADO
+- Idioma diferente, mismo producto = DUPLICADO (ES/EN/FR/IT)
+- Talla diferente, mismo producto = DUPLICADO
+
+Confidence 0-1: 0.9-1.0=exacto, 0.7-0.89=muy probable, <0.7=diferente. JSON: [{"itemIndex":N,"itemName":"...","confidence":0.95,"isDuplicate":true,"reason":"...","type":"exact"}]. Solo >= 0.7`,
+          cache_control: { type: "ephemeral" } // ⭐ PROMPT CACHING
+        }
+      ],
       messages: [
         {
           role: "user",
-          content: `Eres un detector de duplicados de moda. Analiza si estos artículos son el mismo producto con diferentes nombres.
+          content: `Nuevo: "${newItem.name}" | Marca: ${newItem.brand||'?'} | Color: ${newItem.color||'?'} | Tipo: ${newItem.type?.name||'?'}
 
-REGLAS CRÍTICAS:
-1. Misma marca + mismo color + mismo tipo = PROBABLEMENTE DUPLICADO
-2. Diferentes idiomas para el mismo artículo = DUPLICADO ("Vestido Negro" = "Black Dress")
-3. Diferentes descripciones para el mismo artículo = DUPLICADO ("Vestido Formal" = "Formal Dress")
-4. Misma apariencia visual = DUPLICADO
-5. Diferentes tallas del mismo artículo = DUPLICADO
-
-ARTÍCULO NUEVO:
-- Nombre: "${newItem.name}"
-- Marca: "${newItem.brand || 'Desconocida'}"
-- Color: "${newItem.color || 'Desconocido'}"
-- Tipo: "${newItem.type?.name || 'Desconocido'}"
-- Categoría: "${newItem.type?.category || 'Desconocida'}"
-
-ARTÍCULOS EXISTENTES PARA COMPARAR:
-${potentialDuplicates.map((item, index) => `
-${index + 1}. "${item.name}"
-   - Marca: "${item.brand || 'Desconocida'}"
-   - Color: "${item.color || 'Desconocido'}"
-   - Tipo: "${item.type?.name || 'Desconocido'}"
-   - Usuario: "${item.userName || 'Usuario Desconocido'}"
-`).join('')}
-
-Devuelve un array JSON con el análisis de duplicados:
-[
-  {
-    "itemIndex": 1,
-    "itemName": "nombre del artículo existente",
-    "confidence": 0.95,
-    "isDuplicate": true,
-    "reason": "Mismo vestido negro formal Carolina Herrera, solo diferente idioma",
-    "type": "exact"
-  }
-]
-
-Solo incluye artículos con confidence >= 0.7`
+Existentes:
+${potentialDuplicates.map((item, index) => `${index + 1}. "${item.name}" | ${item.brand||'?'} | ${item.color||'?'} | ${item.type?.name||'?'} | User: ${item.userName||'?'}`).join('\n')}`
         }
       ]
     });
@@ -419,6 +384,9 @@ Solo incluye artículos con confidence >= 0.7`
         detectedCount: detectedDuplicates.length
       });
 
+      // Store in cache
+      analysisCache.set(cacheKey, detectedDuplicates);
+
       return detectedDuplicates;
     }
 
@@ -438,6 +406,15 @@ Solo incluye artículos con confidence >= 0.7`
  */
 export async function generateDuplicateSuggestions(duplicateItem, userOtherItems = [], eventContext = {}) {
   try {
+    // Check cache first
+    const cacheData = JSON.stringify({d: duplicateItem.name, c: duplicateItem.color, t: duplicateItem.type?.subcategory, e: eventContext.name});
+    const cacheKey = `suggestions:${crypto.default.createHash('md5').update(cacheData).digest('hex')}`;
+    const cached = analysisCache.get(cacheKey);
+    if (cached) {
+      logger.info('Cache HIT - returning cached suggestions');
+      return cached;
+    }
+
     logger.info('Generating duplicate suggestions with Claude:', {
       duplicateItem: duplicateItem.name,
       userItemsCount: userOtherItems.length,
@@ -454,73 +431,38 @@ export async function generateDuplicateSuggestions(duplicateItem, userOtherItems
     const categories = getAllCategories();
     const colors = AVAILABLE_COLORS.map(c => c.name);
 
+    // COST OPTIMIZATION: Reduced prompt + cache_control
     const response = await claudeClient.messages.create({
       model: "claude-3-5-sonnet-20241022",
-      max_tokens: 2500,
+      max_tokens: 1200, // Reduced from 2500 (50% saving)
       temperature: 0.7,
+      system: [
+        {
+          type: "text",
+          text: `Estilista moda. Sugiere 3-5 alternativas DIFERENTES (NO mismo nombre). Tipos:
+- Alternativa color: mismo artículo, color diferente
+- Variación estilo: artículo diferente, estética similar
+- Complementario: combina bien
+- Alternativo: diferente pero logra mismo look
+
+Categorías: ${categories.map(c => c.name).join(', ')}
+Colores: ${colors.join(', ')}
+
+JSON: [{"type":"...","title":"...","description":"...","item":{"name":"DIFERENTE","category":"...","subcategory":"...","color":"...","style":"..."},"reasoning":"...","searchTerms":[...],"priority":1-5}]`,
+          cache_control: { type: "ephemeral" } // ⭐ PROMPT CACHING
+        }
+      ],
       messages: [
         {
           role: "user",
-          content: `Eres una IA estilista de moda que ayuda a usuarios a evitar conflictos de vestuario sugiriendo artículos alternativos.
+          content: `Duplicado: "${duplicateItem.name}" | ${duplicateItem.color||'?'} | ${duplicateItem.brand||'?'} | ${duplicateItem.type?.name||'?'}
 
-INSTRUCCIONES CRÍTICAS:
-1. Analiza el artículo duplicado y sugiere 3-5 alternativas
-2. Considera los otros artículos del usuario para asegurar coordinación
-3. Sugiere artículos que complementen su guardarropa existente
-4. Proporciona sugerencias específicas y accionables con razonamiento
-5. Incluye alternativas de color y variaciones de estilo
-6. Considera el contexto del evento (formal, casual, etc.)
+Guardarropa:
+${userOtherItems.length > 0 ? userOtherItems.slice(0,5).map(i => `"${i.name}" ${i.color||''}`).join(', ') : 'vacío'}
 
-TIPOS DE SUGERENCIAS:
-1. ALTERNATIVAS DE COLOR - Mismo artículo, diferentes colores
-2. VARIACIONES DE ESTILO - Artículos DIFERENTES con estética similar
-3. ARTÍCULOS COMPLEMENTARIOS - Artículos que funcionan bien juntos
-4. ESTILOS ALTERNATIVOS - Artículos completamente diferentes que logran el mismo look
+Evento: ${eventContext.name||'General'} | ${eventContext.description||''}
 
-Categorías disponibles: ${categories.map(c => c.name).join(', ')}
-Colores disponibles: ${colors.join(', ')}
-
-CRÍTICO: ¡NO sugieras el mismo nombre en diferentes tiendas!
-Sugiere artículos DIFERENTES que logren un estilo similar.
-
-ARTÍCULO DUPLICADO (NO sugieras el mismo nombre):
-- Nombre: "${duplicateItem.name}"
-- Color: "${duplicateItem.color || 'Desconocido'}"
-- Marca: "${duplicateItem.brand || 'Desconocida'}"
-- Tipo: "${duplicateItem.type?.name || 'Desconocido'}"
-- Categoría: "${duplicateItem.type?.category || 'Desconocida'}"
-
-OTROS ARTÍCULOS DEL USUARIO:
-${userOtherItems.length > 0 ? userOtherItems.map((item, index) =>
-  `${index + 1}. "${item.name}" - ${item.color || 'Sin color'} - ${item.type?.name || 'Tipo desconocido'}`
-).join('\n') : 'No hay otros artículos en el guardarropa'}
-
-CONTEXTO DEL EVENTO:
-- Evento: "${eventContext.name || 'Evento desconocido'}"
-- Fecha: "${eventContext.date || 'Fecha desconocida'}"
-- Ubicación: "${eventContext.location || 'Ubicación desconocida'}"
-- Descripción: "${eventContext.description || 'Sin descripción'}"
-
-TAREA: Genera 3-5 artículos DIFERENTES que logren un estilo similar.
-
-Devuelve un array JSON:
-[
-  {
-    "type": "alternativa_estilo|variacion_color|complementario|estilo_alternativo",
-    "title": "Título de la sugerencia",
-    "description": "Por qué este artículo DIFERENTE logra el mismo estilo",
-    "item": {
-      "name": "Nombre DIFERENTE (no el duplicado)",
-      "category": "categoría",
-      "subcategory": "subcategoría",
-      "color": "color sugerido",
-      "style": "descripción de estilo"
-    },
-    "reasoning": "Por qué funciona como alternativa",
-    "searchTerms": ["términos", "de", "búsqueda"],
-    "priority": 5
-  }
-]`
+Sugiere 3-5 artículos DIFERENTES (NO "${duplicateItem.name}")`
         }
       ]
     });
@@ -540,6 +482,9 @@ Devuelve un array JSON:
         duplicateItem: duplicateItem.name,
         suggestionsCount: sortedSuggestions.length
       });
+
+      // Store in cache
+      analysisCache.set(cacheKey, sortedSuggestions);
 
       return sortedSuggestions;
     }
@@ -562,6 +507,14 @@ Devuelve un array JSON:
  */
 export async function interpretScrapedProduct({ html, basicInfo, url }) {
   try {
+    // Check cache first (by URL)
+    const cacheKey = `scraping:${crypto.default.createHash('md5').update(url).digest('hex')}`;
+    const cached = analysisCache.get(cacheKey);
+    if (cached) {
+      logger.info('Cache HIT - returning cached scraped product');
+      return cached;
+    }
+
     if (!claudeClient) {
       claudeClient = initializeClaude();
       if (!claudeClient) {
@@ -572,47 +525,28 @@ export async function interpretScrapedProduct({ html, basicInfo, url }) {
     const categories = getAllCategories();
     const colors = AVAILABLE_COLORS.map(c => c.name);
 
+    // COST OPTIMIZATION: Use Haiku (80% cheaper) for simple HTML extraction
     const response = await claudeClient.messages.create({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 1000,
-      temperature: 0.3,
+      model: "claude-3-haiku-20240307", // 80% cheaper
+      max_tokens: 500, // Reduced from 1000
+      temperature: 0.2,
+      system: [
+        {
+          type: "text",
+          text: `Extrae producto de HTML. Categorías: ${categories.map(c => c.name).join(',')}. Colors: ${colors.join(',')}.
+Reglas: vestido/dress/robe=clothes/dresses, zapato/shoe=accessories/shoes, bolso/bag=accessories/bags.
+Precio: "45,95€"→45.95, "169,95€"→169.95 (punto decimal). JSON: {"name":"...","imageUrl":"REQUIRED","color":"...","price":45.95,"brand":"...","type":{"category":"...","subcategory":"..."},"description":"..."}`,
+          cache_control: { type: "ephemeral" } // ⭐ PROMPT CACHING
+        }
+      ],
       messages: [
         {
           role: "user",
-          content: `Eres un analizador de productos de moda. Extrae y mejora los detalles del producto desde el HTML.
+          content: `URL: ${url}
 
-INSTRUCCIONES CRÍTICAS:
-1. Categorías: clothes, accessories
-2. Para ropa: subcategorías: tops, bottoms, dresses, outerwear
-3. Para accesorios: subcategorías: shoes, bags, jewelry, other
-4. DETECCIÓN DE VESTIDO: "vestido", "dress", "robe" = categoría "clothes", subcategoría "dresses"
-5. DETECCIÓN DE ZAPATOS: "zapato", "shoe", "sandalia", "bota" = categoría "accessories", subcategoría "shoes"
-6. DETECCIÓN DE BOLSOS: "bolso", "bag", "cartera" = categoría "accessories", subcategoría "bags"
-7. Formato de precio:
-   - Convertir "45,95€" a 45.95 (NO 4595)
-   - Convertir "169,95€" a 169.95 (NO 16995)
-   - Usar punto como separador decimal
-   - Ejemplos: "45,95€" → 45.95, "1.234,56€" → 1234.56
+BasicInfo: ${JSON.stringify(basicInfo)}
 
-Categorías disponibles: ${categories.map(c => c.name).join(', ')}
-Colores disponibles: ${colors.join(', ')}
-
-URL: ${url}
-
-Info Básica:
-${JSON.stringify(basicInfo, null, 2)}
-
-HTML (primeros 1500 caracteres):
-${html.substring(0, 1500)}
-
-Devuelve un objeto JSON con:
-- name: Nombre del producto
-- imageUrl: URL de imagen principal (REQUERIDO)
-- color: Color principal de la lista
-- price: Precio como número (correctamente formateado)
-- brand: Marca si se encuentra
-- type: Objeto con category y subcategory
-- description: Descripción del producto`
+HTML: ${html.substring(0, 1000)}`
         }
       ]
     });
@@ -651,6 +585,10 @@ Devuelve un objeto JSON con:
       }
 
       logger.debug('Claude parsed scraped product:', result);
+
+      // Store in cache for 24 hours
+      analysisCache.set(cacheKey, result);
+
       return result;
     }
 
