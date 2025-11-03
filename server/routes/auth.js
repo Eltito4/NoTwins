@@ -1,10 +1,21 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import User from '../models/User.js';
 import { logger } from '../utils/logger.js';
 
 const router = express.Router();
+
+// Rate limiting for auth routes to prevent brute force attacks
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 requests per windowMs
+  skipSuccessfulRequests: false,
+  message: { error: 'Too many authentication attempts, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 // Input validation middleware
 const validateAuthInput = (req, res, next) => {
@@ -22,12 +33,28 @@ const validateAuthInput = (req, res, next) => {
   if (!emailRegex.test(email)) {
     return res.status(400).json({ error: 'Invalid email format' });
   }
-  
+
+  // Validate password strength
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+  }
+
+  // Check for password complexity
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+
+  if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+    return res.status(400).json({
+      error: 'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+    });
+  }
+
   next();
 };
 
 // Register
-router.post('/register', validateAuthInput, async (req, res) => {
+router.post('/register', authLimiter, validateAuthInput, async (req, res) => {
   try {
     const { email, password, name } = req.body;
 
@@ -79,7 +106,7 @@ router.post('/register', validateAuthInput, async (req, res) => {
 });
 
 // Login
-router.post('/login', validateAuthInput, async (req, res) => {
+router.post('/login', authLimiter, validateAuthInput, async (req, res) => {
   try {
     const { email, password } = req.body;
 

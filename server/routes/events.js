@@ -46,7 +46,7 @@ router.get('/', cacheMiddleware(30), async (req, res) => {
 
       // Attach participant details to each event
       const eventsWithParticipants = events.map(event => {
-        const eventObj = event.toObject();
+        const eventObj = event.toJSON(); // Use toJSON instead of toObject to apply the id transform
         eventObj.participantDetails = event.participants
           .map(participantId => {
             const user = userMap[participantId.toString()];

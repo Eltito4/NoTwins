@@ -28,20 +28,25 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     console.error('API Error:', error.response?.data || error.message);
-    
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/';
-      toast.error('Session expired. Please login again.');
-    } else if (error.response?.status === 403) {
-      toast.error('Access denied');
-    } else if (error.response?.status === 404) {
-      toast.error('Resource not found');
-    } else if (error.response?.status === 500) {
-      toast.error('Server error. Please try again later.');
-    } else if (!error.response) {
-      toast.error('Network error. Please check your connection.');
+
+    // Check if this request should suppress error toasts
+    const suppressToast = error.config?.suppressErrorToast;
+
+    if (!suppressToast) {
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/';
+        toast.error('Session expired. Please login again.');
+      } else if (error.response?.status === 403) {
+        toast.error('Access denied');
+      } else if (error.response?.status === 404) {
+        toast.error('Resource not found');
+      } else if (error.response?.status === 500) {
+        toast.error('Server error. Please try again later.');
+      } else if (!error.response) {
+        toast.error('Network error. Please check your connection.');
+      }
     }
     return Promise.reject(error);
   }

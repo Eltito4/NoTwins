@@ -7,6 +7,7 @@ import { authMiddleware } from '../middleware/auth.js';
 import { eventLimiter } from '../middleware/rateLimiter.js';
 import { cacheMiddleware } from '../middleware/cache.js';
 import { detectSmartDuplicates } from '../utils/duplicates/aiSimilarity.js';
+import { sanitizeString, sanitizeUrl } from '../utils/sanitize.js';
 
 const router = express.Router();
 
@@ -49,19 +50,26 @@ router.post('/', async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
+    // Sanitize inputs to prevent XSS
+    const sanitizedName = sanitizeString(name, 200);
+    const sanitizedImageUrl = imageUrl ? sanitizeUrl(imageUrl) : undefined;
+    const sanitizedDescription = description ? sanitizeString(description, 1000) : undefined;
+    const sanitizedColor = color ? sanitizeString(color, 50) : undefined;
+    const sanitizedBrand = brand ? sanitizeString(brand, 100) : undefined;
+
     const item = new Dress({
       userId: req.user.id,
       eventId,
-      name: name.trim(),
-      imageUrl,
-      description: description?.trim(),
-      color: color?.trim(),
-      brand: brand?.trim(),
+      name: sanitizedName,
+      imageUrl: sanitizedImageUrl,
+      description: sanitizedDescription,
+      color: sanitizedColor,
+      brand: sanitizedBrand,
       price: price ? parseFloat(price) : undefined,
       type: type ? {
-        category: type.category,
-        subcategory: type.subcategory,
-        name: type.name
+        category: sanitizeString(type.category, 50),
+        subcategory: sanitizeString(type.subcategory, 50),
+        name: sanitizeString(type.name, 100)
       } : undefined,
       isPrivate: Boolean(isPrivate)
     });
@@ -172,7 +180,7 @@ router.put('/:dressId', async (req, res) => {
     }
 
     const dress = await Dress.findById(dressId);
-    
+
     if (!dress) {
       return res.status(404).json({ error: 'Item not found' });
     }
@@ -182,10 +190,25 @@ router.put('/:dressId', async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Update the dress
+    // Whitelist allowed fields to prevent mass assignment vulnerability
+    const allowedFields = ['name', 'imageUrl', 'description', 'color', 'brand', 'price', 'type', 'isPrivate'];
+    const sanitizedUpdates = {};
+
+    allowedFields.forEach(field => {
+      if (updates[field] !== undefined) {
+        // Sanitize string inputs
+        if (typeof updates[field] === 'string') {
+          sanitizedUpdates[field] = updates[field].trim().substring(0, 500);
+        } else {
+          sanitizedUpdates[field] = updates[field];
+        }
+      }
+    });
+
+    // Update the dress with whitelisted fields only
     const updatedDress = await Dress.findByIdAndUpdate(
       dressId,
-      { ...updates, updatedAt: new Date() },
+      { ...sanitizedUpdates, updatedAt: new Date() },
       { new: true, runValidators: true }
     );
 

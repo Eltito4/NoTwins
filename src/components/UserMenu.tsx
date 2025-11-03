@@ -25,11 +25,12 @@ export function UserMenu({ onShowAdmin }: UserMenuProps) {
   const checkAdminStatus = async () => {
     try {
       console.log('Checking admin status...');
-      await api.get('/admin/dashboard');
+      // Suppress error toast for admin check - we expect 403 for normal users
+      await api.get('/admin/dashboard', { suppressErrorToast: true } as any);
       console.log('Admin status confirmed');
       setIsAdmin(true);
     } catch (error) {
-      console.log('Not an admin user:', error.response?.status);
+      console.log('Not an admin user:', (error as any).response?.status);
       setIsAdmin(false);
     }
   };

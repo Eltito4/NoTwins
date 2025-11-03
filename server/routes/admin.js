@@ -109,21 +109,30 @@ router.get('/dashboard', requirePermission('view_analytics'), async (req, res) =
 router.get('/users', requirePermission('view_all_users'), async (req, res) => {
   try {
     const { page = 1, limit = 20, search, sortBy = 'createdAt', order = 'desc' } = req.query;
-    
+
+    // Validate and sanitize inputs to prevent NoSQL injection
+    const validSortFields = ['createdAt', 'name', 'email'];
+    const sanitizedSortBy = validSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const sanitizedOrder = order === 'asc' ? 1 : -1;
+    const sanitizedLimit = Math.min(Math.max(parseInt(limit) || 20, 1), 100); // Cap at 100
+    const sanitizedPage = Math.max(parseInt(page) || 1, 1);
+
     let query = {};
-    if (search) {
+    if (search && typeof search === 'string') {
+      // Escape special regex characters to prevent ReDoS attacks
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').substring(0, 100);
       query = {
         $or: [
-          { name: { $regex: search, $options: 'i' } },
-          { email: { $regex: search, $options: 'i' } }
+          { name: { $regex: escapedSearch, $options: 'i' } },
+          { email: { $regex: escapedSearch, $options: 'i' } }
         ]
       };
     }
 
     const users = await User.find(query)
-      .sort({ [sortBy]: order === 'desc' ? -1 : 1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
+      .sort({ [sanitizedSortBy]: sanitizedOrder })
+      .limit(sanitizedLimit)
+      .skip((sanitizedPage - 1) * sanitizedLimit)
       .select('-password');
 
     // Get user profiles and activity
@@ -141,10 +150,10 @@ router.get('/users', requirePermission('view_all_users'), async (req, res) => {
     res.json({
       users: enrichedUsers,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: sanitizedPage,
+        limit: sanitizedLimit,
         total,
-        pages: Math.ceil(total / limit)
+        pages: Math.ceil(total / sanitizedLimit)
       }
     });
   } catch (error) {

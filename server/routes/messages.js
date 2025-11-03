@@ -6,6 +6,7 @@ import Dress from '../models/Dress.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { logger } from '../utils/logger.js';
 import { scrapeProduct } from '../utils/scraping/index.js';
+import { sanitizeString, sanitizeUrl } from '../utils/sanitize.js';
 
 const router = express.Router();
 
@@ -45,7 +46,12 @@ router.post('/broadcast/:eventId', async (req, res) => {
     const { title, body, suggestedItemUrl } = req.body;
     const { eventId } = req.params;
 
-    if (!title || !body) {
+    // Sanitize inputs to prevent XSS
+    const sanitizedTitle = sanitizeString(title, 200);
+    const sanitizedBody = sanitizeString(body, 2000);
+    const sanitizedUrl = suggestedItemUrl ? sanitizeUrl(suggestedItemUrl) : null;
+
+    if (!sanitizedTitle || !sanitizedBody) {
       return res.status(400).json({ error: 'Title and body are required' });
     }
 
@@ -68,15 +74,15 @@ router.post('/broadcast/:eventId', async (req, res) => {
 
     // Scrape suggested item if URL provided
     let suggestedItemDetails = null;
-    if (suggestedItemUrl) {
+    if (sanitizedUrl) {
       try {
-        const itemDetails = await scrapeProduct(suggestedItemUrl);
+        const itemDetails = await scrapeProduct(sanitizedUrl);
         suggestedItemDetails = {
-          name: itemDetails.name,
-          imageUrl: itemDetails.imageUrl,
+          name: sanitizeString(itemDetails.name, 200),
+          imageUrl: sanitizeUrl(itemDetails.imageUrl),
           price: itemDetails.price,
-          color: itemDetails.color,
-          brand: itemDetails.brand
+          color: sanitizeString(itemDetails.color, 50),
+          brand: sanitizeString(itemDetails.brand, 100)
         };
       } catch (error) {
         logger.error('Error scraping suggested item:', error);
@@ -89,9 +95,9 @@ router.post('/broadcast/:eventId', async (req, res) => {
       toUserId: participantId,
       eventId: eventId,
       type: 'event_broadcast',
-      title: title.trim(),
-      body: body.trim(),
-      suggestedItemUrl: suggestedItemUrl || undefined,
+      title: sanitizedTitle,
+      body: sanitizedBody,
+      suggestedItemUrl: sanitizedUrl || undefined,
       suggestedItemDetails: suggestedItemDetails
     }));
 
@@ -116,17 +122,21 @@ router.post('/direct', async (req, res) => {
   try {
     const { toUserId, eventId, title, body, suggestedItemUrl, relatedDressIds } = req.body;
 
+    // Sanitize inputs
+    const sanitizedTitle = sanitizeString(title, 200);
+    const sanitizedBody = sanitizeString(body, 2000);
+    const sanitizedUrl = suggestedItemUrl ? sanitizeUrl(suggestedItemUrl) : null;
+
     logger.info('Direct message request:', {
       fromUserId: req.user.id,
       toUserId,
       eventId,
-      title,
-      hasBody: !!body,
-      hasSuggestedUrl: !!suggestedItemUrl
+      hasBody: !!sanitizedBody,
+      hasSuggestedUrl: !!sanitizedUrl
     });
 
-    if (!toUserId || !eventId || !title || !body) {
-      logger.error('Missing required fields:', { toUserId, eventId, title, body });
+    if (!toUserId || !eventId || !sanitizedTitle || !sanitizedBody) {
+      logger.error('Missing required fields or invalid input');
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -148,15 +158,15 @@ router.post('/direct', async (req, res) => {
 
     // Scrape suggested item if URL provided
     let suggestedItemDetails = null;
-    if (suggestedItemUrl) {
+    if (sanitizedUrl) {
       try {
-        const itemDetails = await scrapeProduct(suggestedItemUrl);
+        const itemDetails = await scrapeProduct(sanitizedUrl);
         suggestedItemDetails = {
-          name: itemDetails.name,
-          imageUrl: itemDetails.imageUrl,
+          name: sanitizeString(itemDetails.name, 200),
+          imageUrl: sanitizeUrl(itemDetails.imageUrl),
           price: itemDetails.price,
-          color: itemDetails.color,
-          brand: itemDetails.brand
+          color: sanitizeString(itemDetails.color, 50),
+          brand: sanitizeString(itemDetails.brand, 100)
         };
       } catch (error) {
         logger.error('Error scraping suggested item:', error);
@@ -168,9 +178,9 @@ router.post('/direct', async (req, res) => {
       toUserId,
       eventId,
       type: 'direct_message',
-      title: title.trim(),
-      body: body.trim(),
-      suggestedItemUrl: suggestedItemUrl || undefined,
+      title: sanitizedTitle,
+      body: sanitizedBody,
+      suggestedItemUrl: sanitizedUrl || undefined,
       suggestedItemDetails: suggestedItemDetails,
       relatedDressIds: relatedDressIds || []
     };

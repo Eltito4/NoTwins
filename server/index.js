@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { logger } from './utils/logger.js';
@@ -26,6 +27,26 @@ if (missingVars.length > 0) {
 const app = express();
 const port = process.env.PORT || 3001;
 
+// Security headers with Helmet
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  },
+  noSniff: true,
+  xssFilter: true,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
+}));
+
 // Configure CORS with specific options
 app.use(cors({
   origin: [
@@ -40,9 +61,9 @@ app.use(cors({
   maxAge: 86400 // 24 hours
 }));
 
-// Increase payload size limit to 10MB
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+// Reduce payload size limit to prevent DoS (2MB for JSON, separate handling for file uploads)
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ limit: '2mb', extended: true }));
 
 // Import routes
 import eventRoutes from './routes/events.js';
