@@ -8,6 +8,7 @@
     "verify-db": "node verify-mongodb.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
     "@google-cloud/vision": "^4.0.2",
     "axios": "^1.13.1",
     "bcryptjs": "^2.4.3",
