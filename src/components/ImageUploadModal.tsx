@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Upload, ArrowLeft, Loader2, Eye, EyeOff, Camera, CheckCircle, AlertTriangle, HelpCircle } from 'lucide-react';
+import { Upload, ArrowLeft, Loader2, Eye, EyeOff, Camera, CheckCircle, AlertTriangle, HelpCircle, Link } from 'lucide-react';
 import { analyzeGarmentImage } from '../services/visionService';
+import { scrapeDressDetails } from '../services/scrapingService';
 import { AVAILABLE_COLORS } from '../utils/colors/constants';
 import { getAllCategories, getSubcategoryName } from '../utils/categorization';
 import { formatPrice } from '../utils/currency';
@@ -32,6 +33,8 @@ const convertBlobToBase64 = (blob: Blob): Promise<string> => {
 };
 
 export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: ImageUploadModalProps) {
+  const [inputMode, setInputMode] = useState<'photo' | 'url'>('photo');
+  const [productUrl, setProductUrl] = useState('');
   const [imageUrl, setImageUrl] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -79,14 +82,14 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
     try {
       console.log('Starting image analysis...');
       const analysis = await analyzeGarmentImage(url);
-      
+
       console.log('Analysis result:', analysis);
-      
+
       // Validate analysis result
       if (!analysis || typeof analysis !== 'object') {
         throw new Error('Invalid analysis result received');
       }
-      
+
       // Update form data with analysis results
       setFormData(prev => ({
         ...prev,
@@ -110,7 +113,7 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
     } catch (error) {
       console.error('Analysis error:', error);
       toast.error('Failed to analyze image: ' + (error.message || 'Unknown error'));
-      
+
       // Set basic fallback data so form isn't empty
       setFormData(prev => ({
         ...prev,
@@ -120,6 +123,46 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
       }));
       setConfidence(0.5);
     } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const handleUrlScrape = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!productUrl) {
+      toast.error('Por favor ingresa una URL');
+      return;
+    }
+
+    setLoading(true);
+    setAnalyzing(true);
+    try {
+      console.log('Starting product scraping:', productUrl);
+      const data = await scrapeDressDetails(productUrl);
+
+      console.log('Scraped data:', data);
+
+      // Set the image URL
+      setImageUrl(data.imageUrl || '');
+
+      // Update form data with scraped results
+      setFormData({
+        name: data.name || '',
+        brand: data.brand || '',
+        color: data.color || '',
+        description: data.description || '',
+        category: data.type?.category || 'clothes',
+        subcategory: data.type?.subcategory || 'dresses',
+        price: data.price ? data.price.toString() : ''
+      });
+
+      setConfidence(0.95); // High confidence for scraped data
+      toast.success('¡Producto obtenido exitosamente!');
+    } catch (error) {
+      console.error('Scraping error:', error);
+      // Error already handled in scrapeDressDetails
+    } finally {
+      setLoading(false);
       setAnalyzing(false);
     }
   };
@@ -203,29 +246,108 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
           >
             <ArrowLeft size={20} />
           </button>
-          <h2 className="text-xl font-semibold">Subir Foto del Artículo</h2>
+          <h2 className="text-xl font-semibold">
+            {!imageUrl
+              ? 'Agregar Artículo'
+              : inputMode === 'url'
+                ? 'Producto desde URL'
+                : 'Artículo desde Foto'
+            }
+          </h2>
         </div>
       </div>
 
       <div className="p-6 flex-1 overflow-auto">
         {!imageUrl ? (
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
-          >
-            <Camera className="mx-auto h-12 w-12 text-gray-400" />
-            <p className="mt-4 text-sm text-gray-600">
-              Haz clic para subir una foto o arrastra y suelta
-            </p>
-            <p className="mt-1 text-xs text-gray-500">PNG, JPG hasta 10MB</p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-          </div>
+          <>
+            {/* Mode Selector Tabs */}
+            <div className="flex gap-2 mb-6 border-b">
+              <button
+                type="button"
+                onClick={() => setInputMode('photo')}
+                className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+                  inputMode === 'photo'
+                    ? 'border-primary text-primary font-medium'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Camera size={20} />
+                <span>Subir Foto</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputMode('url')}
+                className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+                  inputMode === 'url'
+                    ? 'border-primary text-primary font-medium'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Link size={20} />
+                <span>Pegar URL</span>
+              </button>
+            </div>
+
+            {/* Photo Upload Mode */}
+            {inputMode === 'photo' ? (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+              >
+                <Camera className="mx-auto h-12 w-12 text-gray-400" />
+                <p className="mt-4 text-sm text-gray-600">
+                  Haz clic para subir una foto o arrastra y suelta
+                </p>
+                <p className="mt-1 text-xs text-gray-500">PNG, JPG hasta 10MB</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </div>
+            ) : (
+              /* URL Input Mode */
+              <form onSubmit={handleUrlScrape} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    URL del Producto
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={productUrl}
+                      onChange={(e) => setProductUrl(e.target.value)}
+                      placeholder="https://www.zara.com/es/vestido-negro-p12345.html"
+                      className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+                      disabled={loading}
+                    />
+                    <button
+                      type="submit"
+                      disabled={loading || !productUrl}
+                      className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Obteniendo...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Link className="w-4 h-4" />
+                          <span>Obtener</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    💡 Funciona con: Zara, Mango, H&M, y la mayoría de tiendas online
+                  </p>
+                </div>
+              </form>
+            )}
+          </>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="aspect-square w-full max-w-md mx-auto relative rounded-lg overflow-hidden bg-gray-100 border-2 border-gray-200 shadow-sm">
@@ -283,13 +405,26 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Marca</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Marca
+                  {!formData.brand && (
+                    <span className="ml-2 text-xs text-amber-600 font-normal">
+                      (Ingresar manualmente)
+                    </span>
+                  )}
+                </label>
                 <input
                   type="text"
                   value={formData.brand}
                   onChange={e => setFormData(prev => ({ ...prev, brand: e.target.value }))}
+                  placeholder="Ej: Zara, Mango, H&M..."
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
                 />
+                {!formData.brand && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    💡 La mayoría de vestidos no tienen logos visibles
+                  </p>
+                )}
               </div>
 
               <div>
