@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.get('/health', async (req, res) => {
   try {
-    // Check Google Vision API status
+    // Check Claude AI status
     const visionStatus = await checkVisionApiStatus();
 
     res.json({
@@ -35,19 +35,19 @@ router.post('/analyze', authMiddleware, async (req, res) => {
       });
     }
 
-    // Use Google Vision API for image analysis
+    // Use Claude AI for image analysis
     try {
       const analysis = await analyzeGarmentImage(imageUrl);
-      
+
       res.json({
         success: true,
         data: analysis
       });
     } catch (visionError) {
-      if (visionError.message.includes('Vision client')) {
+      if (visionError.message.includes('Claude client') || visionError.message.includes('ANTHROPIC_API_KEY')) {
         return res.status(503).json({
-          error: 'Google Vision API not available',
-          details: 'Image analysis service is temporarily unavailable'
+          error: 'Claude AI not available',
+          details: 'Image analysis service is temporarily unavailable. Please ensure ANTHROPIC_API_KEY is configured.'
         });
       }
       throw visionError;
