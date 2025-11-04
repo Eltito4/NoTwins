@@ -38,7 +38,7 @@ Estimado mensual (100 usuarios): $10-20 (-80% ahorro!)
 **Implementación:**
 ```javascript
 const response = await claudeClient.messages.create({
-  model: "claude-3-5-sonnet-20240620",
+  model: "claude-3-sonnet-20240229",
   max_tokens: 1024,
   system: [
     {

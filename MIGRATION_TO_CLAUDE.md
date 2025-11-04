@@ -171,7 +171,7 @@ Si encuentras problemas con la migración:
 ## 📝 Notas Técnicas
 
 ### Modelo Usado
-- **Claude 3.5 Sonnet** (`claude-3-5-sonnet-20240620`)
+- **Claude 3 Sonnet** (`claude-3-sonnet-20240229`)
 - Excelente balance entre calidad y costo
 - Soporte nativo para visión (imágenes)
 - Contexto de 200K tokens

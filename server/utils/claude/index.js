@@ -119,7 +119,7 @@ export async function analyzeGarmentImage(imageUrl) {
 
     // COST OPTIMIZATION: System prompt with cache_control (70-90% cost reduction)
     const response = await claudeClient.messages.create({
-      model: "claude-3-5-sonnet-20240620",
+      model: "claude-3-sonnet-20240229",
       max_tokens: 512, // Reduced from 1024 (50% cost saving on output)
       system: [
         {
@@ -338,7 +338,7 @@ export async function detectSmartDuplicates(newItem, existingItems) {
 
     // COST OPTIMIZATION: Reduced prompt + cache_control
     const response = await claudeClient.messages.create({
-      model: "claude-3-5-sonnet-20240620",
+      model: "claude-3-sonnet-20240229",
       max_tokens: 800, // Reduced from 1500
       temperature: 0.2,
       system: [
@@ -433,7 +433,7 @@ export async function generateDuplicateSuggestions(duplicateItem, userOtherItems
 
     // COST OPTIMIZATION: Reduced prompt + cache_control
     const response = await claudeClient.messages.create({
-      model: "claude-3-5-sonnet-20240620",
+      model: "claude-3-sonnet-20240229",
       max_tokens: 1200, // Reduced from 2500 (50% saving)
       temperature: 0.7,
       system: [
@@ -637,7 +637,7 @@ export async function checkClaudeStatus() {
     try {
       const response = await Promise.race([
         claudeClient.messages.create({
-          model: "claude-3-5-sonnet-20240620",
+          model: "claude-3-sonnet-20240229",
           max_tokens: 10,
           messages: [{ role: "user", content: "Test" }]
         }),
