@@ -9,12 +9,13 @@ import { fileURLToPath } from 'url';
 
 // Load environment variables based on NODE_ENV
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 // Validate required environment variables
 const requiredEnvVars = [
   'MONGODB_URI',
   'JWT_SECRET',
+  'ANTHROPIC_API_KEY',
   'SCRAPER_API_KEY'
 ];
 

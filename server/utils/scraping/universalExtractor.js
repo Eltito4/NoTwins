@@ -2,7 +2,7 @@ import { load } from 'cheerio';
 import { logger } from '../logger.js';
 import { findClosestNamedColor } from '../colors/utils.js';
 import { detectProductType } from '../categorization/detector.js';
-import { interpretScrapedProduct } from '../vision/deepseek.js';
+import { interpretScrapedProduct } from '../claude/index.js';
 import axios from 'axios';
 
 // Enhanced color detection for Spanish and other languages
