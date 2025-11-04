@@ -171,10 +171,11 @@ Si encuentras problemas con la migración:
 ## 📝 Notas Técnicas
 
 ### Modelo Usado
-- **Claude 3 Sonnet** (`claude-3-sonnet-20240229`)
-- Excelente balance entre calidad y costo
-- Soporte nativo para visión (imágenes)
+- **Claude 3 Haiku** (`claude-3-haiku-20240307`)
+- Modelo rápido y económico con soporte para visión
+- Soporte nativo para análisis de imágenes
 - Contexto de 200K tokens
+- Ideal para aplicaciones de producción con alto volumen
 
 ### Prompts Optimizados
 Los prompts han sido diseñados específicamente para:
