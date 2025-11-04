@@ -85,7 +85,8 @@ export function sanitizeObjectId(id) {
 }
 
 /**
- * Sanitize URL to prevent javascript: and data: schemes
+ * Sanitize URL to prevent javascript: and dangerous data: schemes
+ * Allows data:image/* for base64 images
  * @param {string} url - URL to sanitize
  * @returns {string|null} - Valid URL or null
  */
@@ -96,8 +97,23 @@ export function sanitizeUrl(url) {
 
   const trimmedUrl = url.trim();
 
-  // Block javascript: and data: schemes
-  if (/^(javascript|data|vbscript):/i.test(trimmedUrl)) {
+  // Block javascript: and vbscript: schemes
+  if (/^(javascript|vbscript):/i.test(trimmedUrl)) {
+    return null;
+  }
+
+  // Allow data:image/* for base64 images (safe for image display)
+  if (/^data:image\/(jpeg|jpg|png|gif|webp);base64,/i.test(trimmedUrl)) {
+    // Validate that it's actually base64 data after the comma
+    const base64Part = trimmedUrl.split(',')[1];
+    if (base64Part && /^[A-Za-z0-9+/=]+$/.test(base64Part.substring(0, 100))) {
+      return trimmedUrl; // Valid base64 image
+    }
+    return null; // Invalid base64 format
+  }
+
+  // Block other data: schemes (could be used for XSS)
+  if (/^data:/i.test(trimmedUrl)) {
     return null;
   }
 

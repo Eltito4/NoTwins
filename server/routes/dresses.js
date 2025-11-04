@@ -29,9 +29,20 @@ router.post('/', async (req, res) => {
       isPrivate
     } = req.body;
 
+    // Log incoming data for debugging
+    logger.debug('Creating new item', {
+      eventId,
+      name,
+      hasImageUrl: !!imageUrl,
+      imageUrlType: imageUrl ? (imageUrl.startsWith('data:') ? 'base64' : 'url') : 'none',
+      imageUrlLength: imageUrl?.length || 0,
+      color,
+      brand
+    });
+
     // Validate required fields
     if (!eventId || !name) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Missing required fields',
         details: {
           eventId: !eventId ? 'Event ID is required' : null,
@@ -56,6 +67,13 @@ router.post('/', async (req, res) => {
     const sanitizedDescription = description ? sanitizeString(description, 1000) : undefined;
     const sanitizedColor = color ? sanitizeString(color, 50) : undefined;
     const sanitizedBrand = brand ? sanitizeString(brand, 100) : undefined;
+
+    // Log sanitization results
+    logger.debug('After sanitization', {
+      hasImageUrl: !!sanitizedImageUrl,
+      imageUrlType: sanitizedImageUrl ? (sanitizedImageUrl.startsWith('data:') ? 'base64' : 'url') : 'none',
+      wasBlocked: imageUrl && !sanitizedImageUrl
+    });
 
     const item = new Dress({
       userId: req.user.id,
