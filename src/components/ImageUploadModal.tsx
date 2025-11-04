@@ -37,6 +37,7 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
   const [analyzing, setAnalyzing] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [confidence, setConfidence] = useState<number | null>(null);
+  const [imageError, setImageError] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
