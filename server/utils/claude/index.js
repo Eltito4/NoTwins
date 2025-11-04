@@ -166,14 +166,26 @@ REGLAS:
 
     const text = response.content[0].text;
     logger.debug('Claude response received:', { textLength: text.length });
+    logger.debug('Claude raw response:', text); // Log full response to debug
 
-    // Parse JSON from response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    // Parse JSON from response - try to extract JSON more robustly
+    let jsonMatch = text.match(/\{[\s\S]*\}/);
+
     if (!jsonMatch) {
+      logger.error('No JSON found in Claude response. Full text:', text);
       throw new Error('No valid JSON found in Claude response');
     }
 
-    const analysis = JSON.parse(jsonMatch[0]);
+    let analysis;
+    try {
+      analysis = JSON.parse(jsonMatch[0]);
+    } catch (parseError) {
+      logger.error('JSON parse error:', {
+        error: parseError.message,
+        jsonString: jsonMatch[0].substring(0, 200)
+      });
+      throw new Error('Failed to parse JSON from Claude response');
+    }
 
     logger.info('Claude analysis completed successfully:', {
       hasName: !!analysis.name,
