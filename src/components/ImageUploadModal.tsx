@@ -23,6 +23,54 @@ interface ImageUploadModalProps {
   onBack: () => void;
 }
 
+const compressImage = (file: File, maxWidth: number = 800, quality: number = 0.8): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Calculate new dimensions while maintaining aspect ratio
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Could not get canvas context'));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              console.log(`Image compressed from ${(file.size / 1024).toFixed(2)}KB to ${(blob.size / 1024).toFixed(2)}KB`);
+              resolve(blob);
+            } else {
+              reject(new Error('Canvas to Blob conversion failed'));
+            }
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      img.onerror = () => reject(new Error('Image load failed'));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error('FileReader failed'));
+    reader.readAsDataURL(file);
+  });
+};
+
 const convertBlobToBase64 = (blob: Blob): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -66,11 +114,25 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
 
     setLoading(true);
     try {
-      const base64Image = await convertBlobToBase64(file);
+      console.log(`Original file size: ${(file.size / 1024).toFixed(2)}KB`);
+
+      // Compress the image to reduce size (max 800px width, 0.8 quality)
+      const compressedBlob = await compressImage(file, 800, 0.8);
+      const base64Image = await convertBlobToBase64(compressedBlob);
+
+      // Check final size (base64 is ~33% larger than binary)
+      const estimatedSizeKB = (base64Image.length * 0.75) / 1024;
+      console.log(`Compressed base64 size: ~${estimatedSizeKB.toFixed(2)}KB`);
+
+      if (estimatedSizeKB > 1800) { // Safety check: under 2MB limit
+        toast.error('La imagen es demasiado grande. Por favor usa una imagen más pequeña.');
+        return;
+      }
+
       setImageUrl(base64Image);
       await analyzeImage(base64Image);
     } catch (error) {
-      toast.error('Failed to process image');
+      toast.error('Error al procesar la imagen');
       console.error('File processing error:', error);
     } finally {
       setLoading(false);
@@ -169,24 +231,31 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    console.log('handleSubmit called with imageUrl:', imageUrl ? imageUrl.substring(0, 50) + '...' : 'EMPTY');
+    console.log('Form data:', formData);
+
     // Validation checks
     const missingFields = [];
-    if (!imageUrl || !formData.name) {
-      missingFields.push('name and image');
+    if (!imageUrl) {
+      toast.error('⚠️ Se requiere una imagen');
+      return;
+    }
+    if (!formData.name) {
+      missingFields.push('nombre');
     }
     if (!formData.color) {
       missingFields.push('color');
     }
     if (!formData.category || !formData.subcategory) {
-      missingFields.push('category and type');
+      missingFields.push('categoría y tipo');
     }
     if (!formData.brand) {
-      missingFields.push('brand');
+      missingFields.push('marca');
     }
-    
+
     if (missingFields.length > 0) {
-      toast.error(`⚠️ Please fill in: ${missingFields.join(', ')}`);
+      toast.error(`⚠️ Por favor completa: ${missingFields.join(', ')}`);
       return;
     }
 
@@ -195,17 +264,16 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
     if (formData.price) {
       const priceValue = parseFloat(formData.price);
       if (isNaN(priceValue) || priceValue < 0) {
-        toast.error('Please enter a valid price');
+        toast.error('Por favor ingresa un precio válido');
         return;
       }
       // Round to 2 decimal places
       finalPrice = Math.round(priceValue * 100) / 100;
     }
 
-    console.log('Submitting form data:', formData);
-    onSubmit({
+    const submitData = {
       name: formData.name,
-      imageUrl,
+      imageUrl: imageUrl,
       description: formData.description,
       color: formData.color,
       brand: formData.brand,
@@ -216,7 +284,10 @@ export function ImageUploadModal({ onClose, onSubmit, isEventCreator, onBack }: 
         name: getSubcategoryName(formData.category, formData.subcategory)
       } : undefined,
       isPrivate
-    });
+    };
+
+    console.log('Submitting data with imageUrl length:', submitData.imageUrl?.length || 0);
+    onSubmit(submitData);
   };
 
   const getConfidenceColor = (score: number) => {
