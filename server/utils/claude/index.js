@@ -117,22 +117,35 @@ export async function analyzeGarmentImage(imageUrl) {
       'La Croixé', 'Aware Barcelona', 'Cardié Moda', 'Güendolina', 'Mattui', 'THE-ARE',
       'Mannit', 'Mimoki', 'Panambi', 'Carolina Herrera', 'CH', 'Zara', 'Mango', 'Massimo Dutti'];
 
-    // COST OPTIMIZATION: System prompt with cache_control (70-90% cost reduction)
+    // Use Claude 3 Opus for best image analysis and brand detection
+    // Opus has superior OCR and text recognition capabilities
     const response = await claudeClient.messages.create({
-      model: "claude-3-haiku-20240307",
-      max_tokens: 512, // Reduced from 1024 (50% cost saving on output)
+      model: "claude-3-opus-20240229",
+      max_tokens: 1024, // Higher for detailed brand detection
       system: [
         {
           type: "text",
-          text: `Experto moda ES. Analiza imagen y extrae:
-- Tipo: zapatos/vestido/top/bottom/bolso/joyería/otro
-- Color de lista: ${colors.join(', ')}
-- Marca (si visible): ${spanishBrands.join(', ')}
-- Categorías: ${categories.map(c => c.name).join(', ')}
+          text: `Eres un experto en análisis de moda. Analiza CUIDADOSAMENTE la imagen y extrae:
+
+🔍 IMPORTANTE - DETECCIÓN DE MARCA:
+1. Busca logos, etiquetas, bordados o texto visible en la prenda
+2. Examina cuidadosamente etiquetas interiores si son visibles
+3. Busca nombres de marca en: cuello, mangas, cintura, costuras, botones, cremalleras
+4. Marcas conocidas: ${spanishBrands.join(', ')}, y CUALQUIER otra marca visible
+5. Si ves CUALQUIER texto que parezca una marca, inclúyelo
+
+Información a extraer:
+- Tipo de prenda: zapatos/vestido/top/bottom/bolso/joyería/otro
+- Color (de esta lista): ${colors.join(', ')}
+- Marca: BUSCA MUY BIEN logos, etiquetas, texto en la prenda
+- Categoría: ${categories.map(c => c.name).join(', ')}
   * Ropa: tops/bottoms/dresses/outerwear
   * Accesorios: shoes/bags/jewelry/other
 
-Devuelve JSON: {"name":"Nombre ES","color":"Color","brand":"Marca|null","type":{"category":"clothes|accessories","subcategory":"...","name":"..."},"description":"...","confidence":0.95}`,
+Devuelve JSON exacto:
+{"name":"Nombre descriptivo ES","color":"Color de la lista","brand":"MARCA SI ESTÁ VISIBLE O null","type":{"category":"clothes|accessories","subcategory":"...","name":"..."},"description":"Descripción detallada","confidence":0.85}
+
+⚠️ Si ves CUALQUIER marca, logo o texto, ponlo en "brand". No dejes "brand":null si hay texto visible.`,
           cache_control: { type: "ephemeral" } // ⭐ PROMPT CACHING - 70-90% savings
         }
       ],

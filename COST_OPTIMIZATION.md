@@ -37,8 +37,9 @@ Estimado mensual (100 usuarios): $10-20 (-80% ahorro!)
 
 **Implementación:**
 ```javascript
+// Para análisis de imágenes: usar Opus (mejor OCR y detección de marcas)
 const response = await claudeClient.messages.create({
-  model: "claude-3-haiku-20240307",
+  model: "claude-3-opus-20240229", // Mejor para imágenes
   max_tokens: 1024,
   system: [
     {
@@ -47,6 +48,14 @@ const response = await claudeClient.messages.create({
       cache_control: { type: "ephemeral" } // ⭐ ACTIVA EL CACHÉ
     }
   ],
+  messages: [...]
+});
+
+// Para tareas simples: usar Haiku (80% más económico)
+const response = await claudeClient.messages.create({
+  model: "claude-3-haiku-20240307", // Para comparaciones, sugerencias
+  max_tokens: 512,
+  system: [...],
   messages: [...]
 });
 ```
