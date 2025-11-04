@@ -117,36 +117,43 @@ export async function analyzeGarmentImage(imageUrl) {
       'La Croixé', 'Aware Barcelona', 'Cardié Moda', 'Güendolina', 'Mattui', 'THE-ARE',
       'Mannit', 'Mimoki', 'Panambi', 'Carolina Herrera', 'CH', 'Zara', 'Mango', 'Massimo Dutti'];
 
-    // Use Claude 3 Opus for best image analysis and brand detection
-    // Opus has superior OCR and text recognition capabilities
+    // Use Claude 3 Haiku - only model available on this API key
+    // Optimized prompt for maximum brand detection capability
     const response = await claudeClient.messages.create({
-      model: "claude-3-opus-20240229",
+      model: "claude-3-haiku-20240307",
       max_tokens: 1024, // Higher for detailed brand detection
       system: [
         {
           type: "text",
-          text: `Eres un experto en análisis de moda. Analiza CUIDADOSAMENTE la imagen y extrae:
+          text: `Experto en moda. Analiza la imagen paso a paso:
 
-🔍 IMPORTANTE - DETECCIÓN DE MARCA:
-1. Busca logos, etiquetas, bordados o texto visible en la prenda
-2. Examina cuidadosamente etiquetas interiores si son visibles
-3. Busca nombres de marca en: cuello, mangas, cintura, costuras, botones, cremalleras
-4. Marcas conocidas: ${spanishBrands.join(', ')}, y CUALQUIER otra marca visible
-5. Si ves CUALQUIER texto que parezca una marca, inclúyelo
+PASO 1 - BUSCAR MARCA (MUY IMPORTANTE):
+Examina TODO en busca de texto/logos:
+• Etiquetas: cuello, interior, cintura, mangas
+• Logos: pecho, espalda, mangas, piernas
+• Texto: costuras, botones, cremalleras, hebillas
+• Marcas: ${spanishBrands.join(', ')}, Nike, Adidas, H&M, Bershka, Pull&Bear, Stradivarius, CUALQUIER OTRA
+• Si ves CUALQUIER palabra/logo → es la marca
+• Si NO ves texto → brand: null
 
-Información a extraer:
-- Tipo de prenda: zapatos/vestido/top/bottom/bolso/joyería/otro
-- Color (de esta lista): ${colors.join(', ')}
-- Marca: BUSCA MUY BIEN logos, etiquetas, texto en la prenda
-- Categoría: ${categories.map(c => c.name).join(', ')}
-  * Ropa: tops/bottoms/dresses/outerwear
-  * Accesorios: shoes/bags/jewelry/other
+PASO 2 - IDENTIFICAR TIPO:
+Tipo: ${categories.map(c => `${c.name}: ${c.subcategories.map(s => s.name).join(', ')}`).join(' | ')}
 
-Devuelve JSON exacto:
-{"name":"Nombre descriptivo ES","color":"Color de la lista","brand":"MARCA SI ESTÁ VISIBLE O null","type":{"category":"clothes|accessories","subcategory":"...","name":"..."},"description":"Descripción detallada","confidence":0.85}
+PASO 3 - COLOR:
+Elige de: ${colors.join(', ')}
 
-⚠️ Si ves CUALQUIER marca, logo o texto, ponlo en "brand". No dejes "brand":null si hay texto visible.`,
-          cache_control: { type: "ephemeral" } // ⭐ PROMPT CACHING - 70-90% savings
+PASO 4 - NOMBRE Y DESCRIPCIÓN:
+Nombre descriptivo en español
+
+JSON EXACTO (copia formato):
+{"name":"Vestido negro","color":"Negro","brand":"Zara","type":{"category":"clothes","subcategory":"dresses","name":"Dresses"},"description":"Vestido negro elegante","confidence":0.9}
+
+REGLAS:
+✓ Si hay texto visible → siempre incluir en brand
+✓ Buscar en etiquetas, logos, costuras, hebillas
+✓ Marcas comunes: Zara, Mango, H&M, Nike, Adidas, etc.
+✗ No inventar marcas si no las ves`,
+          cache_control: { type: "ephemeral" } // ⭐ PROMPT CACHING
         }
       ],
       messages: [

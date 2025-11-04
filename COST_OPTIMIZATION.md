@@ -37,28 +37,27 @@ Estimado mensual (100 usuarios): $10-20 (-80% ahorro!)
 
 **Implementación:**
 ```javascript
-// Para análisis de imágenes: usar Opus (mejor OCR y detección de marcas)
+// Usar Haiku para TODAS las tareas (único modelo disponible en API keys gratuitas)
+// Optimización: prompts super específicos para compensar menor capacidad
 const response = await claudeClient.messages.create({
-  model: "claude-3-opus-20240229", // Mejor para imágenes
+  model: "claude-3-haiku-20240307",
   max_tokens: 1024,
   system: [
     {
       type: "text",
-      text: "Tu prompt largo del sistema aquí...",
+      text: `Prompt PASO A PASO muy específico:
+      PASO 1 - Buscar marca en etiquetas, logos, texto
+      PASO 2 - Identificar tipo de prenda
+      PASO 3 - Detectar color
+      ...`,
       cache_control: { type: "ephemeral" } // ⭐ ACTIVA EL CACHÉ
     }
   ],
   messages: [...]
 });
-
-// Para tareas simples: usar Haiku (80% más económico)
-const response = await claudeClient.messages.create({
-  model: "claude-3-haiku-20240307", // Para comparaciones, sugerencias
-  max_tokens: 512,
-  system: [...],
-  messages: [...]
-});
 ```
+
+**Clave:** Prompts estructurados paso a paso funcionan mejor con Haiku.
 
 **Ahorro:** 70-90% en llamadas repetidas
 

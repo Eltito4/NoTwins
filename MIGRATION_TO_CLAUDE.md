@@ -170,19 +170,14 @@ Si encuentras problemas con la migración:
 
 ## 📝 Notas Técnicas
 
-### Modelos Usados
+### Modelo Usado
 
-**Para Análisis de Imágenes (Vision):**
-- **Claude 3 Opus** (`claude-3-opus-20240229`)
-- El modelo más potente de Claude 3
-- Superior capacidad de OCR y detección de texto
-- Mejor para reconocimiento de marcas, logos y etiquetas
+**Claude 3 Haiku** (`claude-3-haiku-20240307`)
+- Único modelo disponible en API keys gratuitas/básicas
+- Rápido y muy económico
+- Prompts optimizados para máxima precisión en detección de marcas
 - Contexto de 200K tokens
-
-**Para Otras Tareas (Similarity, Suggestions, Scraping):**
-- **Claude 3 Haiku** (`claude-3-haiku-20240307`)
-- Rápido y económico
-- Suficiente para análisis de texto y comparaciones
+- Usado para todas las tareas: análisis de imágenes, similitudes, sugerencias
 
 ### Prompts Optimizados
 Los prompts han sido diseñados específicamente para:
